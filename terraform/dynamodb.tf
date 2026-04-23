@@ -55,6 +55,11 @@ resource "aws_dynamodb_table" "results" {
     enabled = true
   }
 
+  ttl {
+    attribute_name = "expiryTime"
+    enabled        = true
+  }
+
   tags = merge(local.common_tags, {
     Name = var.results_table_name
   })

@@ -60,12 +60,43 @@ def lambda_handler(event, context):
         exit_code = containers[0].get("exitCode", 1)
         
     success = (exit_code == 0)
-    syntax_error = output if any(t in output.lower() for t in ["syntaxerror", "compile", "javac", "py_compile"]) else ""
-    runtime_error = "" if syntax_error else output if not success else ""
     
-    # Save to DynamoDB
+    # Extract Lab Type to help with error parsing
+    lab_type = "unknown"
+    for container in container_overrides:
+        env = container.get("environment", [])
+        for pair in env:
+            if pair.get("name") == "LAB_TYPE":
+                lab_type = pair.get("value")
+                break
+
+    syntax_error = ""
+    runtime_error = ""
+    
+    if not success:
+        out_lower = output.lower()
+        # More specific error parsing
+        if lab_type == "python":
+            if "syntaxerror" in out_lower or "indentationerror" in out_lower:
+                syntax_error = output
+            else:
+                runtime_error = output
+        elif lab_type == "java":
+            if "error:" in out_lower and "javac" in detail.get("overrides", {}).get("containerOverrides", [{}])[0].get("command", [""])[-1]:
+                syntax_error = output
+            else:
+                runtime_error = output
+        else:
+            # Fallback for linux/dbms
+            syntax_error = output if any(t in out_lower for t in ["syntax", "compile"]) else ""
+            runtime_error = "" if syntax_error else output
+
+    # Save to DynamoDB with TTL (2 hours)
     table_name = os.environ["RESULTS_TABLE_NAME"]
     ddb = boto3.resource("dynamodb", region_name=region).Table(table_name)
+    
+    # TTL is epoch time in seconds
+    expiry_time = int(time.time()) + (2 * 3600)
     
     result_item = {
         "sessionId": session_id,
@@ -74,10 +105,12 @@ def lambda_handler(event, context):
         "output": output,
         "syntaxError": syntax_error,
         "runtimeError": runtime_error,
-        "timestamp": detail.get("stoppedAt", detail.get("updatedAt", ""))
+        "labType": lab_type,
+        "timestamp": detail.get("stoppedAt", detail.get("updatedAt", "")),
+        "expiryTime": expiry_time
     }
     
     ddb.put_item(Item=result_item)
-    print(f"Saved result for session {session_id} to {table_name}")
+    print(f"Saved result for session {session_id} to {table_name} with TTL")
     
     return {"status": "success"}

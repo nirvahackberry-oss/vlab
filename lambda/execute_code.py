@@ -140,6 +140,11 @@ def lambda_handler(event, context):
     if failures:
         return _response(False, runtime_error=json.dumps(failures))
 
+    # Clear previous results to avoid stale data during polling
+    results_table = os.environ["RESULTS_TABLE_NAME"]
+    ddb = boto3.resource("dynamodb", region_name=region).Table(results_table)
+    ddb.delete_item(Key={"sessionId": session_id})
+
     task_arn = run_resp["tasks"][0]["taskArn"]
     task_id = task_arn.split("/")[-1]
 

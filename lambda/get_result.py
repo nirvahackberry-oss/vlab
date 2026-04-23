@@ -14,6 +14,11 @@ def lambda_handler(event, context):
     table = boto3.resource("dynamodb", region_name=region).Table(os.environ["RESULTS_TABLE_NAME"])
     item = table.get_item(Key={"sessionId": session_id}).get("Item")
     if not item:
-        return {"statusCode": 404, "body": json.dumps({"error": "Result not found"})}
+        return {
+            "statusCode": 200, 
+            "body": json.dumps({"status": "PROCESSING", "message": "Result not ready yet"})
+        }
 
+    # Add a success status for consistency
+    item["status"] = "COMPLETED"
     return {"statusCode": 200, "body": json.dumps(item)}
