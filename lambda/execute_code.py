@@ -143,19 +143,17 @@ def lambda_handler(event, context):
     task_arn = run_resp["tasks"][0]["taskArn"]
     task_id = task_arn.split("/")[-1]
 
-    task = _wait_task_stopped(ecs, cluster_arn, task_arn, timeout=90)
-    if not task:
-        ecs.stop_task(cluster=cluster_arn, task=task_arn, reason="Lambda timeout")
-        return _response(False, runtime_error="Execution timed out")
-
-    # CloudWatch stream: ecs/{container-name}/{task-id}
-    log_stream = f"ecs/lab-runtime/{task_id}"
-    output = _read_logs(logs, log_group_name, log_stream)
-
-    exit_code = task.get("containers", [{}])[0].get("exitCode", 1)
-    if exit_code == 0:
-        return _response(True, output=output)
-
-    syntax_error = output if any(t in output.lower() for t in ["syntaxerror", "compile", "javac", "py_compile"]) else ""
-    runtime_error = "" if syntax_error else output
-    return _response(False, syntax_error=syntax_error, runtime_error=runtime_error, output=output)
+    # Return immediately to avoid API Gateway timeout
+    return {
+        "statusCode": 202,
+        "headers": {"Content-Type": "application/json"},
+        "body": json.dumps(
+            {
+                "success": True,
+                "status": "PROCESSING",
+                "sessionId": session_id,
+                "taskId": task_id,
+                "message": "Execution started. Use /result to fetch the output."
+            }
+        ),
+    }
