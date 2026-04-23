@@ -28,7 +28,7 @@ permissions:
 env:
   AWS_REGION: ap-south-1
   PROJECT_NAME: python-lab
-  ENVIRONMENT: prod
+  ENVIRONMENT: dev
   LAB_TYPES: "python java linux dbms"
 
 jobs:
