@@ -181,6 +181,7 @@ resource "aws_lambda_function" "execute_code" {
       ECS_SUBNET_IDS          = join(",", aws_subnet.private[*].id)
       ECS_SECURITY_GROUP_ID   = aws_security_group.ecs_tasks.id
       SESSIONS_TABLE_NAME     = aws_dynamodb_table.sessions.name
+      RESULTS_TABLE_NAME      = aws_dynamodb_table.results.name
       LAB_LOG_GROUP_NAME      = aws_cloudwatch_log_group.ecs.name
     }
   }
