@@ -174,6 +174,11 @@ resource "aws_iam_role_policy" "start_lab_lambda" {
   policy = data.aws_iam_policy_document.start_lab_lambda.json
 }
 
+resource "aws_iam_role_policy_attachment" "start_lab_lambda_vpc" {
+  role       = aws_iam_role.start_lab_lambda.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+}
+
 data "aws_iam_policy_document" "stop_lab_lambda" {
   statement {
     sid    = "CloudWatchLogs"
@@ -238,6 +243,11 @@ resource "aws_iam_role_policy" "stop_lab_lambda" {
   name   = "${local.name_prefix}-stop-lab-policy"
   role   = aws_iam_role.stop_lab_lambda.id
   policy = data.aws_iam_policy_document.stop_lab_lambda.json
+}
+
+resource "aws_iam_role_policy_attachment" "stop_lab_lambda_vpc" {
+  role       = aws_iam_role.stop_lab_lambda.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
 }
 
 data "aws_iam_policy_document" "lab_ops_lambda" {
@@ -332,4 +342,9 @@ resource "aws_iam_role_policy" "lab_ops_lambda" {
   name   = "${local.name_prefix}-lab-ops-policy"
   role   = aws_iam_role.lab_ops_lambda.id
   policy = data.aws_iam_policy_document.lab_ops_lambda.json
+}
+
+resource "aws_iam_role_policy_attachment" "lab_ops_lambda_vpc" {
+  role       = aws_iam_role.lab_ops_lambda.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
 }

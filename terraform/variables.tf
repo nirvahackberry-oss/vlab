@@ -7,7 +7,7 @@ variable "region" {
 variable "project_name" {
   description = "Base project name used for naming resources."
   type        = string
-  default     = "python-lab"
+  default     = "vlab"
 }
 
 variable "environment" {
@@ -78,7 +78,7 @@ variable "enable_temp_data_bucket" {
 variable "dynamodb_table_name" {
   description = "DynamoDB session table name."
   type        = string
-  default     = "python-lab-sessions"
+  default     = "vlab-sessions"
 }
 
 variable "submissions_table_name" {

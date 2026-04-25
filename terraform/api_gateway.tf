@@ -91,58 +91,82 @@ resource "aws_apigatewayv2_integration" "get_result" {
   payload_format_version = "2.0"
 }
 
-resource "aws_apigatewayv2_route" "start" {
-  api_id    = aws_apigatewayv2_api.lab.id
-  route_key = "POST /start"
-  target    = "integrations/${aws_apigatewayv2_integration.start_lab.id}"
+resource "aws_apigatewayv2_integration" "get_labs" {
+  api_id                 = aws_apigatewayv2_api.lab.id
+  integration_type       = "AWS_PROXY"
+  integration_uri        = aws_lambda_function.get_labs.invoke_arn
+  integration_method     = "POST"
+  payload_format_version = "2.0"
+}
 
-  authorization_type = "NONE" # Placeholder: swap with JWT/CUSTOM authorizer in production.
+resource "aws_apigatewayv2_integration" "get_session" {
+  api_id                 = aws_apigatewayv2_api.lab.id
+  integration_type       = "AWS_PROXY"
+  integration_uri        = aws_lambda_function.get_session.invoke_arn
+  integration_method     = "POST"
+  payload_format_version = "2.0"
+}
+
+resource "aws_apigatewayv2_route" "labs" {
+  api_id    = aws_apigatewayv2_api.lab.id
+  route_key = "GET /labs"
+  target    = "integrations/${aws_apigatewayv2_integration.get_labs.id}"
+}
+
+resource "aws_apigatewayv2_route" "lab_detail" {
+  api_id    = aws_apigatewayv2_api.lab.id
+  route_key = "GET /labs/{labId}"
+  target    = "integrations/${aws_apigatewayv2_integration.get_labs.id}"
+}
+
+resource "aws_apigatewayv2_route" "lab_sessions" {
+  api_id    = aws_apigatewayv2_api.lab.id
+  route_key = "POST /lab-sessions"
+  target    = "integrations/${aws_apigatewayv2_integration.start_lab.id}"
+}
+
+resource "aws_apigatewayv2_route" "session_status" {
+  api_id    = aws_apigatewayv2_api.lab.id
+  route_key = "GET /lab-sessions/{sessionId}"
+  target    = "integrations/${aws_apigatewayv2_integration.get_session.id}"
+}
+
+resource "aws_apigatewayv2_route" "session_stop" {
+  api_id    = aws_apigatewayv2_api.lab.id
+  route_key = "POST /lab-sessions/{sessionId}/stop"
+  target    = "integrations/${aws_apigatewayv2_integration.stop_lab.id}"
 }
 
 resource "aws_apigatewayv2_route" "execute" {
   api_id    = aws_apigatewayv2_api.lab.id
   route_key = "POST /execute"
   target    = "integrations/${aws_apigatewayv2_integration.execute_code.id}"
-
-  authorization_type = "NONE" # Placeholder: swap with JWT/CUSTOM authorizer in production.
 }
 
 resource "aws_apigatewayv2_route" "submit" {
   api_id    = aws_apigatewayv2_api.lab.id
   route_key = "POST /submit"
   target    = "integrations/${aws_apigatewayv2_integration.submit_code.id}"
-
-  authorization_type = "NONE" # Placeholder: swap with JWT/CUSTOM authorizer in production.
-}
-
-resource "aws_apigatewayv2_route" "grade" {
-  api_id    = aws_apigatewayv2_api.lab.id
-  route_key = "POST /grade"
-  target    = "integrations/${aws_apigatewayv2_integration.grade_lab.id}"
-
-  authorization_type = "NONE" # Placeholder: swap with JWT/CUSTOM authorizer in production.
-}
-
-resource "aws_apigatewayv2_route" "stop" {
-  api_id    = aws_apigatewayv2_api.lab.id
-  route_key = "POST /stop"
-  target    = "integrations/${aws_apigatewayv2_integration.stop_lab.id}"
-
-  authorization_type = "NONE" # Placeholder: swap with JWT/CUSTOM authorizer in production.
 }
 
 resource "aws_apigatewayv2_route" "result" {
   api_id    = aws_apigatewayv2_api.lab.id
   route_key = "GET /result"
   target    = "integrations/${aws_apigatewayv2_integration.get_result.id}"
-
-  authorization_type = "NONE" # Placeholder: swap with JWT/CUSTOM authorizer in production.
 }
 
 resource "aws_lambda_permission" "apigw_start" {
   statement_id  = "AllowApiGatewayInvokeStartLab"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.start_lab.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.lab.execution_arn}/*/*"
+}
+
+resource "aws_lambda_permission" "apigw_stop" {
+  statement_id  = "AllowApiGatewayInvokeStopLab"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.stop_lab.function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.lab.execution_arn}/*/*"
 }
@@ -163,26 +187,26 @@ resource "aws_lambda_permission" "apigw_submit" {
   source_arn    = "${aws_apigatewayv2_api.lab.execution_arn}/*/*"
 }
 
-resource "aws_lambda_permission" "apigw_grade" {
-  statement_id  = "AllowApiGatewayInvokeGradeLab"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.grade_lab.function_name
-  principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_apigatewayv2_api.lab.execution_arn}/*/*"
-}
-
-resource "aws_lambda_permission" "apigw_stop" {
-  statement_id  = "AllowApiGatewayInvokeStopLab"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.stop_lab.function_name
-  principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_apigatewayv2_api.lab.execution_arn}/*/*"
-}
-
-resource "aws_lambda_permission" "apigw_result" {
+resource "aws_lambda_permission" "apigw_get_result" {
   statement_id  = "AllowApiGatewayInvokeGetResult"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.get_result.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.lab.execution_arn}/*/*"
+}
+
+resource "aws_lambda_permission" "apigw_get_labs" {
+  statement_id  = "AllowApiGatewayInvokeGetLabs"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.get_labs.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.lab.execution_arn}/*/*"
+}
+
+resource "aws_lambda_permission" "apigw_get_session" {
+  statement_id  = "AllowApiGatewayInvokeGetSession"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.get_session.function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.lab.execution_arn}/*/*"
 }

@@ -14,6 +14,11 @@ def _response(status_code: int, body: dict) -> dict:
 
 
 def _extract_session_id(event: dict) -> str:
+    # Check path parameters first (RESTful)
+    path_params = event.get("pathParameters")
+    if path_params and "sessionId" in path_params:
+        return path_params["sessionId"]
+        
     if isinstance(event.get("body"), str):
         body = json.loads(event.get("body") or "{}")
         return body.get("sessionId", "")

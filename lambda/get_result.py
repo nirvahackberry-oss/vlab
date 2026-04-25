@@ -1,7 +1,15 @@
 import json
 import os
+from decimal import Decimal
 
 import boto3
+
+
+class DecimalEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Decimal):
+            return int(obj) if obj % 1 == 0 else float(obj)
+        return super(DecimalEncoder, self).default(obj)
 
 
 def lambda_handler(event, context):
@@ -21,4 +29,4 @@ def lambda_handler(event, context):
 
     # Add a success status for consistency
     item["status"] = "COMPLETED"
-    return {"statusCode": 200, "body": json.dumps(item)}
+    return {"statusCode": 200, "body": json.dumps(item, cls=DecimalEncoder)}

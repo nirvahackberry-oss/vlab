@@ -1,7 +1,8 @@
 resource "aws_ecr_repository" "lab_images" {
   for_each             = toset(var.lab_types)
-  name                 = "${local.name_prefix}-${each.key}-lab"
+  name                 = "${local.name_prefix}-${each.key}"
   image_tag_mutability = "MUTABLE"
+  force_delete         = true
 
   image_scanning_configuration {
     scan_on_push = true
@@ -12,7 +13,7 @@ resource "aws_ecr_repository" "lab_images" {
   }
 
   tags = merge(local.common_tags, {
-    Name    = "${local.name_prefix}-${each.key}-lab-ecr"
+    Name    = "${local.name_prefix}-${each.key}-ecr"
     LabType = each.key
   })
 }

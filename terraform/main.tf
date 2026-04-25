@@ -1,15 +1,15 @@
 terraform {
   required_version = ">= 1.6.0"
 
-  # AFTER you run 'terraform apply' to create the bucket, uncomment this block, 
-  # paste in your actual bucket name, and run 'terraform init'.
-  # backend "s3" {
-  #   bucket         = "python-lab-terraform-state-xxxxxxx"
-  #   key            = "dev/terraform.tfstate"
-  #   region         = "ap-south-1"
-  #   dynamodb_table = "python-lab-terraform-locks"
-  #   encrypt        = true
-  # }
+  /*
+  backend "s3" {
+    bucket         = "vlab-terraform-state-wrslgizb"
+    key            = "dev/terraform.tfstate"
+    region         = "ap-south-1"
+    dynamodb_table = "vlab-terraform-locks"
+    encrypt        = true
+  }
+  */
 
   required_providers {
     aws = {
@@ -42,3 +42,6 @@ locals {
     var.tags
   )
 }
+
+data "aws_caller_identity" "current" {}
+data "aws_region" "current" {}

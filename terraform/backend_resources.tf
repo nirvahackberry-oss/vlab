@@ -8,11 +8,11 @@ resource "random_string" "backend_suffix" {
 }
 
 resource "aws_s3_bucket" "terraform_state" {
-  bucket = "python-lab-terraform-state-${random_string.backend_suffix.result}"
+  bucket = "vlab-terraform-state-${random_string.backend_suffix.result}"
 
   # Prevent accidental deletion of the state bucket
   lifecycle {
-    prevent_destroy = true
+    prevent_destroy = false
   }
 
   tags = local.common_tags
@@ -36,7 +36,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "state_encryption"
 }
 
 resource "aws_dynamodb_table" "terraform_locks" {
-  name         = "python-lab-terraform-locks"
+  name         = "vlab-terraform-locks"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "LockID"
 

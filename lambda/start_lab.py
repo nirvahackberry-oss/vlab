@@ -49,23 +49,28 @@ def lambda_handler(event, context):
 
     body = _parse_event_body(event)
     user_id = body.get("userId")
-    lab_type = body.get("labType")
+    # Accept labId as requested by the frontend
+    lab_id = body.get("labId", body.get("labType"))
+    
+    # Map labId back to labType internally if needed
+    lab_type = lab_id 
+    
     try:
         duration_minutes = _to_int(body.get("duration", default_timeout), "duration")
     except ValueError as exc:
-        return _response(400, {"error": str(exc)})
+        return _response(400, {"success": False, "message": str(exc)})
     additional_env = body.get("environment", {})
 
     if not user_id or not lab_type:
-        return _response(400, {"error": "userId and labType are required"})
+        return _response(400, {"success": False, "message": "userId and labId are required"})
     if lab_type not in allowed_lab_types:
-        return _response(400, {"error": f"Unsupported labType: {lab_type}"})
+        return _response(400, {"success": False, "message": f"Unsupported labId: {lab_type}"})
     if duration_minutes <= 0:
-        return _response(400, {"error": "duration must be > 0"})
+        return _response(400, {"success": False, "message": "duration must be > 0"})
     if lab_type not in task_definition_map:
-        return _response(500, {"error": f"No task definition configured for labType: {lab_type}"})
+        return _response(500, {"success": False, "message": f"No task definition configured for labId: {lab_type}"})
 
-    session_id = str(uuid.uuid4())
+    session_id = f"sess_{str(uuid.uuid4())[:8]}" # Using a cleaner prefix for frontend
     schedule_id = f"stop-{session_id}"
     now_utc = datetime.now(timezone.utc)
     stop_at = now_utc + timedelta(minutes=duration_minutes)
@@ -105,7 +110,7 @@ def lambda_handler(event, context):
 
     failures = run_task_response.get("failures", [])
     if failures:
-        return _response(500, {"error": "Failed to start ECS task", "details": failures})
+        return _response(500, {"success": False, "message": "Failed to start ECS task", "details": str(failures)})
 
     task_arn = run_task_response["tasks"][0]["taskArn"]
 
@@ -127,31 +132,25 @@ def lambda_handler(event, context):
         Item={
             "sessionId": session_id,
             "userId": user_id,
-            "labType": lab_type,
+            "labId": lab_id,
             "taskArn": task_arn,
             "clusterArn": ecs_cluster_arn,
             "scheduleId": schedule_id,
             "startTime": now_utc.isoformat(),
             "expiryTime": ttl_epoch,
-            "status": "RUNNING",
+            "status": "starting",
         }
     )
-
-    connection_info = {
-        "taskArn": task_arn,
-        "clusterArn": ecs_cluster_arn,
-        "region": region,
-    }
-    if enable_alb and alb_dns_name:
-        connection_info["labEndpoint"] = f"http://{alb_dns_name}"
 
     return _response(
         200,
         {
+            "success": True,
             "sessionId": session_id,
-            "labType": lab_type,
-            "status": "RUNNING",
-            "expiresAt": stop_at.isoformat(),
-            "connectionInfo": connection_info,
+            "labId": lab_id,
+            "status": "starting",
+            "message": "Lab provisioning started",
+            "estimatedReadyInSeconds": 120
         },
     )
+

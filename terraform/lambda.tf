@@ -40,6 +40,18 @@ data "archive_file" "get_result_zip" {
   output_path = "${path.module}/get_result.zip"
 }
 
+data "archive_file" "get_labs_zip" {
+  type        = "zip"
+  source_file = "${path.module}/../lambda/get_labs.py"
+  output_path = "${path.module}/get_labs.zip"
+}
+
+data "archive_file" "get_session_zip" {
+  type        = "zip"
+  source_file = "${path.module}/../lambda/get_session.py"
+  output_path = "${path.module}/get_session.zip"
+}
+
 locals {
   resolved_lab_cpu_map = {
     for lab_type in var.lab_types : lab_type => tostring(lookup(var.lab_cpu_by_type, lab_type, var.lab_cpu))
@@ -87,6 +99,18 @@ resource "aws_cloudwatch_log_group" "cleanup_expired_lambda" {
 
 resource "aws_cloudwatch_log_group" "get_result_lambda" {
   name              = "/aws/lambda/${local.name_prefix}-get-result"
+  retention_in_days = 14
+  tags              = local.common_tags
+}
+
+resource "aws_cloudwatch_log_group" "get_labs_lambda" {
+  name              = "/aws/lambda/${local.name_prefix}-get-labs"
+  retention_in_days = 14
+  tags              = local.common_tags
+}
+
+resource "aws_cloudwatch_log_group" "get_session_lambda" {
+  name              = "/aws/lambda/${local.name_prefix}-get-session"
   retention_in_days = 14
   tags              = local.common_tags
 }
@@ -285,6 +309,50 @@ resource "aws_lambda_function" "get_result" {
   environment {
     variables = {
       RESULTS_TABLE_NAME  = aws_dynamodb_table.results.name
+    }
+  }
+
+  tags = local.common_tags
+}
+
+resource "aws_lambda_function" "get_labs" {
+  function_name    = "${local.name_prefix}-get-labs"
+  role             = aws_iam_role.lab_ops_lambda.arn
+  runtime          = "python3.12"
+  handler          = "get_labs.lambda_handler"
+  filename         = data.archive_file.get_labs_zip.output_path
+  source_code_hash = data.archive_file.get_labs_zip.output_base64sha256
+  timeout          = 30
+  memory_size      = 256
+
+  vpc_config {
+    subnet_ids         = aws_subnet.private[*].id
+    security_group_ids = [aws_security_group.lambda.id]
+  }
+
+  tags = local.common_tags
+}
+
+resource "aws_lambda_function" "get_session" {
+  function_name    = "${local.name_prefix}-get-session"
+  role             = aws_iam_role.lab_ops_lambda.arn
+  runtime          = "python3.12"
+  handler          = "get_session.lambda_handler"
+  filename         = data.archive_file.get_session_zip.output_path
+  source_code_hash = data.archive_file.get_session_zip.output_base64sha256
+  timeout          = 30
+  memory_size      = 256
+
+  vpc_config {
+    subnet_ids         = aws_subnet.private[*].id
+    security_group_ids = [aws_security_group.lambda.id]
+  }
+
+  environment {
+    variables = {
+      DYNAMODB_TABLE_NAME = aws_dynamodb_table.sessions.name
+      ECS_CLUSTER_ARN     = aws_ecs_cluster.lab.arn
+      AWS_ACCOUNT_ID      = data.aws_caller_identity.current.account_id
     }
   }
 
