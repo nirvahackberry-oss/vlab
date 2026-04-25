@@ -23,7 +23,7 @@ flowchart TD
     L2 --> ECS
     L4 --> ECS
     L1 --> SCH[EventBridge Scheduler]
-    L1 --> DDB[(DynamoDB python-lab-sessions)]
+    L1 --> DDB[(DynamoDB vlab-sessions)]
     L3 --> SUB[(DynamoDB submissions)]
     L4 --> RES[(DynamoDB results)]
     SCH -->|timeout| L5
@@ -52,7 +52,7 @@ flowchart TD
   - `GET /result`
 - EventBridge Scheduler schedule group (one-time stop schedules)
 - DynamoDB tables:
-  - `python-lab-sessions` (TTL: `expiryTime`)
+  - `vlab-sessions` (TTL: `expiryTime`)
   - `lab-submissions`
   - `lab-results`
 - S3 bucket for grading test cases
@@ -135,7 +135,7 @@ terraform destroy
 Workflow: `.github/workflows/deploy.yml`
 
 - Build four Docker images and push to ECR:
-  - `python-lab:latest`
+  - `vlab:latest`
   - `java-lab:latest`
   - `linux-lab:latest`
   - `dbms-lab:latest`
