@@ -167,8 +167,8 @@ resource "aws_lambda_function" "stop_lab" {
 
   environment {
     variables = {
-      DYNAMODB_TABLE_NAME = aws_dynamodb_table.sessions.name
-      ECS_CLUSTER_ARN     = aws_ecs_cluster.lab.arn
+      DYNAMODB_TABLE_NAME  = aws_dynamodb_table.sessions.name
+      ECS_CLUSTER_ARN      = aws_ecs_cluster.lab.arn
       SCHEDULER_GROUP_NAME = aws_scheduler_schedule_group.lab.name
       GRADE_LAB_LAMBDA_ARN = aws_lambda_function.grade_lab.arn
     }
@@ -224,9 +224,9 @@ resource "aws_lambda_function" "submit_code" {
 
   environment {
     variables = {
-      SESSIONS_TABLE_NAME   = aws_dynamodb_table.sessions.name
+      SESSIONS_TABLE_NAME    = aws_dynamodb_table.sessions.name
       SUBMISSIONS_TABLE_NAME = aws_dynamodb_table.submissions.name
-      GRADE_LAB_LAMBDA_ARN  = aws_lambda_function.grade_lab.arn
+      GRADE_LAB_LAMBDA_ARN   = aws_lambda_function.grade_lab.arn
     }
   }
 
@@ -282,9 +282,9 @@ resource "aws_lambda_function" "cleanup_expired" {
 
   environment {
     variables = {
-      SESSIONS_TABLE_NAME   = aws_dynamodb_table.sessions.name
-      STOP_LAB_LAMBDA_ARN   = aws_lambda_function.stop_lab.arn
-      GRADE_LAB_LAMBDA_ARN  = aws_lambda_function.grade_lab.arn
+      SESSIONS_TABLE_NAME  = aws_dynamodb_table.sessions.name
+      STOP_LAB_LAMBDA_ARN  = aws_lambda_function.stop_lab.arn
+      GRADE_LAB_LAMBDA_ARN = aws_lambda_function.grade_lab.arn
     }
   }
 
@@ -308,7 +308,7 @@ resource "aws_lambda_function" "get_result" {
 
   environment {
     variables = {
-      RESULTS_TABLE_NAME  = aws_dynamodb_table.results.name
+      RESULTS_TABLE_NAME = aws_dynamodb_table.results.name
     }
   }
 

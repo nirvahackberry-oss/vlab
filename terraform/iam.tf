@@ -45,8 +45,8 @@ resource "aws_iam_role" "scheduler_invoke_stop_lambda" {
 
 data "aws_iam_policy_document" "scheduler_invoke_stop_lambda" {
   statement {
-    effect    = "Allow"
-    actions   = ["lambda:InvokeFunction"]
+    effect  = "Allow"
+    actions = ["lambda:InvokeFunction"]
     resources = [
       aws_lambda_function.stop_lab.arn,
       aws_lambda_function.grade_lab.arn,
@@ -290,8 +290,8 @@ data "aws_iam_policy_document" "lab_ops_lambda" {
   }
 
   statement {
-    sid    = "PassEcsRoles"
-    effect = "Allow"
+    sid     = "PassEcsRoles"
+    effect  = "Allow"
     actions = ["iam:PassRole"]
     resources = [
       aws_iam_role.ecs_task_execution.arn,
@@ -331,9 +331,9 @@ data "aws_iam_policy_document" "lab_ops_lambda" {
   }
 
   statement {
-    sid    = "InvokeLabLambdas"
-    effect = "Allow"
-    actions = ["lambda:InvokeFunction"]
+    sid       = "InvokeLabLambdas"
+    effect    = "Allow"
+    actions   = ["lambda:InvokeFunction"]
     resources = ["*"]
   }
 }
