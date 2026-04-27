@@ -9,4 +9,4 @@ RUN pip install \
     scipy
 
 WORKDIR /workspace
-CMD ["bash"]
+CMD ["sh", "-c", "python3 -m http.server 8888 & tail -f /dev/null"]

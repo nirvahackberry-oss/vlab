@@ -7,4 +7,4 @@ RUN apt-get update && apt-get install -y \
     curl
 
 WORKDIR /workspace
-CMD ["bash"]
+CMD ["sh", "-c", "tail -f /dev/null"]

@@ -27,4 +27,4 @@ RUN apt-get update && apt-get install -y \
     iproute2
 
 WORKDIR /workspace
-CMD ["bash"]
+CMD ["tail", "-f", "/dev/null"]
