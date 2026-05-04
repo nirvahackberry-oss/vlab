@@ -4,6 +4,19 @@ from datetime import datetime, timezone
 
 import boto3
 
+_LAB_ID_ALIASES = {
+    "python-lab": "python",
+    "java-lab": "java",
+    "linux-lab": "linux",
+    "dbms-lab": "dbms",
+}
+
+
+def _canonical_lab_type(lab_id: str) -> str:
+    if not lab_id:
+        return lab_id
+    return _LAB_ID_ALIASES.get(lab_id, lab_id)
+
 
 def _parse_event(event):
     if isinstance(event, dict) and "body" in event:
@@ -30,7 +43,12 @@ def lambda_handler(event, context):
     if not sub or not sess:
         return {"statusCode": 404, "body": json.dumps({"error": "Submission or session not found"})}
 
-    lab_type = sub.get("labType", sess.get("labType", "python"))
+    lab_type = (
+        sub.get("labType")
+        or sess.get("labType")
+        or _canonical_lab_type(sess.get("labId", ""))
+        or "python"
+    )
     user_id = sub.get("userId", sess.get("userId", "unknown"))
 
     bucket = os.environ["TEST_CASES_BUCKET"]

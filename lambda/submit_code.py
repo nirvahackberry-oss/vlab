@@ -3,7 +3,28 @@ import os
 from datetime import datetime, timezone
 
 import boto3
-#testing
+
+_LAB_ID_ALIASES = {
+    "python-lab": "python",
+    "java-lab": "java",
+    "linux-lab": "linux",
+    "dbms-lab": "dbms",
+}
+
+
+def _canonical_lab_type(lab_id: str) -> str:
+    if not lab_id:
+        return lab_id
+    extra = {}
+    raw = os.environ.get("LAB_ID_ALIASES_JSON", "").strip()
+    if raw:
+        try:
+            extra = json.loads(raw)
+        except json.JSONDecodeError:
+            extra = {}
+    merged = {**_LAB_ID_ALIASES, **extra}
+    return merged.get(lab_id, lab_id)
+
 
 def _parse_body(event: dict) -> dict:
     body = event.get("body", "{}")
@@ -30,10 +51,12 @@ def lambda_handler(event, context):
     if not session:
         return {"statusCode": 404, "body": json.dumps({"error": "Session not found"})}
 
+    resolved_type = session.get("labType") or _canonical_lab_type(session.get("labId", ""))
+
     item = {
         "sessionId": session_id,
         "userId": session.get("userId", "unknown"),
-        "labType": session.get("labType", "unknown"),
+        "labType": resolved_type if resolved_type else "unknown",
         "code": code,
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }

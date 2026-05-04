@@ -4,6 +4,27 @@ import time
 
 import boto3
 
+_LAB_ID_ALIASES = {
+    "python-lab": "python",
+    "java-lab": "java",
+    "linux-lab": "linux",
+    "dbms-lab": "dbms",
+}
+
+
+def _canonical_lab_type(lab_id: str) -> str:
+    if not lab_id:
+        return lab_id
+    extra = {}
+    raw = os.environ.get("LAB_ID_ALIASES_JSON", "").strip()
+    if raw:
+        try:
+            extra = json.loads(raw)
+        except json.JSONDecodeError:
+            extra = {}
+    merged = {**_LAB_ID_ALIASES, **extra}
+    return merged.get(lab_id, lab_id)
+
 
 def _response(success: bool, syntax_error: str = "", runtime_error: str = "", output: str = ""):
     return {
@@ -82,11 +103,11 @@ def _read_logs(logs_client, log_group: str, log_stream: str, retries: int = 5) -
 def lambda_handler(event, context):
     body = _parse_body(event)
     session_id = body.get("sessionId")
-    lab_type = body.get("labType")
+    lab_type = _canonical_lab_type(body.get("labType") or body.get("labId") or "")
     code = body.get("code", "")
 
     if not session_id or not lab_type:
-        return _response(False, runtime_error="sessionId and labType are required")
+        return _response(False, runtime_error="sessionId and labType (or labId) are required")
 
     lab_cmd = _lab_commands(lab_type)
     if not lab_cmd:

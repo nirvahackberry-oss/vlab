@@ -6,6 +6,28 @@ from datetime import datetime, timedelta, timezone
 
 import boto3
 
+# Frontend routes often use slugs like "python-lab"; ECS/task map keys use "python".
+_LAB_ID_ALIASES = {
+    "python-lab": "python",
+    "java-lab": "java",
+    "linux-lab": "linux",
+    "dbms-lab": "dbms",
+}
+
+
+def _canonical_lab_type(lab_id: str) -> str:
+    if not lab_id:
+        return lab_id
+    extra = {}
+    raw = os.environ.get("LAB_ID_ALIASES_JSON", "").strip()
+    if raw:
+        try:
+            extra = json.loads(raw)
+        except json.JSONDecodeError:
+            extra = {}
+    merged = {**_LAB_ID_ALIASES, **extra}
+    return merged.get(lab_id, lab_id)
+
 
 def _response(status_code: int, body: dict) -> dict:
     return {
@@ -49,22 +71,23 @@ def lambda_handler(event, context):
 
     body = _parse_event_body(event)
     user_id = body.get("userId")
-    # Accept labId as requested by the frontend
+    # Accept labId as requested by the frontend (may be a slug e.g. python-lab)
     lab_id = body.get("labId", body.get("labType"))
-    
-    # Map labId back to labType internally if needed
-    lab_type = lab_id 
-    
+    lab_type = _canonical_lab_type(lab_id)
+
     try:
         duration_minutes = _to_int(body.get("duration", default_timeout), "duration")
     except ValueError as exc:
         return _response(400, {"success": False, "message": str(exc)})
     additional_env = body.get("environment", {})
 
-    if not user_id or not lab_type:
+    if not user_id or not lab_id:
         return _response(400, {"success": False, "message": "userId and labId are required"})
     if lab_type not in allowed_lab_types:
-        return _response(400, {"success": False, "message": f"Unsupported labId: {lab_type}"})
+        return _response(
+            400,
+            {"success": False, "message": f"Unsupported labId: {lab_id} (resolved type: {lab_type})"},
+        )
     if duration_minutes <= 0:
         return _response(400, {"success": False, "message": "duration must be > 0"})
     if lab_type not in task_definition_map:
