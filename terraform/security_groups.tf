@@ -33,13 +33,13 @@ resource "aws_security_group" "ecs_tasks" {
   }
 
   dynamic "ingress" {
-    for_each = length(var.lab_task_ingress_cidr_blocks) > 0 ? [1] : []
+    for_each = length(local.effective_lab_task_ingress_cidr_blocks) > 0 ? [1] : []
     content {
       description = "Allow inbound to lab app (direct task IP / Ignito proxy)"
       from_port   = var.lab_container_port
       to_port     = var.lab_container_port
       protocol    = "tcp"
-      cidr_blocks = var.lab_task_ingress_cidr_blocks
+      cidr_blocks = local.effective_lab_task_ingress_cidr_blocks
     }
   }
 

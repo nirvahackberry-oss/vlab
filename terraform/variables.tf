@@ -118,7 +118,7 @@ variable "lab_container_port" {
 }
 
 variable "lab_task_ingress_cidr_blocks" {
-  description = "CIDRs allowed to reach the lab container port on the task ENI. Use [\"0.0.0.0/0\"] when tasks have assignPublicIp ENABLED and a client (e.g. Ignito backend) calls http://task-ip:port directly. Empty = no direct Internet ingress (ALB-only when enable_alb)."
+  description = "CIDRs allowed to reach the lab container port on the task ENI. When empty, non-dev environments get no direct ingress; dev automatically uses [\"0.0.0.0/0\"] (Ignito + public task IP). Set explicitly (e.g. [\"203.0.113.0/32\"]) to override dev or lock down prod."
   type        = list(string)
   default     = []
 }

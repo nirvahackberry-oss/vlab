@@ -18,6 +18,11 @@ output "ecs_cluster_name" {
   value       = aws_ecs_cluster.lab.name
 }
 
+output "ecs_task_security_group_id" {
+  description = "Security group attached to lab Fargate tasks. In dev, inbound TCP on lab_container_port is opened for Ignito-style direct access unless lab_task_ingress_cidr_blocks overrides."
+  value       = aws_security_group.ecs_tasks.id
+}
+
 output "dynamodb_table_name" {
   description = "DynamoDB table storing active sessions."
   value       = aws_dynamodb_table.sessions.name
