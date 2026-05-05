@@ -24,7 +24,23 @@ RUN apt-get update && apt-get install -y \
     socat \
     inetutils-telnet \
     tcpdump \
-    iproute2
+    iproute2 \
+    python3 \
+    python3-pip
+
+RUN useradd --create-home --uid 1000 --shell /bin/bash labuser
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    LAB_WORKSPACE=/workspace
 
 WORKDIR /workspace
-CMD ["tail", "-f", "/dev/null"]
+
+# Ensure runtime user can write to /workspace (used by ECS Exec writes/runs).
+RUN mkdir -p /workspace && chown -R labuser:labuser /workspace
+
+USER labuser
+
+# Keep the task running for ECS Exec interactive commands.
+CMD ["sh", "-c", "tail -f /dev/null"]
