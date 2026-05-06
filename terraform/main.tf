@@ -42,13 +42,8 @@ locals {
     var.tags
   )
 
-  # Ignito (and similar) call http://task-public-ip:8888 from outside the VPC. Without an ALB, the
-  # task ENI needs inbound on the lab port. When var.lab_task_ingress_cidr_blocks is empty, dev
-  # stacks open 0.0.0.0/0; set lab_task_ingress_cidr_blocks explicitly to restrict (e.g. office IP).
-  effective_lab_task_ingress_cidr_blocks = (
-    length(var.lab_task_ingress_cidr_blocks) > 0 ? var.lab_task_ingress_cidr_blocks :
-    (var.environment == "dev" ? ["0.0.0.0/0"] : [])
-  )
+  # Job model: no inbound to tasks is required (tasks are short-lived and write results to DynamoDB).
+  effective_lab_task_ingress_cidr_blocks = []
 }
 
 data "aws_caller_identity" "current" {}

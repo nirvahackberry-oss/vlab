@@ -63,12 +63,6 @@ variable "enable_nat_gateway" {
   default     = false
 }
 
-variable "enable_alb" {
-  description = "Enable optional ALB resources."
-  type        = bool
-  default     = false
-}
-
 variable "enable_temp_data_bucket" {
   description = "Enable optional S3 bucket for temporary lab data."
   type        = bool
@@ -93,6 +87,12 @@ variable "results_table_name" {
   default     = "lab-results"
 }
 
+variable "runs_table_name" {
+  description = "DynamoDB runs table name (per-run output for polling)."
+  type        = string
+  default     = "vlab-runs"
+}
+
 variable "vpc_cidr" {
   description = "CIDR block for VPC."
   type        = string
@@ -109,18 +109,6 @@ variable "public_subnet_cidrs" {
   description = "Public subnet CIDRs."
   type        = list(string)
   default     = ["10.40.101.0/24", "10.40.102.0/24"]
-}
-
-variable "lab_container_port" {
-  description = "Container port used by the lab image."
-  type        = number
-  default     = 8888
-}
-
-variable "lab_task_ingress_cidr_blocks" {
-  description = "CIDRs allowed to reach the lab container port on the task ENI. When empty, non-dev environments get no direct ingress; dev automatically uses [\"0.0.0.0/0\"] (Ignito + public task IP). Set explicitly (e.g. [\"203.0.113.0/32\"]) to override dev or lock down prod."
-  type        = list(string)
-  default     = []
 }
 
 variable "lab_environment" {

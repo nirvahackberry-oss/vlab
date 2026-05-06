@@ -28,11 +28,6 @@ def lambda_handler(event, context):
             InvocationType="Event",
             Payload=json.dumps({"sessionId": session_id, "reason": "EXPIRED_CLEANUP"}).encode("utf-8"),
         )
-        lambda_client.invoke(
-            FunctionName=os.environ["GRADE_LAB_LAMBDA_ARN"],
-            InvocationType="Event",
-            Payload=json.dumps({"sessionId": session_id, "trigger": "ON_LAB_END"}).encode("utf-8"),
-        )
         stopped += 1
 
     return {"statusCode": 200, "body": json.dumps({"expiredSessionsHandled": stopped})}

@@ -19,7 +19,7 @@ output "ecs_cluster_name" {
 }
 
 output "ecs_task_security_group_id" {
-  description = "Security group attached to lab Fargate tasks. In dev, inbound TCP on lab_container_port is opened for Ignito-style direct access unless lab_task_ingress_cidr_blocks overrides."
+  description = "Security group attached to lab Fargate tasks."
   value       = aws_security_group.ecs_tasks.id
 }
 
@@ -34,6 +34,7 @@ output "dynamodb_tables" {
     sessions    = aws_dynamodb_table.sessions.name
     submissions = aws_dynamodb_table.submissions.name
     results     = aws_dynamodb_table.results.name
+    runs        = aws_dynamodb_table.runs.name
   }
 }
 
@@ -55,7 +56,3 @@ output "test_cases_bucket" {
   value       = aws_s3_bucket.test_cases.bucket
 }
 
-output "alb_dns_name" {
-  description = "Optional ALB DNS name."
-  value       = var.enable_alb ? aws_lb.lab[0].dns_name : null
-}

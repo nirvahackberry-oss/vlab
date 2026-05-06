@@ -52,6 +52,18 @@ data "archive_file" "get_session_zip" {
   output_path = "${path.module}/get_session.zip"
 }
 
+data "archive_file" "get_run_zip" {
+  type        = "zip"
+  source_file = "${path.module}/../lambda/get_run.py"
+  output_path = "${path.module}/get_run.zip"
+}
+
+data "archive_file" "process_task_result_zip" {
+  type        = "zip"
+  source_file = "${path.module}/../lambda/process_task_result.py"
+  output_path = "${path.module}/process_task_result.zip"
+}
+
 locals {
   resolved_lab_cpu_map = {
     for lab_type in var.lab_types : lab_type => tostring(lookup(var.lab_cpu_by_type, lab_type, var.lab_cpu))
@@ -132,18 +144,13 @@ resource "aws_lambda_function" "start_lab" {
 
   environment {
     variables = {
+      DYNAMODB_TABLE_NAME     = aws_dynamodb_table.sessions.name
+      DEFAULT_SESSION_TIMEOUT = tostring(var.session_timeout_minutes)
+      ALLOWED_LAB_TYPES       = join(",", var.lab_types)
       ECS_CLUSTER_ARN         = aws_ecs_cluster.lab.arn
       LAB_TASK_DEFINITION_MAP = jsonencode({ for lab_type, td in aws_ecs_task_definition.lab : lab_type => td.arn })
       ECS_SUBNET_IDS          = join(",", aws_subnet.private[*].id)
       ECS_SECURITY_GROUP_ID   = aws_security_group.ecs_tasks.id
-      DYNAMODB_TABLE_NAME     = aws_dynamodb_table.sessions.name
-      STOP_LAB_LAMBDA_ARN     = aws_lambda_function.stop_lab.arn
-      SCHEDULER_ROLE_ARN      = aws_iam_role.scheduler_invoke_stop_lambda.arn
-      SCHEDULER_GROUP_NAME    = aws_scheduler_schedule_group.lab.name
-      DEFAULT_SESSION_TIMEOUT = tostring(var.session_timeout_minutes)
-      ENABLE_ALB              = tostring(var.enable_alb)
-      ALB_DNS_NAME            = var.enable_alb ? aws_lb.lab[0].dns_name : ""
-      ALLOWED_LAB_TYPES       = join(",", var.lab_types)
     }
   }
 
@@ -168,9 +175,8 @@ resource "aws_lambda_function" "stop_lab" {
   environment {
     variables = {
       DYNAMODB_TABLE_NAME  = aws_dynamodb_table.sessions.name
-      ECS_CLUSTER_ARN      = aws_ecs_cluster.lab.arn
-      SCHEDULER_GROUP_NAME = aws_scheduler_schedule_group.lab.name
       GRADE_LAB_LAMBDA_ARN = aws_lambda_function.grade_lab.arn
+      ECS_CLUSTER_ARN      = aws_ecs_cluster.lab.arn
     }
   }
 
@@ -199,7 +205,7 @@ resource "aws_lambda_function" "execute_code" {
       ECS_SUBNET_IDS          = join(",", aws_subnet.private[*].id)
       ECS_SECURITY_GROUP_ID   = aws_security_group.ecs_tasks.id
       SESSIONS_TABLE_NAME     = aws_dynamodb_table.sessions.name
-      RESULTS_TABLE_NAME      = aws_dynamodb_table.results.name
+      RUNS_TABLE_NAME         = aws_dynamodb_table.runs.name
       LAB_LOG_GROUP_NAME      = aws_cloudwatch_log_group.ecs.name
     }
   }
@@ -258,6 +264,7 @@ resource "aws_lambda_function" "grade_lab" {
       RESULTS_TABLE_NAME      = aws_dynamodb_table.results.name
       SESSIONS_TABLE_NAME     = aws_dynamodb_table.sessions.name
       TEST_CASES_BUCKET       = aws_s3_bucket.test_cases.bucket
+      RUNS_TABLE_NAME         = aws_dynamodb_table.runs.name
       LAB_LOG_GROUP_NAME      = aws_cloudwatch_log_group.ecs.name
     }
   }
@@ -282,9 +289,8 @@ resource "aws_lambda_function" "cleanup_expired" {
 
   environment {
     variables = {
-      SESSIONS_TABLE_NAME  = aws_dynamodb_table.sessions.name
-      STOP_LAB_LAMBDA_ARN  = aws_lambda_function.stop_lab.arn
-      GRADE_LAB_LAMBDA_ARN = aws_lambda_function.grade_lab.arn
+      SESSIONS_TABLE_NAME = aws_dynamodb_table.sessions.name
+      STOP_LAB_LAMBDA_ARN = aws_lambda_function.stop_lab.arn
     }
   }
 
@@ -309,6 +315,30 @@ resource "aws_lambda_function" "get_result" {
   environment {
     variables = {
       RESULTS_TABLE_NAME = aws_dynamodb_table.results.name
+    }
+  }
+
+  tags = local.common_tags
+}
+
+resource "aws_lambda_function" "get_run" {
+  function_name    = "${local.name_prefix}-get-run"
+  role             = aws_iam_role.lab_ops_lambda.arn
+  runtime          = "python3.12"
+  handler          = "get_run.lambda_handler"
+  filename         = data.archive_file.get_run_zip.output_path
+  source_code_hash = data.archive_file.get_run_zip.output_base64sha256
+  timeout          = 30
+  memory_size      = 256
+
+  vpc_config {
+    subnet_ids         = aws_subnet.private[*].id
+    security_group_ids = [aws_security_group.lambda.id]
+  }
+
+  environment {
+    variables = {
+      RUNS_TABLE_NAME = aws_dynamodb_table.runs.name
     }
   }
 
@@ -353,6 +383,31 @@ resource "aws_lambda_function" "get_session" {
       DYNAMODB_TABLE_NAME = aws_dynamodb_table.sessions.name
       ECS_CLUSTER_ARN     = aws_ecs_cluster.lab.arn
       AWS_ACCOUNT_ID      = data.aws_caller_identity.current.account_id
+    }
+  }
+
+  tags = local.common_tags
+}
+
+resource "aws_lambda_function" "process_task_result" {
+  function_name    = "${local.name_prefix}-process-task-result"
+  role             = aws_iam_role.lab_ops_lambda.arn
+  runtime          = "python3.12"
+  handler          = "process_task_result.lambda_handler"
+  filename         = data.archive_file.process_task_result_zip.output_path
+  source_code_hash = data.archive_file.process_task_result_zip.output_base64sha256
+  timeout          = 120
+  memory_size      = 256
+
+  vpc_config {
+    subnet_ids         = aws_subnet.private[*].id
+    security_group_ids = [aws_security_group.lambda.id]
+  }
+
+  environment {
+    variables = {
+      RUNS_TABLE_NAME    = aws_dynamodb_table.runs.name
+      LAB_LOG_GROUP_NAME = aws_cloudwatch_log_group.ecs.name
     }
   }
 

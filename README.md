@@ -1,7 +1,7 @@
 # Ephemeral Multi-Lab on AWS (Terraform + CI/CD)
 
 Production-ready infrastructure for isolated, short-lived multi-lab sessions using ECS Fargate.  
-Each lab session is mapped to one task, auto-stopped via EventBridge Scheduler, and tracked in DynamoDB with TTL backup cleanup.
+Job-model execution: sessions are metadata only; each **Run click** starts a short-lived Fargate task that executes and exits. Outputs are stored in DynamoDB and polled by `runId`.
 
 ## Architecture
 
@@ -12,38 +12,39 @@ flowchart TD
     U -->|POST /lab-sessions| APIGW
     U -->|GET /lab-sessions/{sessionId}| APIGW
     U -->|POST /lab-sessions/{sessionId}/stop| APIGW
-    U -->|POST /execute| APIGW
+    U -->|POST /runs| APIGW
+    U -->|GET /runs/{runId}| APIGW
     U -->|POST /submit| APIGW
     U -->|POST /grade| APIGW
     U -->|GET /result| APIGW
     APIGW --> L1[start-lab Lambda]
     APIGW --> L2[execute-code Lambda]
+    APIGW --> LR[get-run Lambda]
     APIGW --> L3[submit-code Lambda]
     APIGW --> L4[grade-lab Lambda]
     APIGW --> L5[stop-lab Lambda]
     APIGW --> L6[get-result Lambda]
     APIGW --> L7[get-labs Lambda]
     APIGW --> L8[get-session Lambda]
-    L1 --> ECS[ECS Fargate Task]
-    L2 --> ECS
+    L2 --> ECSRUN[ECS Fargate Run Task]
     L4 --> ECS
     L1 --> SCH[EventBridge Scheduler]
     L1 --> DDB[(DynamoDB vlab-sessions)]
     L3 --> SUB[(DynamoDB submissions)]
     L4 --> RES[(DynamoDB results)]
+    ECSRUN -->|task stopped event| PTR[process-task-result Lambda]
+    PTR --> RUNS[(DynamoDB runs by runId)]
     SCH -->|timeout| L5
     SCH -->|rate 5 min| CLN[cleanup-expired Lambda]
     CLN --> L5
     CLN --> L4
-    L5 --> ECS
+    L5 --> DDB
     L5 --> SCH
     L5 --> DDB
     L4 --> S3[(S3 test cases)]
     DDB -->|TTL expiryTime| TTL[Automatic metadata cleanup]
     ECS --> ECR[ECR prebuilt image]
-    ECS -->|task stopped event| PTR[process-task-result Lambda]
-    PTR --> RES
-    ECS --> CWL[CloudWatch Logs]
+    ECSRUN --> CWL[CloudWatch Logs]
 ```
 
 ## Resource Coverage
@@ -59,7 +60,8 @@ flowchart TD
   - `POST /lab-sessions`
   - `GET /lab-sessions/{sessionId}`
   - `POST /lab-sessions/{sessionId}/stop`
-  - `POST /execute`
+  - `POST /runs`
+  - `GET /runs/{runId}`
   - `POST /submit`
   - `POST /grade`
   - `GET /result`
@@ -69,10 +71,10 @@ flowchart TD
   - `vlab-sessions` (TTL: `expiryTime`)
   - `lab-submissions`
   - `lab-results` (TTL: `expiryTime`)
+  - `vlab-runs` (TTL: `expiryTime`, PK: `runId`, GSI: `bySession`)
 - S3 bucket for grading test cases
 - IAM roles/policies with scoped permissions
 - CloudWatch logs for ECS, Lambda, API Gateway
-- Optional ALB
 - Optional S3 temp data bucket
 
 ## Project Layout
@@ -110,27 +112,25 @@ lab-images/
   java/Dockerfile
   linux/Dockerfile
   dbms/Dockerfile
-Dockerfile
-lab_server.py
 ```
-
-> `Dockerfile` and `lab_server.py` at the root define the base lab runtime image (FastAPI health/info server on port 8888). Each `lab-images/<type>/Dockerfile` extends or replaces this for language-specific environments.
+ 
+> Runtime images are defined per lab type under `lab-images/<type>/Dockerfile`. In job-model mode, images do not need to expose HTTP ports.
 
 ## Runtime Flow
 
 1. Client calls `GET /labs` or `GET /labs/{labId}` to browse available labs.
 2. Client calls `POST /lab-sessions` with `userId`, `labId`, and optional `duration`.
-3. `start-lab` Lambda validates `labId`, selects the matching ECR image, and launches one Fargate task (`assignPublicIp=DISABLED`).
-4. Lambda creates a one-time EventBridge schedule to invoke `stop-lab` at session expiry.
-5. Lambda stores session record in DynamoDB (`sessionId`, `userId`, `labId`, `taskArn`, `startTime`, `expiryTime`, `status: starting`).
-6. Client polls `GET /lab-sessions/{sessionId}` until `status` is `running`.
-7. Student calls `POST /execute` for code execution; a short-lived Fargate task runs the code and results are read from CloudWatch Logs.
-8. When the ECS execution task stops, EventBridge triggers `process-task-result` Lambda, which parses logs and writes to `lab-results`.
+3. `start-lab` Lambda validates `labId` and stores a session record in DynamoDB (`sessionId`, `userId`, `labId`, `labType`, `startTime`, `expiryTime`).
+4. Client can call `GET /lab-sessions/{sessionId}` to check if the session is `running` or `expired`.
+5. Student clicks **Run** and calls `POST /runs` with `sessionId`, `labType/labId`, and `code`.
+6. `execute-code` Lambda creates a `runId`, writes `status=QUEUED` to DynamoDB `vlab-runs`, and launches a short-lived Fargate task that executes the code.
+7. When the ECS task stops, EventBridge triggers `process-task-result` Lambda, which parses CloudWatch logs and writes the final output/errors to DynamoDB `vlab-runs` keyed by `runId`.
+8. Client polls `GET /runs/{runId}` until `status` is `COMPLETED` or `FAILED`.
 9. Student calls `POST /submit` to persist the submission; grading is triggered synchronously via `grade-lab` Lambda.
 10. `GET /result?sessionId=<id>` returns the grading result from `lab-results`.
 11. Timeout or manual `POST /lab-sessions/{sessionId}/stop` calls `stop-lab`.
-12. `stop-lab` stops the ECS task, deletes the EventBridge schedule, and deletes the DynamoDB session record.
-13. A recurring EventBridge schedule (every 5 minutes) invokes `cleanup-expired`, which scans for sessions past their `expiryTime` and invokes `stop-lab` + `grade-lab` for each.
+12. `stop-lab` deletes the DynamoDB session record (job-model runs are already short-lived tasks).
+13. A recurring EventBridge schedule (every 5 minutes) invokes `cleanup-expired`, which scans for sessions past their `expiryTime` and invokes `stop-lab`.
 14. DynamoDB TTL acts as a final backup metadata cleanup.
 
 ## Prerequisites
@@ -224,9 +224,9 @@ Response:
   "success": true,
   "sessionId": "sess_a1b2c3d4",
   "labId": "python",
-  "status": "starting",
-  "message": "Lab provisioning started",
-  "estimatedReadyInSeconds": 120
+  "status": "running",
+  "message": "Lab session started",
+  "estimatedReadyInSeconds": 0
 }
 ```
 
@@ -280,7 +280,7 @@ Response:
 
 Idempotent: returns success when session is already removed.
 
-### `POST /execute`
+### `POST /runs`
 
 Request body:
 
@@ -292,18 +292,67 @@ Request body:
 }
 ```
 
-Response:
+Response (immediate):
 
 ```json
 {
   "success": true,
-  "syntaxError": "",
-  "runtimeError": "",
-  "output": "hello"
+  "runId": "run_1a2b3c4d5e6f",
+  "status": "STARTED"
 }
 ```
 
 Supported `labType` values: `python`, `java`, `linux`, `dbms`.
+
+### `GET /runs/{runId}`
+
+Response (not ready yet):
+
+```json
+{
+  "status": "PROCESSING",
+  "runId": "run_1a2b3c4d5e6f",
+  "message": "Result not ready yet"
+}
+```
+
+Response (ready):
+
+```json
+{
+  "runId": "run_1a2b3c4d5e6f",
+  "sessionId": "sess_a1b2c3d4",
+  "labType": "python",
+  "status": "COMPLETED",
+  "success": true,
+  "output": "hello",
+  "syntaxError": "",
+  "runtimeError": ""
+}
+```
+
+### Frontend polling example (finish output, no streaming)
+
+```js
+// 1) Start a run
+const start = await fetch(`${API_BASE}/runs`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ sessionId, labType: "python", code }),
+}).then(r => r.json());
+
+// 2) Poll until completed
+let run;
+for (;;) {
+  run = await fetch(`${API_BASE}/runs/${start.runId}`).then(r => r.json());
+  if (run.status === "COMPLETED" || run.status === "FAILED") break;
+  await new Promise(r => setTimeout(r, 800));
+}
+
+// 3) Show output/errors
+console.log(run.output);
+console.error(run.syntaxError || run.runtimeError);
+```
 
 ### `POST /submit`
 
@@ -401,6 +450,7 @@ Response (not yet ready):
 | `dynamodb_table_name` | `vlab-sessions` | Sessions table name |
 | `submissions_table_name` | `lab-submissions` | Submissions table name |
 | `results_table_name` | `lab-results` | Results table name |
+| `runs_table_name` | `vlab-runs` | Runs table name (per-run output) |
 
 Example per-lab sizing:
 

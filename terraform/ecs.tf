@@ -43,17 +43,16 @@ resource "aws_ecs_task_definition" "lab" {
 
   container_definitions = jsonencode([
     {
-      name      = "lab-runtime"
-      image     = "${aws_ecr_repository.lab_images[each.key].repository_url}:latest"
-      essential = true
+      name        = "lab-runtime"
+      image       = "${aws_ecr_repository.lab_images[each.key].repository_url}:latest"
+      essential   = true
+      environment = local.lab_environment_list
       portMappings = [
         {
-          containerPort = var.lab_container_port
-          hostPort      = var.lab_container_port
+          containerPort = 8080
           protocol      = "tcp"
         }
       ]
-      environment = local.lab_environment_list
       logConfiguration = {
         logDriver = "awslogs"
         options = {
@@ -66,54 +65,6 @@ resource "aws_ecs_task_definition" "lab" {
   ])
 
   tags = local.common_tags
-}
-
-resource "aws_lb" "lab" {
-  count              = var.enable_alb ? 1 : 0
-  name               = substr("${local.name_prefix}-alb", 0, 32)
-  load_balancer_type = "application"
-  internal           = var.enable_nat_gateway ? false : true
-  security_groups    = [aws_security_group.alb[0].id]
-  subnets            = var.enable_nat_gateway ? aws_subnet.public[*].id : aws_subnet.private[*].id
-
-  tags = merge(local.common_tags, {
-    Name = "${local.name_prefix}-alb"
-  })
-}
-
-resource "aws_lb_target_group" "lab" {
-  count       = var.enable_alb ? 1 : 0
-  name        = substr("${local.name_prefix}-tg", 0, 32)
-  target_type = "ip"
-  vpc_id      = aws_vpc.main.id
-  port        = var.lab_container_port
-  protocol    = "HTTP"
-
-  health_check {
-    enabled             = true
-    protocol            = "HTTP"
-    path                = "/"
-    healthy_threshold   = 2
-    unhealthy_threshold = 5
-    interval            = 30
-    timeout             = 5
-  }
-
-  tags = merge(local.common_tags, {
-    Name = "${local.name_prefix}-tg"
-  })
-}
-
-resource "aws_lb_listener" "lab" {
-  count             = var.enable_alb ? 1 : 0
-  load_balancer_arn = aws_lb.lab[0].arn
-  port              = 80
-  protocol          = "HTTP"
-
-  default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.lab[0].arn
-  }
 }
 
 resource "aws_s3_bucket" "temp_lab_data" {

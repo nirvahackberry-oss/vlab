@@ -1,14 +1,17 @@
 import json
-import boto3
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 
-dynamodb = boto3.resource('dynamodb')
-ecs = boto3.client('ecs')
+import boto3
+
+dynamodb = boto3.resource("dynamodb")
 
 def lambda_handler(event, context):
     table_name = os.environ.get('DYNAMODB_TABLE_NAME')
     table = dynamodb.Table(table_name)
+    region = os.environ.get("AWS_REGION")
+    ecs_cluster_arn = os.environ.get("ECS_CLUSTER_ARN", "")
+    ecs = boto3.client("ecs", region_name=region) if region and ecs_cluster_arn else None
     
     path_parameters = event.get('pathParameters')
     if not path_parameters or 'sessionId' not in path_parameters:
@@ -29,39 +32,43 @@ def lambda_handler(event, context):
                 "body": json.dumps({"success": False, "message": "Session not found"})
             }
             
-        status = item.get('status', 'pending')
-        
-        # If the lab is marked as starting, check ECS for the actual status
-        if status == 'starting' or status == 'pending':
-            task_arn = item.get('taskArn')
-            cluster_arn = os.environ.get('ECS_CLUSTER_ARN')
-            
-            if task_arn:
-                task_resp = ecs.describe_tasks(cluster=cluster_arn, tasks=[task_arn])
-                tasks = task_resp.get('tasks', [])
+        status = item.get("status", "running")
+        expiry = item.get("expiryTime")
+        now_epoch = int(datetime.now(timezone.utc).timestamp())
+        if isinstance(expiry, (int, float)) and now_epoch >= int(expiry):
+            status = "expired"
+
+        # Warm-session bootstrap: if the session is still "starting", try to resolve the task ENI IP.
+        if status == "starting" and ecs and item.get("taskArn") and not (item.get("taskPrivateIp") or "").strip():
+            try:
+                desc = ecs.describe_tasks(cluster=ecs_cluster_arn, tasks=[item["taskArn"]])
+                tasks = desc.get("tasks") or []
                 if tasks:
-                    task = tasks[0]
-                    last_status = task.get('lastStatus')
-                    
-                    if last_status == 'RUNNING':
-                        status = 'running'
-                        # Get the IP address (this assumes public IP for now, adjust based on network mode)
-                        # For production, you might return an ALB URL or a proxy URL
-                        eni_id = ""
-                        for attachment in task.get('attachments', []):
-                            for detail in attachment.get('details', []):
-                                if detail.get('name') == 'networkInterfaceId':
-                                    eni_id = detail.get('value')
-                        
-                        # In this lab env, we return a mock tool URL or the task ID
-                        # In a real setup, we'd query EC2 for the Public IP of that ENI.
-                        item['status'] = 'running'
+                    t = tasks[0]
+                    private_ip = ""
+                    for att in t.get("attachments") or []:
+                        if att.get("type") != "ElasticNetworkInterface":
+                            continue
+                        for d in att.get("details") or []:
+                            if d.get("name") == "privateIPv4Address":
+                                private_ip = d.get("value") or ""
+                                break
+                        if private_ip:
+                            break
+                    if private_ip:
                         table.update_item(
-                            Key={'sessionId': session_id},
-                            UpdateExpression="SET #s = :s",
+                            Key={"sessionId": session_id},
+                            UpdateExpression="SET #s = :s, taskPrivateIp = :ip, taskPort = :p",
                             ExpressionAttributeNames={"#s": "status"},
-                            ExpressionAttributeValues={":s": "running"}
+                            ExpressionAttributeValues={":s": "running", ":ip": private_ip, ":p": 8080},
                         )
+                        item["taskPrivateIp"] = private_ip
+                        item["taskPort"] = 8080
+                        status = "running"
+                    elif t.get("lastStatus") == "STOPPED":
+                        status = "failed"
+            except Exception as e:
+                print("Failed to resolve task IP:", str(e))
 
         # Build response matching frontend spec
         result = {

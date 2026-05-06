@@ -30,51 +30,33 @@ def _extract_session_id(event: dict) -> str:
 def lambda_handler(event, context):
     table_name = os.environ["DYNAMODB_TABLE_NAME"]
     region = os.environ["AWS_REGION"]
+    cluster_arn = os.environ.get("ECS_CLUSTER_ARN", "")
 
     session_id = _extract_session_id(event)
     if not session_id:
         return _response(400, {"error": "sessionId is required"})
 
     ddb = boto3.resource("dynamodb", region_name=region).Table(table_name)
-    ecs_client = boto3.client("ecs", region_name=region)
-    scheduler = boto3.client("scheduler", region_name=region)
     lambda_client = boto3.client("lambda", region_name=region)
+    ecs = boto3.client("ecs", region_name=region)
 
     session_record = ddb.get_item(Key={"sessionId": session_id}).get("Item")
     if not session_record:
         # Already cleaned up (idempotent success)
         return _response(200, {"sessionId": session_id, "status": "NOT_FOUND_OR_ALREADY_STOPPED"})
 
-    task_arn = session_record.get("taskArn")
-    schedule_id = session_record.get("scheduleId")
-    cluster_arn = os.environ.get("ECS_CLUSTER_ARN") or session_record.get("clusterArn")
-
-    if task_arn and cluster_arn:
+    task_arn = session_record.get("taskArn") or ""
+    if cluster_arn and task_arn:
         try:
-            ecs_client.stop_task(
-                cluster=cluster_arn,
-                task=task_arn,
-                reason=f"Session {session_id} stopped",
-            )
-        except ClientError as error:
-            error_code = error.response["Error"].get("Code")
-            if error_code not in {"TaskNotFoundException", "ClusterNotFoundException"}:
-                raise
-
-    if schedule_id:
-        try:
-            scheduler.delete_schedule(
-                Name=schedule_id,
-                GroupName=os.environ.get("SCHEDULER_GROUP_NAME", "default"),
-            )
-        except ClientError as error:
-            error_code = error.response["Error"].get("Code")
-            if error_code not in {"ResourceNotFoundException", "ValidationException"}:
-                raise
+            ecs.stop_task(cluster=cluster_arn, task=task_arn, reason="Lab session stopped")
+        except ClientError:
+            # If task is already gone, continue cleanup.
+            pass
 
     ddb.delete_item(Key={"sessionId": session_id})
 
     trigger = event.get("reason") if isinstance(event, dict) else None
+    # Optional: auto-grade on stop/timeout if enabled.
     if trigger in {"AUTO_TIMEOUT", "EXPIRED_CLEANUP"} and os.environ.get("GRADE_LAB_LAMBDA_ARN"):
         lambda_client.invoke(
             FunctionName=os.environ["GRADE_LAB_LAMBDA_ARN"],

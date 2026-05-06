@@ -1,7 +1,7 @@
+import base64
 import json
 import os
 import uuid
-import base64
 from datetime import datetime, timedelta, timezone
 
 import boto3
@@ -56,18 +56,13 @@ def _to_int(value, field_name: str) -> int:
 
 def lambda_handler(event, context):
     region = os.environ["AWS_REGION"]
-    ecs_cluster_arn = os.environ["ECS_CLUSTER_ARN"]
-    task_definition_map = json.loads(os.environ["LAB_TASK_DEFINITION_MAP"])
-    ecs_subnet_ids = os.environ["ECS_SUBNET_IDS"].split(",")
-    ecs_security_group_id = os.environ["ECS_SECURITY_GROUP_ID"]
     table_name = os.environ["DYNAMODB_TABLE_NAME"]
-    stop_lab_lambda_arn = os.environ["STOP_LAB_LAMBDA_ARN"]
-    scheduler_role_arn = os.environ["SCHEDULER_ROLE_ARN"]
-    scheduler_group_name = os.environ["SCHEDULER_GROUP_NAME"]
     default_timeout = int(os.environ["DEFAULT_SESSION_TIMEOUT"])
     allowed_lab_types = set(os.environ.get("ALLOWED_LAB_TYPES", "").split(","))
-    enable_alb = os.environ.get("ENABLE_ALB", "false").lower() == "true"
-    alb_dns_name = os.environ.get("ALB_DNS_NAME", "")
+    cluster_arn = os.environ["ECS_CLUSTER_ARN"]
+    task_definition_map = json.loads(os.environ["LAB_TASK_DEFINITION_MAP"])
+    subnet_ids = os.environ["ECS_SUBNET_IDS"].split(",")
+    security_group_id = os.environ["ECS_SECURITY_GROUP_ID"]
 
     body = _parse_event_body(event)
     user_id = body.get("userId")
@@ -90,28 +85,41 @@ def lambda_handler(event, context):
         )
     if duration_minutes <= 0:
         return _response(400, {"success": False, "message": "duration must be > 0"})
-    if lab_type not in task_definition_map:
-        return _response(500, {"success": False, "message": f"No task definition configured for labId: {lab_type}"})
 
-    session_id = f"sess_{str(uuid.uuid4())[:8]}" # Using a cleaner prefix for frontend
-    schedule_id = f"stop-{session_id}"
+    session_id = f"sess_{str(uuid.uuid4())[:8]}"
     now_utc = datetime.now(timezone.utc)
     stop_at = now_utc + timedelta(minutes=duration_minutes)
     ttl_epoch = int((stop_at + timedelta(minutes=5)).timestamp())
-
-    ecs_client = boto3.client("ecs", region_name=region)
     ddb = boto3.resource("dynamodb", region_name=region).Table(table_name)
-    scheduler = boto3.client("scheduler", region_name=region)
+    ecs = boto3.client("ecs", region_name=region)
 
-    run_task_response = ecs_client.run_task(
-        cluster=ecs_cluster_arn,
+    session_token = uuid.uuid4().hex
+
+    ddb.put_item(
+        Item={
+            "sessionId": session_id,
+            "userId": user_id,
+            "labId": lab_id,
+            "labType": lab_type,
+            "startTime": now_utc.isoformat(),
+            "expiryTime": ttl_epoch,
+            "status": "starting",
+            "sessionToken": session_token,
+        }
+    )
+
+    if lab_type not in task_definition_map:
+        return _response(400, {"success": False, "message": f"No task definition for labType: {lab_type}"})
+
+    run_resp = ecs.run_task(
+        cluster=cluster_arn,
         taskDefinition=task_definition_map[lab_type],
         launchType="FARGATE",
         count=1,
         networkConfiguration={
             "awsvpcConfiguration": {
-                "subnets": ecs_subnet_ids,
-                "securityGroups": [ecs_security_group_id],
+                "subnets": subnet_ids,
+                "securityGroups": [security_group_id],
                 "assignPublicIp": "DISABLED",
             }
         },
@@ -119,50 +127,62 @@ def lambda_handler(event, context):
             "containerOverrides": [
                 {
                     "name": "lab-runtime",
-                    "environment": [{"name": "LAB_TYPE", "value": lab_type}]
-                    + (
-                        [{"name": k, "value": str(v)} for k, v in additional_env.items()]
-                        if isinstance(additional_env, dict)
-                        else []
-                    ),
+                    "environment": [
+                        {"name": "LAB_TYPE", "value": lab_type},
+                        {"name": "SESSION_ID", "value": session_id},
+                        {"name": "SESSION_TOKEN", "value": session_token},
+                    ]
+                    + [{"name": k, "value": str(v)} for k, v in (additional_env or {}).items()],
                 }
             ]
         },
-        enableExecuteCommand=False,
     )
 
-    failures = run_task_response.get("failures", [])
+    failures = run_resp.get("failures") or []
     if failures:
-        return _response(500, {"success": False, "message": "Failed to start ECS task", "details": str(failures)})
+        ddb.update_item(
+            Key={"sessionId": session_id},
+            UpdateExpression="SET #s = :s, error = :e",
+            ExpressionAttributeNames={"#s": "status"},
+            ExpressionAttributeValues={":s": "failed_to_start", ":e": json.dumps(failures)},
+        )
+        return _response(500, {"success": False, "message": "Failed to start lab container", "error": failures})
 
-    task_arn = run_task_response["tasks"][0]["taskArn"]
+    task_arn = run_resp["tasks"][0]["taskArn"]
 
-    scheduler.create_schedule(
-        Name=schedule_id,
-        GroupName=scheduler_group_name,
-        ScheduleExpression=f"at({stop_at.strftime('%Y-%m-%dT%H:%M:%S')})",
-        ScheduleExpressionTimezone="UTC",
-        FlexibleTimeWindow={"Mode": "OFF"},
-        Target={
-            "Arn": stop_lab_lambda_arn,
-            "RoleArn": scheduler_role_arn,
-            "Input": json.dumps({"sessionId": session_id, "reason": "AUTO_TIMEOUT"}),
+    # Best-effort: wait briefly for ENI private IP so execute_code can forward immediately.
+    private_ip = None
+    deadline = datetime.now(timezone.utc).timestamp() + 60
+    while datetime.now(timezone.utc).timestamp() < deadline:
+        desc = ecs.describe_tasks(cluster=cluster_arn, tasks=[task_arn])
+        tasks = desc.get("tasks") or []
+        if not tasks:
+            continue
+        t = tasks[0]
+        if t.get("lastStatus") == "STOPPED":
+            break
+        for att in t.get("attachments") or []:
+            if att.get("type") != "ElasticNetworkInterface":
+                continue
+            for d in att.get("details") or []:
+                if d.get("name") == "privateIPv4Address":
+                    private_ip = d.get("value")
+                    break
+            if private_ip:
+                break
+        if private_ip:
+            break
+
+    ddb.update_item(
+        Key={"sessionId": session_id},
+        UpdateExpression="SET #s = :s, taskArn = :t, taskPrivateIp = :ip, taskPort = :p",
+        ExpressionAttributeNames={"#s": "status"},
+        ExpressionAttributeValues={
+            ":s": "running" if private_ip else "starting",
+            ":t": task_arn,
+            ":ip": private_ip or "",
+            ":p": 8080,
         },
-        ActionAfterCompletion="DELETE",
-    )
-
-    ddb.put_item(
-        Item={
-            "sessionId": session_id,
-            "userId": user_id,
-            "labId": lab_id,
-            "taskArn": task_arn,
-            "clusterArn": ecs_cluster_arn,
-            "scheduleId": schedule_id,
-            "startTime": now_utc.isoformat(),
-            "expiryTime": ttl_epoch,
-            "status": "starting",
-        }
     )
 
     return _response(
@@ -171,9 +191,9 @@ def lambda_handler(event, context):
             "success": True,
             "sessionId": session_id,
             "labId": lab_id,
-            "status": "starting",
-            "message": "Lab provisioning started",
-            "estimatedReadyInSeconds": 120
+            "status": "running" if private_ip else "starting",
+            "message": "Lab session started",
+            "estimatedReadyInSeconds": 0 if private_ip else 30,
         },
     )
 

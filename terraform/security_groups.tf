@@ -21,26 +21,12 @@ resource "aws_security_group" "ecs_tasks" {
   description = "Security group for ephemeral lab tasks"
   vpc_id      = aws_vpc.main.id
 
-  dynamic "ingress" {
-    for_each = var.enable_alb ? [1] : []
-    content {
-      description     = "Allow ALB to reach lab container"
-      from_port       = var.lab_container_port
-      to_port         = var.lab_container_port
-      protocol        = "tcp"
-      security_groups = [aws_security_group.alb[0].id]
-    }
-  }
-
-  dynamic "ingress" {
-    for_each = length(local.effective_lab_task_ingress_cidr_blocks) > 0 ? [1] : []
-    content {
-      description = "Allow inbound to lab app (direct task IP / Ignito proxy)"
-      from_port   = var.lab_container_port
-      to_port     = var.lab_container_port
-      protocol    = "tcp"
-      cidr_blocks = local.effective_lab_task_ingress_cidr_blocks
-    }
+  ingress {
+    description     = "Allow Lambdas to call warm session runtime"
+    from_port       = 8080
+    to_port         = 8080
+    protocol        = "tcp"
+    security_groups = [aws_security_group.lambda.id]
   }
 
   egress {
@@ -62,11 +48,14 @@ resource "aws_security_group" "vpc_endpoints" {
   vpc_id      = aws_vpc.main.id
 
   ingress {
-    description     = "Allow VPC resources to call endpoints"
-    from_port       = 443
-    to_port         = 443
-    protocol        = "tcp"
-    security_groups = [aws_security_group.lambda.id, aws_security_group.ecs_tasks.id]
+    description = "Allow VPC resources to call endpoints"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    security_groups = [
+      aws_security_group.lambda.id,
+      aws_security_group.ecs_tasks.id
+    ]
   }
 
   egress {
@@ -82,29 +71,3 @@ resource "aws_security_group" "vpc_endpoints" {
   })
 }
 
-resource "aws_security_group" "alb" {
-  count       = var.enable_alb ? 1 : 0
-  name        = "${local.name_prefix}-alb-sg"
-  description = "Security group for optional ALB"
-  vpc_id      = aws_vpc.main.id
-
-  ingress {
-    description = "Allow HTTPS inbound"
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    description = "Allow outbound to tasks"
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = merge(local.common_tags, {
-    Name = "${local.name_prefix}-alb-sg"
-  })
-}

@@ -91,6 +91,14 @@ resource "aws_apigatewayv2_integration" "get_result" {
   payload_format_version = "2.0"
 }
 
+resource "aws_apigatewayv2_integration" "get_run" {
+  api_id                 = aws_apigatewayv2_api.lab.id
+  integration_type       = "AWS_PROXY"
+  integration_uri        = aws_lambda_function.get_run.invoke_arn
+  integration_method     = "POST"
+  payload_format_version = "2.0"
+}
+
 resource "aws_apigatewayv2_integration" "get_labs" {
   api_id                 = aws_apigatewayv2_api.lab.id
   integration_type       = "AWS_PROXY"
@@ -139,7 +147,7 @@ resource "aws_apigatewayv2_route" "session_stop" {
 
 resource "aws_apigatewayv2_route" "execute" {
   api_id    = aws_apigatewayv2_api.lab.id
-  route_key = "POST /execute"
+  route_key = "POST /runs"
   target    = "integrations/${aws_apigatewayv2_integration.execute_code.id}"
 }
 
@@ -151,8 +159,8 @@ resource "aws_apigatewayv2_route" "submit" {
 
 resource "aws_apigatewayv2_route" "result" {
   api_id    = aws_apigatewayv2_api.lab.id
-  route_key = "GET /result"
-  target    = "integrations/${aws_apigatewayv2_integration.get_result.id}"
+  route_key = "GET /runs/{runId}"
+  target    = "integrations/${aws_apigatewayv2_integration.get_run.id}"
 }
 
 resource "aws_lambda_permission" "apigw_start" {
@@ -191,6 +199,14 @@ resource "aws_lambda_permission" "apigw_get_result" {
   statement_id  = "AllowApiGatewayInvokeGetResult"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.get_result.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.lab.execution_arn}/*/*"
+}
+
+resource "aws_lambda_permission" "apigw_get_run" {
+  statement_id  = "AllowApiGatewayInvokeGetRun"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.get_run.function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.lab.execution_arn}/*/*"
 }

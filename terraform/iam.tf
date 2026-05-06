@@ -122,9 +122,12 @@ data "aws_iam_policy_document" "start_lab_lambda" {
       "ecs:RunTask",
       "ecs:DescribeTasks"
     ]
+    # RunTask supports scoping to task definitions + cluster.
+    # DescribeTasks is evaluated against task ARNs; allow broadly.
     resources = concat(
       values(aws_ecs_task_definition.lab)[*].arn,
-      [aws_ecs_cluster.lab.arn]
+      [aws_ecs_cluster.lab.arn],
+      ["*"]
     )
   }
 
@@ -265,6 +268,16 @@ data "aws_iam_policy_document" "lab_ops_lambda" {
   }
 
   statement {
+    sid    = "CloudWatchLogsRead"
+    effect = "Allow"
+    actions = [
+      "logs:GetLogEvents",
+      "logs:DescribeLogStreams"
+    ]
+    resources = ["*"]
+  }
+
+  statement {
     sid    = "VpcNetworking"
     effect = "Allow"
     actions = [
@@ -312,6 +325,7 @@ data "aws_iam_policy_document" "lab_ops_lambda" {
     ]
     resources = [
       aws_dynamodb_table.sessions.arn,
+      aws_dynamodb_table.runs.arn,
       aws_dynamodb_table.submissions.arn,
       aws_dynamodb_table.results.arn
     ]

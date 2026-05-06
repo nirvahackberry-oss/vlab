@@ -1,6 +1,8 @@
 import json
 import os
 import time
+import uuid
+from urllib import request, error
 
 import boto3
 
@@ -49,11 +51,12 @@ def _parse_body(event: dict) -> dict:
 
 
 def _lab_commands(lab_type: str):
+    # Return default filename only; the final command is built after we decide the filename.
     mapping = {
-        "python": ("main.py", "python -m py_compile main.py && python main.py"),
-        "java":   ("Main.java", "javac Main.java && java Main"),
-        "linux":  ("script.sh", "bash -n script.sh && bash script.sh"),
-        "dbms":   ("query.sql", "psql -U student -d labdb -f query.sql"),
+        "python": "main.py",
+        "java": "Main.java",
+        "linux": "script.sh",
+        "dbms": "query.sql",
     }
     return mapping.get(lab_type)
 
@@ -104,84 +107,132 @@ def lambda_handler(event, context):
     body = _parse_body(event)
     session_id = body.get("sessionId")
     lab_type = _canonical_lab_type(body.get("labType") or body.get("labId") or "")
-    code = body.get("code", "")
+    # Support both legacy (code) and new (content) payloads
+    code = body.get("content", body.get("code", ""))
+    run_mode = (body.get("runMode") or "run").lower()
+    raw_path = body.get("path") or body.get("filePath") or ""
 
     if not session_id or not lab_type:
         return _response(False, runtime_error="sessionId and labType (or labId) are required")
 
-    lab_cmd = _lab_commands(lab_type)
-    if not lab_cmd:
-        return _response(False, runtime_error=f"Unsupported labType: {lab_type}")
-
-    filename, run_cmd = lab_cmd
     region = os.environ["AWS_REGION"]
+
+    # Validate session exists and is not expired
+    sessions_table = os.environ["SESSIONS_TABLE_NAME"]
+    sess = boto3.resource("dynamodb", region_name=region).Table(sessions_table).get_item(Key={"sessionId": session_id}).get("Item")
+    if not sess:
+        return _response(False, runtime_error="Session not found")
+    if int(time.time()) >= int(sess.get("expiryTime", 0)):
+        return _response(False, runtime_error="Session expired")
+
+    runs_table = os.environ["RUNS_TABLE_NAME"]
+    run_id = f"run_{uuid.uuid4().hex[:12]}"
+
+    ddb = boto3.resource("dynamodb", region_name=region).Table(runs_table)
+
+    # Write a queued run record (TTL 2 hours)
+    expiry_time = int(time.time()) + (2 * 3600)
+    ddb.put_item(
+        Item={
+            "runId": run_id,
+            "sessionId": session_id,
+            "labType": lab_type,
+            "status": "QUEUED",
+            "createdAt": int(time.time()),
+            "expiryTime": expiry_time,
+        }
+    )
+
+    # Warm session forwarding: call the already-running container.
     cluster_arn = os.environ["ECS_CLUSTER_ARN"]
-    task_definition_map = json.loads(os.environ["LAB_TASK_DEFINITION_MAP"])
-    subnet_ids = os.environ["ECS_SUBNET_IDS"].split(",")
-    security_group_id = os.environ["ECS_SECURITY_GROUP_ID"]
-    log_group_name = os.environ["LAB_LOG_GROUP_NAME"]
-
-    if lab_type not in task_definition_map:
-        return _response(False, runtime_error=f"No task definition for labType: {lab_type}")
-
-    # Write code to file then run — single shell string avoids heredoc quoting issues
-    escaped = code.replace("'", "'\\''")
-    shell_cmd = f"printf '%s' '{escaped}' > /workspace/{filename} && cd /workspace && {run_cmd}"
-
     ecs = boto3.client("ecs", region_name=region)
-    logs = boto3.client("logs", region_name=region)
+    task_arn = (sess.get("taskArn") or "").strip()
+    private_ip = (sess.get("taskPrivateIp") or "").strip()
+    port = int(sess.get("taskPort") or 8080)
 
-    run_resp = ecs.run_task(
-        cluster=cluster_arn,
-        taskDefinition=task_definition_map[lab_type],
-        launchType="FARGATE",
-        count=1,
-        networkConfiguration={
-            "awsvpcConfiguration": {
-                "subnets": subnet_ids,
-                "securityGroups": [security_group_id],
-                "assignPublicIp": "DISABLED",
-            }
-        },
-        overrides={
-            "containerOverrides": [
-                {
-                    "name": "lab-runtime",
-                    "command": ["bash", "-c", shell_cmd],
-                    "environment": [
-                        {"name": "LAB_TYPE", "value": lab_type},
-                        {"name": "SESSION_ID", "value": session_id},
-                    ],
-                }
-            ]
+    if task_arn and not private_ip:
+        desc = ecs.describe_tasks(cluster=cluster_arn, tasks=[task_arn])
+        tasks = desc.get("tasks") or []
+        if tasks:
+            for att in tasks[0].get("attachments") or []:
+                if att.get("type") != "ElasticNetworkInterface":
+                    continue
+                for d in att.get("details") or []:
+                    if d.get("name") == "privateIPv4Address":
+                        private_ip = d.get("value") or ""
+                        break
+                if private_ip:
+                    break
+
+    if not task_arn or not private_ip:
+        ddb.update_item(
+            Key={"runId": run_id},
+            UpdateExpression="SET #s = :s, runtimeError = :e",
+            ExpressionAttributeNames={"#s": "status"},
+            ExpressionAttributeValues={":s": "FAILED", ":e": "Session container not ready"},
+        )
+        return _response(False, runtime_error="Session container not ready")
+
+    url = f"http://{private_ip}:{port}/execute"
+    token = (sess.get("sessionToken") or "").strip()
+    req_body = json.dumps(
+        {"sessionId": session_id, "labType": lab_type, "code": code, "path": raw_path, "runMode": run_mode}
+    ).encode("utf-8")
+
+    req = request.Request(
+        url,
+        data=req_body,
+        method="POST",
+        headers={
+            "Content-Type": "application/json",
+            "X-Session-Token": token,
         },
     )
 
-    failures = run_resp.get("failures")
-    if failures:
-        return _response(False, runtime_error=json.dumps(failures))
+    try:
+        with request.urlopen(req, timeout=30) as resp:
+            raw = resp.read().decode("utf-8")
+            result = json.loads(raw or "{}")
+    except error.HTTPError as exc:
+        body = exc.read().decode("utf-8") if exc.fp else ""
+        result = {"success": False, "output": "", "syntaxError": "", "runtimeError": f"Container error: {exc.code} {body}"}
+    except Exception as exc:
+        result = {"success": False, "output": "", "syntaxError": "", "runtimeError": f"Failed to reach container: {exc}"}
 
-    # Clear previous results to avoid stale data during polling
-    results_table = os.environ["RESULTS_TABLE_NAME"]
-    ddb = boto3.resource("dynamodb", region_name=region).Table(results_table)
-    ddb.delete_item(Key={"sessionId": session_id})
+    # Persist run result immediately (keeps GET /runs/{runId} compatible).
+    ddb.update_item(
+        Key={"runId": run_id},
+        UpdateExpression="SET #s = :s, success = :ok, output = :o, syntaxError = :se, runtimeError = :re, completedAt = :t",
+        ExpressionAttributeNames={"#s": "status"},
+        ExpressionAttributeValues={
+            ":s": "COMPLETED" if result.get("success") else "FAILED",
+            ":ok": bool(result.get("success")),
+            ":o": result.get("output", ""),
+            ":se": result.get("syntaxError", ""),
+            ":re": result.get("runtimeError", ""),
+            ":t": int(time.time()),
+        },
+    )
 
-    task_arn = run_resp["tasks"][0]["taskArn"]
-    task_id = task_arn.split("/")[-1]
+    # Optional: kick off grading on every run (expensive). This updates grade fields on the run record.
+    if run_mode == "grade" and os.environ.get("GRADE_LAB_LAMBDA_ARN"):
+        boto3.client("lambda", region_name=region).invoke(
+            FunctionName=os.environ["GRADE_LAB_LAMBDA_ARN"],
+            InvocationType="Event",
+            Payload=json.dumps({"sessionId": session_id, "runId": run_id, "trigger": "ON_RUN"}).encode("utf-8"),
+        )
 
-    task = _wait_task_stopped(ecs, cluster_arn, task_arn, timeout=90)
-    if not task:
-        ecs.stop_task(cluster=cluster_arn, task=task_arn, reason="Lambda timeout")
-        return _response(False, runtime_error="Execution timed out")
-
-    # CloudWatch stream: ecs/{container-name}/{task-id}
-    log_stream = f"ecs/lab-runtime/{task_id}"
-    output = _read_logs(logs, log_group_name, log_stream)
-
-    exit_code = task.get("containers", [{}])[0].get("exitCode", 1)
-    if exit_code == 0:
-        return _response(True, output=output)
-
-    syntax_error = output if any(t in output.lower() for t in ["syntaxerror", "compile", "javac", "py_compile"]) else ""
-    runtime_error = "" if syntax_error else output
-    return _response(False, syntax_error=syntax_error, runtime_error=runtime_error, output=output)
+    return {
+        "statusCode": 200,
+        "headers": {"Content-Type": "application/json"},
+        "body": json.dumps(
+            {
+                "success": bool(result.get("success")),
+                "runId": run_id,
+                "status": "COMPLETED" if result.get("success") else "FAILED",
+                "output": result.get("output", ""),
+                "syntaxError": result.get("syntaxError", ""),
+                "runtimeError": result.get("runtimeError", ""),
+            }
+        ),
+    }

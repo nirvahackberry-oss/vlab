@@ -28,6 +28,7 @@ def _parse_event(event):
 def lambda_handler(event, context):
     payload = _parse_event(event)
     session_id = payload.get("sessionId")
+    run_id = payload.get("runId") or ""
     if not session_id:
         return {"statusCode": 400, "body": json.dumps({"error": "sessionId is required"})}
 
@@ -37,6 +38,8 @@ def lambda_handler(event, context):
     submissions = ddb.Table(os.environ["SUBMISSIONS_TABLE_NAME"])
     results = ddb.Table(os.environ["RESULTS_TABLE_NAME"])
     sessions = ddb.Table(os.environ["SESSIONS_TABLE_NAME"])
+    runs_table_name = os.environ.get("RUNS_TABLE_NAME", "").strip()
+    runs = ddb.Table(runs_table_name) if runs_table_name else None
 
     sub = submissions.get_item(Key={"sessionId": session_id}).get("Item")
     sess = sessions.get_item(Key={"sessionId": session_id}).get("Item")
@@ -82,5 +85,23 @@ def lambda_handler(event, context):
         "gradedAt": datetime.now(timezone.utc).isoformat(),
     }
     results.put_item(Item=result_item)
+
+    # Optional: if invoked for runMode=grade, attach grade summary to the run record.
+    if run_id and runs:
+        try:
+            runs.update_item(
+                Key={"runId": run_id},
+                UpdateExpression="SET gradeScore = :s, gradeMaxScore = :m, gradePassed = :p, gradeFeedback = :f, gradeAt = :t",
+                ExpressionAttributeValues={
+                    ":s": score,
+                    ":m": max_score,
+                    ":p": passed,
+                    ":f": result_item["feedback"],
+                    ":t": result_item["gradedAt"],
+                },
+            )
+        except Exception as e:
+            # Do not fail grading result due to run annotation issues.
+            print("Failed to update run grade fields:", str(e))
 
     return {"statusCode": 200, "body": json.dumps(result_item)}

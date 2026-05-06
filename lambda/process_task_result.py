@@ -28,20 +28,22 @@ def lambda_handler(event, context):
         print(f"Task {task_arn} is not stopped. Status: {last_status}")
         return
 
-    # Extract session ID from environment overrides
+    # Extract run + session IDs from environment overrides
     session_id = None
+    run_id = None
     container_overrides = detail.get("overrides", {}).get("containerOverrides", [])
     for container in container_overrides:
         env = container.get("environment", [])
         for pair in env:
             if pair.get("name") == "SESSION_ID":
                 session_id = pair.get("value")
-                break
-        if session_id:
+            if pair.get("name") == "RUN_ID":
+                run_id = pair.get("value")
+        if session_id and run_id:
             break
             
-    if not session_id:
-        print(f"No SESSION_ID found in overrides for task {task_arn}. Ignoring.")
+    if not run_id:
+        print(f"No RUN_ID found in overrides for task {task_arn}. Ignoring.")
         return
 
     # Get logs
@@ -91,26 +93,50 @@ def lambda_handler(event, context):
             syntax_error = output if any(t in out_lower for t in ["syntax", "compile"]) else ""
             runtime_error = "" if syntax_error else output
 
-    # Save to DynamoDB with TTL (2 hours)
-    table_name = os.environ["RESULTS_TABLE_NAME"]
+    # Save to DynamoDB runs table with TTL (2 hours)
+    table_name = os.environ["RUNS_TABLE_NAME"]
     ddb = boto3.resource("dynamodb", region_name=region).Table(table_name)
     
     # TTL is epoch time in seconds
     expiry_time = int(time.time()) + (2 * 3600)
     
-    result_item = {
-        "sessionId": session_id,
-        "taskId": task_id,
-        "success": success,
-        "output": output,
-        "syntaxError": syntax_error,
-        "runtimeError": runtime_error,
-        "labType": lab_type,
-        "timestamp": detail.get("stoppedAt", detail.get("updatedAt", "")),
-        "expiryTime": expiry_time
-    }
-    
-    ddb.put_item(Item=result_item)
-    print(f"Saved result for session {session_id} to {table_name} with TTL")
+    final_status = "COMPLETED" if success else "FAILED"
+    timestamp = detail.get("stoppedAt", detail.get("updatedAt", ""))
+
+    # Update the existing run record created by execute_code (preferred),
+    # but also works as an upsert if it doesn't exist yet.
+    ddb.update_item(
+        Key={"runId": run_id},
+        UpdateExpression=(
+            "SET #s = :s, "
+            "success = :ok, "
+            "#out = :out, "
+            "syntaxError = :syn, "
+            "runtimeError = :run, "
+            "labType = :lab, "
+            "#ts = :ts, "
+            "expiryTime = :ttl, "
+            "taskId = :tid, "
+            "sessionId = :sid"
+        ),
+        ExpressionAttributeNames={
+            "#s": "status",
+            "#out": "output",
+            "#ts": "timestamp",
+        },
+        ExpressionAttributeValues={
+            ":s": final_status,
+            ":ok": success,
+            ":out": output,
+            ":syn": syntax_error,
+            ":run": runtime_error,
+            ":lab": lab_type,
+            ":ts": timestamp,
+            ":ttl": expiry_time,
+            ":tid": task_id,
+            ":sid": session_id or "",
+        },
+    )
+    print(f"Finalized run {run_id} in {table_name} (status={final_status})")
     
     return {"status": "success"}

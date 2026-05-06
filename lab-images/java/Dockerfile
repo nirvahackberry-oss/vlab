@@ -21,7 +21,11 @@ WORKDIR /workspace
 # Ensure runtime user can write to /workspace (used by ECS Exec writes/runs).
 RUN mkdir -p /workspace && chown -R labuser:labuser /workspace
 
+WORKDIR /app
+COPY --chown=labuser:labuser lab-images/common/lab_server.py /app/lab_server.py
+
 USER labuser
 
-# Keep the task running for ECS Exec interactive commands.
-CMD ["sh", "-c", "tail -f /dev/null"]
+# Warm session: keep task alive and accept /execute requests.
+EXPOSE 8080
+CMD ["python3", "/app/lab_server.py"]
