@@ -1,4 +1,4 @@
-ARG LAB_BASE_IMAGE
+ARG LAB_BASE_IMAGE=eclipse-temurin:21-jdk-jammy
 FROM ${LAB_BASE_IMAGE}
 
 WORKDIR /app

@@ -15,7 +15,11 @@ output "ecr_repository_urls" {
 
 output "ecr_lab_base_repository_urls" {
   description = "ECR repository URLs for shared build bases (linux=Ubuntu tools, python=3.11-slim, java=Temurin 21)."
-  value       = { for kind, repo in aws_ecr_repository.lab_bases : kind => repo.repository_url }
+  value = {
+    linux  = aws_ecr_repository.lab_base_linux.repository_url
+    python = aws_ecr_repository.lab_base_python.repository_url
+    java   = aws_ecr_repository.lab_base_java.repository_url
+  }
 }
 
 output "ecs_cluster_name" {

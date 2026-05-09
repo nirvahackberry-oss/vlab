@@ -28,13 +28,10 @@ locals {
       }
     ]
   })
-
-  lab_base_kinds = toset(["linux", "python", "java"])
 }
 
-resource "aws_ecr_repository" "lab_bases" {
-  for_each             = local.lab_base_kinds
-  name                 = "${local.name_prefix}-lab-base-${each.key}"
+resource "aws_ecr_repository" "lab_base_linux" {
+  name                 = "${local.name_prefix}-lab-base-linux"
   image_tag_mutability = "MUTABLE"
   force_delete         = true
 
@@ -47,15 +44,64 @@ resource "aws_ecr_repository" "lab_bases" {
   }
 
   tags = merge(local.common_tags, {
-    Name     = "${local.name_prefix}-lab-base-${each.key}-ecr"
-    LabBase  = each.key
-    Role     = "shared-build-base"
+    Name    = "${local.name_prefix}-lab-base-linux-ecr"
+    LabBase = "linux"
+    Role    = "shared-build-base"
   })
 }
 
-resource "aws_ecr_lifecycle_policy" "lab_bases" {
-  for_each   = aws_ecr_repository.lab_bases
-  repository = each.value.name
+resource "aws_ecr_repository" "lab_base_python" {
+  name                 = "${local.name_prefix}-lab-base-python"
+  image_tag_mutability = "MUTABLE"
+  force_delete         = true
+
+  image_scanning_configuration {
+    scan_on_push = true
+  }
+
+  encryption_configuration {
+    encryption_type = "AES256"
+  }
+
+  tags = merge(local.common_tags, {
+    Name    = "${local.name_prefix}-lab-base-python-ecr"
+    LabBase = "python"
+    Role    = "shared-build-base"
+  })
+}
+
+resource "aws_ecr_repository" "lab_base_java" {
+  name                 = "${local.name_prefix}-lab-base-java"
+  image_tag_mutability = "MUTABLE"
+  force_delete         = true
+
+  image_scanning_configuration {
+    scan_on_push = true
+  }
+
+  encryption_configuration {
+    encryption_type = "AES256"
+  }
+
+  tags = merge(local.common_tags, {
+    Name    = "${local.name_prefix}-lab-base-java-ecr"
+    LabBase = "java"
+    Role    = "shared-build-base"
+  })
+}
+
+resource "aws_ecr_lifecycle_policy" "lab_base_linux" {
+  repository = aws_ecr_repository.lab_base_linux.name
+  policy     = local.ecr_lab_lifecycle_policy
+}
+
+resource "aws_ecr_lifecycle_policy" "lab_base_python" {
+  repository = aws_ecr_repository.lab_base_python.name
+  policy     = local.ecr_lab_lifecycle_policy
+}
+
+resource "aws_ecr_lifecycle_policy" "lab_base_java" {
+  repository = aws_ecr_repository.lab_base_java.name
   policy     = local.ecr_lab_lifecycle_policy
 }
 
