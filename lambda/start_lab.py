@@ -12,6 +12,13 @@ _LAB_ID_ALIASES = {
     "java-lab": "java",
     "linux-lab": "linux",
     "dbms-lab": "dbms",
+    "agilemethodology-lab": "agilemethodology",
+    "android-lab": "android",
+    "bigdata-lab": "bigdata",
+    "datascience-lab": "datascience",
+    "dotnet-lab": "dotnet",
+    "softwareengeering-lab": "softwareengeering",
+    "testing-lab": "testing",
 }
 
 

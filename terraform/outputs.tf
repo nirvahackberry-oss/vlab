@@ -13,6 +13,11 @@ output "ecr_repository_urls" {
   value       = { for lab_type, repo in aws_ecr_repository.lab_images : lab_type => repo.repository_url }
 }
 
+output "ecr_lab_base_repository_urls" {
+  description = "ECR repository URLs for shared build bases (linux=Ubuntu tools, python=3.11-slim, java=Temurin 21)."
+  value       = { for kind, repo in aws_ecr_repository.lab_bases : kind => repo.repository_url }
+}
+
 output "ecs_cluster_name" {
   description = "ECS cluster name."
   value       = aws_ecs_cluster.lab.name

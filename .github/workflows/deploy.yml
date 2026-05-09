@@ -28,7 +28,7 @@ env:
   AWS_REGION: ap-south-1
   PROJECT_NAME: vlab
   ENVIRONMENT: dev
-  LAB_TYPES: "python java linux dbms"
+  LAB_TYPES: "python java linux dbms agilemethodology android bigdata datascience dotnet softwareengeering testing"
 
 jobs:
   build-and-push:
@@ -50,12 +50,57 @@ jobs:
 
       - name: Build and push lab images
         run: |
+          set -euo pipefail
+          registry="${{ steps.login-ecr.outputs.registry }}"
+
+          ensure_repo() {
+            aws ecr describe-repositories --repository-names "$1" >/dev/null 2>&1 || \
+              aws ecr create-repository --repository-name "$1"
+          }
+
+          for suffix in lab-base-linux lab-base-python lab-base-java; do
+            ensure_repo "${PROJECT_NAME}-${ENVIRONMENT}-${suffix}"
+          done
+
+          docker build -f lab-images/base/linux/Dockerfile \
+            -t "${registry}/${PROJECT_NAME}-${ENVIRONMENT}-lab-base-linux:latest" .
+          docker push "${registry}/${PROJECT_NAME}-${ENVIRONMENT}-lab-base-linux:latest"
+
+          docker build -f lab-images/base/python/Dockerfile \
+            -t "${registry}/${PROJECT_NAME}-${ENVIRONMENT}-lab-base-python:latest" .
+          docker push "${registry}/${PROJECT_NAME}-${ENVIRONMENT}-lab-base-python:latest"
+
+          docker build -f lab-images/base/java/Dockerfile \
+            -t "${registry}/${PROJECT_NAME}-${ENVIRONMENT}-lab-base-java:latest" .
+          docker push "${registry}/${PROJECT_NAME}-${ENVIRONMENT}-lab-base-java:latest"
+
+          base_linux="${registry}/${PROJECT_NAME}-${ENVIRONMENT}-lab-base-linux:latest"
+          base_python="${registry}/${PROJECT_NAME}-${ENVIRONMENT}-lab-base-python:latest"
+          base_java="${registry}/${PROJECT_NAME}-${ENVIRONMENT}-lab-base-java:latest"
+
           for lab in ${LAB_TYPES}; do
             repo_name="${PROJECT_NAME}-${ENVIRONMENT}-${lab}"
-            aws ecr describe-repositories --repository-names "${repo_name}" >/dev/null 2>&1 || \
-            aws ecr create-repository --repository-name "${repo_name}"
-            image_uri="${{ steps.login-ecr.outputs.registry }}/${repo_name}:latest"
-            docker build -f "lab-images/${lab}/Dockerfile" -t "${image_uri}" .
+            ensure_repo "${repo_name}"
+            image_uri="${registry}/${repo_name}:latest"
+
+            case "${lab}" in
+              python|datascience)
+                base_uri="${base_python}" ;;
+              java|softwareengeering)
+                base_uri="${base_java}" ;;
+              linux|bigdata|agilemethodology|android|testing)
+                base_uri="${base_linux}" ;;
+              *)
+                base_uri="" ;;
+            esac
+
+            if [ -n "${base_uri}" ]; then
+              docker build -f "lab-images/${lab}/Dockerfile" \
+                --build-arg "LAB_BASE_IMAGE=${base_uri}" \
+                -t "${image_uri}" .
+            else
+              docker build -f "lab-images/${lab}/Dockerfile" -t "${image_uri}" .
+            fi
             docker push "${image_uri}"
           done
 

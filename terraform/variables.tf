@@ -19,7 +19,19 @@ variable "environment" {
 variable "lab_types" {
   description = "Supported lab types."
   type        = list(string)
-  default     = ["python", "java", "linux", "dbms"]
+  default = [
+    "python",
+    "java",
+    "linux",
+    "dbms",
+    "agilemethodology",
+    "android",
+    "bigdata",
+    "datascience",
+    "dotnet",
+    "softwareengeering",
+    "testing",
+  ]
 
   validation {
     condition     = length(var.lab_types) > 0
