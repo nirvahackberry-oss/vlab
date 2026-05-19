@@ -15,5 +15,5 @@ RUN pip install --no-cache-dir \
 
 WORKDIR /workspace
 
-EXPOSE 8080
-CMD ["sh", "-c", "exec jupyter notebook --ip=0.0.0.0 --port=8080 --no-browser --allow-root --ServerApp.token='' --ServerApp.password=''"]
+EXPOSE 8888
+CMD ["sh", "-c", "exec jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --allow-root --ServerApp.token='' --ServerApp.password=''"]
