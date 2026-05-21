@@ -1,12 +1,9 @@
-ARG LAB_BASE_IMAGE=python:3.11-slim
+ARG LAB_BASE_IMAGE=465443875617.dkr.ecr.ap-south-1.amazonaws.com/vlab-dev-lab-base-python:latest
 FROM ${LAB_BASE_IMAGE}
 
 USER root
 
 RUN pip install --no-cache-dir \
-    numpy \
-    pandas \
-    matplotlib \
     paramiko \
     pytest
 

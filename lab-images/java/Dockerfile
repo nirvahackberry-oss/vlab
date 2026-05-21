@@ -1,5 +1,7 @@
-ARG LAB_BASE_IMAGE=eclipse-temurin:21-jdk-jammy
+ARG LAB_BASE_IMAGE=465443875617.dkr.ecr.ap-south-1.amazonaws.com/vlab-dev-lab-base-java:latest
 FROM ${LAB_BASE_IMAGE}
+
+USER root
 
 WORKDIR /app
 COPY --chown=labuser:labuser lab-images/common/lab_server.py /app/lab_server.py

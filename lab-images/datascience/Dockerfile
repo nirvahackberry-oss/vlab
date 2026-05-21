@@ -4,9 +4,6 @@ FROM ${LAB_BASE_IMAGE}
 USER root
 
 RUN pip install --no-cache-dir \
-    pandas \
-    numpy \
-    matplotlib \
     seaborn \
     scikit-learn \
     requests \
@@ -15,7 +12,7 @@ RUN pip install --no-cache-dir \
     jupyterlab
 
 ENV JUPYTER_CONFIG_DIR=/etc/jupyter
-COPY jupyter_server_config.py /etc/jupyter/jupyter_server_config.py
+COPY lab-images/datascience/jupyter_server_config.py /etc/jupyter/jupyter_server_config.py
 
 WORKDIR /workspace
 

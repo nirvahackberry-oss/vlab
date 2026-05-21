@@ -1,25 +1,28 @@
-ARG LAB_BASE_IMAGE=ubuntu:22.04
+ARG LAB_BASE_IMAGE=465443875617.dkr.ecr.ap-south-1.amazonaws.com/vlab-dev-lab-base-linux:latest
 FROM ${LAB_BASE_IMAGE}
 
 USER root
 
+ENV DEBIAN_FRONTEND=noninteractive
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    bash \
-    net-tools \
-    iputils-ping \
-    dnsutils \
-    procps \
-    psmisc \
-    lsof \
+    python3 \
     grep \
     sed \
     gawk \
+    procps \
+    psmisc \
     coreutils \
+    findutils \
+    net-tools \
+    iputils-ping \
+    dnsutils \
+    lsof \
     gcc \
     g++ \
     make \
     build-essential \
-    netcat \
+    netcat-openbsd \
     socat \
     inetutils-telnet \
     tcpdump \

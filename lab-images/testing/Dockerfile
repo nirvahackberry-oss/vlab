@@ -1,16 +1,23 @@
-ARG LAB_BASE_IMAGE=ubuntu:22.04
+ARG LAB_BASE_IMAGE=465443875617.dkr.ecr.ap-south-1.amazonaws.com/vlab-dev-lab-base-linux:latest
 FROM ${LAB_BASE_IMAGE}
 
 USER root
 
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    CHROME_BIN=/usr/bin/google-chrome \
+    CHROMEDRIVER_PATH=/usr/bin/chromedriver
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    openjdk-17-jdk \
-    ca-certificates \
     wget \
     unzip \
     gnupg \
     python3 \
     python3-pip \
+    openjdk-17-jdk \
+    maven \
     && rm -rf /var/lib/apt/lists/*
 
 RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /usr/share/keyrings/chrome.gpg \
@@ -31,6 +38,6 @@ RUN set -eux; \
     chmod +x /usr/bin/chromedriver; \
     rm -rf /tmp/chromedriver-linux64.zip /tmp/chromedriver-linux64
 
-RUN python3 -m pip install --no-cache-dir selenium
+RUN pip install --no-cache-dir selenium
 
 WORKDIR /workspace

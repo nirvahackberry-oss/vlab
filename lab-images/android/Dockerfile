@@ -1,15 +1,21 @@
-ARG LAB_BASE_IMAGE=ubuntu:22.04
+# Android SDK + emulator for Activities, Gradle builds, and AVD (practical #5).
+# GUI emulator may need KVM; use sdkmanager/avdmanager from the IDE terminal on Fargate.
+ARG LAB_BASE_IMAGE=465443875617.dkr.ecr.ap-south-1.amazonaws.com/vlab-dev-lab-base-linux:latest
 FROM ${LAB_BASE_IMAGE}
 
 USER root
 
+ENV DEBIAN_FRONTEND=noninteractive
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    wget \
+    unzip \
     openjdk-17-jdk \
     libglu1-mesa \
     && rm -rf /var/lib/apt/lists/*
 
 ENV ANDROID_HOME=/opt/android-sdk
-ENV PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
+ENV PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator
 
 RUN mkdir -p $ANDROID_HOME/cmdline-tools
 
