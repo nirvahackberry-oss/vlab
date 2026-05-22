@@ -10,3 +10,18 @@ export const labsGetHandler = async ({ pathParameters }) => {
   if (!lab) throw notFound("Lab not found");
   return ok({ lab });
 };
+export const subLabsHandler = async () => {
+  const grouped = {};
+
+  LABS.forEach((lab) => {
+    const semester = lab.semester || "Other";
+
+    if (!grouped[semester]) {
+      grouped[semester] = [];
+    }
+
+    grouped[semester].push(lab);
+  });
+
+  return ok({ subLabs: grouped });
+};

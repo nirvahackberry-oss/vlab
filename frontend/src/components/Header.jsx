@@ -38,10 +38,17 @@ const Header = ({ onMenuClick, title, onBack }) => {
     });
 
     // Add Sub Labs
-    Object.values(subLabs).forEach(subList => {
-      subList.forEach(sub => {
-        data.push({ id: sub.id, type: 'Lab', name: sub.title, path: `/admin/labs/view/${sub.id}` });
-      });
+    Object.values(subLabs || {}).forEach((subList) => {
+      if (Array.isArray(subList)) {
+        subList.forEach((sub) => {
+          data.push({
+            id: sub.id,
+            type: 'Lab',
+            name: sub.title,
+            path: `/admin/labs/view/${sub.id}`,
+          });
+        });
+      }
     });
 
     // Add Mock Users/Policies for now

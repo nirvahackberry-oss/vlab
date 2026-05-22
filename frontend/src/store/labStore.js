@@ -31,12 +31,37 @@ export const useLabStore = create((set) => ({
   },
   loadLabs: async () => {
     set({ isLoading: true, error: null });
-
+  
     try {
-      const [labs, subLabs] = await Promise.all([fetchLabs(), fetchSubLabs()]);
-      set({ labs, subLabs, isLoading: false, error: null });
+      const [labsResponse, subLabsResponse] = await Promise.all([
+        fetchLabs(),
+        fetchSubLabs()
+      ]);
+  
+      set({
+        labs: Array.isArray(labsResponse?.labs)
+          ? labsResponse.labs
+          : [],
+  
+        subLabs: subLabsResponse?.subLabs || {},
+  
+        isLoading: false,
+        error: null
+      });
+  
     } catch (error) {
-      set({ isLoading: false, error: error.message || 'Unable to load labs' });
+      set({
+        isLoading: false,
+        error: error.message || 'Unable to load labs'
+      });
     }
-  },
+  },  loadSubLabs: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await fetchSubLabs();
+      set({ subLabs: response.subLabs || {} });
+    } catch (error) {
+      set({ isLoading: false, error: error.message || 'Unable to load sub-labs' });
+    }
+  }
 }));

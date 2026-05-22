@@ -1,7 +1,7 @@
 import { createHandler } from "./lib/apigw.js";
 import { healthHandler } from "./handlers/health.js";
 import { authLoginHandler } from "./handlers/authLogin.js";
-import { labsListHandler, labsGetHandler } from "./handlers/labs.js";
+import { labsListHandler, labsGetHandler, subLabsHandler } from "./handlers/labs.js";
 import {
   sessionsStartHandler,
   sessionsGetHandler,
@@ -29,6 +29,7 @@ export const ROUTES = [
 
   { method: "GET", path: "/labs", handler: labsListHandler, auth: true },
   { method: "GET", path: "/labs/:labId", handler: labsGetHandler, auth: true },
+  { method: "GET", path: "/sub-labs", handler: subLabsHandler, auth: true },
 
   { method: "POST", path: "/lab-sessions", handler: sessionsStartHandler, auth: true },
   {

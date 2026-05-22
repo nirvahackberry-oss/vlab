@@ -5,7 +5,7 @@ export async function fetchLabs() {
 }
 
 export async function fetchSubLabs() {
-  return apiRequest('/labs/sub-labs');
+  return apiRequest('/sub-labs');
 }
 
 export async function fetchLabDetails(labId) {
