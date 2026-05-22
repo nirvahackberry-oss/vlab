@@ -8,6 +8,8 @@ on:
       - "terraform/**"
       - "lambda/**"
       - "lab-images/**"
+      - "scripts/**"
+      - "../backend/**"
       - ".github/workflows/deploy.yml"
   workflow_dispatch:
     inputs:
@@ -115,6 +117,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Package Node.js Lambdas
+        working-directory: ${{ github.workspace }}
+        run: bash vlab/scripts/package-node-lambdas.sh
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -165,6 +176,15 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_wrapper: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Package Node.js Lambdas
+        working-directory: ${{ github.workspace }}
+        run: bash vlab/scripts/package-node-lambdas.sh
 
       - name: Terraform Init
         run: terraform init

@@ -3,8 +3,8 @@ resource "aws_apigatewayv2_api" "lab" {
   protocol_type = "HTTP"
 
   cors_configuration {
-    allow_headers = ["content-type", "authorization"]
-    allow_methods = ["GET", "POST", "OPTIONS"]
+    allow_headers = ["content-type", "authorization", "x-session-id"]
+    allow_methods = ["GET", "POST", "DELETE", "OPTIONS"]
     allow_origins = ["*"]
     max_age       = 3600
   }
@@ -115,49 +115,67 @@ resource "aws_apigatewayv2_integration" "get_session" {
   payload_format_version = "2.0"
 }
 
+# Legacy Python Lambda routes (disabled when use_node_api_gateway = true)
+
 resource "aws_apigatewayv2_route" "labs" {
+  count = var.use_node_api_gateway ? 0 : 1
+
   api_id    = aws_apigatewayv2_api.lab.id
   route_key = "GET /labs"
   target    = "integrations/${aws_apigatewayv2_integration.get_labs.id}"
 }
 
 resource "aws_apigatewayv2_route" "lab_detail" {
+  count = var.use_node_api_gateway ? 0 : 1
+
   api_id    = aws_apigatewayv2_api.lab.id
   route_key = "GET /labs/{labId}"
   target    = "integrations/${aws_apigatewayv2_integration.get_labs.id}"
 }
 
 resource "aws_apigatewayv2_route" "lab_sessions" {
+  count = var.use_node_api_gateway ? 0 : 1
+
   api_id    = aws_apigatewayv2_api.lab.id
   route_key = "POST /lab-sessions"
   target    = "integrations/${aws_apigatewayv2_integration.start_lab.id}"
 }
 
 resource "aws_apigatewayv2_route" "session_status" {
+  count = var.use_node_api_gateway ? 0 : 1
+
   api_id    = aws_apigatewayv2_api.lab.id
   route_key = "GET /lab-sessions/{sessionId}"
   target    = "integrations/${aws_apigatewayv2_integration.get_session.id}"
 }
 
 resource "aws_apigatewayv2_route" "session_stop" {
+  count = var.use_node_api_gateway ? 0 : 1
+
   api_id    = aws_apigatewayv2_api.lab.id
   route_key = "POST /lab-sessions/{sessionId}/stop"
   target    = "integrations/${aws_apigatewayv2_integration.stop_lab.id}"
 }
 
 resource "aws_apigatewayv2_route" "execute" {
+  count = var.use_node_api_gateway ? 0 : 1
+
   api_id    = aws_apigatewayv2_api.lab.id
   route_key = "POST /runs"
   target    = "integrations/${aws_apigatewayv2_integration.execute_code.id}"
 }
 
 resource "aws_apigatewayv2_route" "submit" {
+  count = var.use_node_api_gateway ? 0 : 1
+
   api_id    = aws_apigatewayv2_api.lab.id
   route_key = "POST /submit"
   target    = "integrations/${aws_apigatewayv2_integration.submit_code.id}"
 }
 
 resource "aws_apigatewayv2_route" "result" {
+  count = var.use_node_api_gateway ? 0 : 1
+
   api_id    = aws_apigatewayv2_api.lab.id
   route_key = "GET /runs/{runId}"
   target    = "integrations/${aws_apigatewayv2_integration.get_run.id}"

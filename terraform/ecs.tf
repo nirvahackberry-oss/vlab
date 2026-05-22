@@ -5,6 +5,9 @@ locals {
       value = v
     }
   ]
+  lab_container_port = {
+    for lab_type in var.lab_types : lab_type => lab_type == "datascience" ? 8888 : 8080
+  }
 }
 
 resource "aws_ecs_cluster" "lab" {
@@ -49,7 +52,7 @@ resource "aws_ecs_task_definition" "lab" {
       environment = local.lab_environment_list
       portMappings = [
         {
-          containerPort = 8080
+          containerPort = local.lab_container_port[each.key]
           protocol      = "tcp"
         }
       ]

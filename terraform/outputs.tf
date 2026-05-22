@@ -57,7 +57,14 @@ output "lambda_arns" {
     grade_lab       = aws_lambda_function.grade_lab.arn
     cleanup_expired = aws_lambda_function.cleanup_expired.arn
     get_result      = aws_lambda_function.get_result.arn
+    node_api        = var.use_node_api_gateway ? aws_lambda_function.node_api[0].arn : null
+    jwt_authorizer  = var.use_node_api_gateway ? aws_lambda_function.jwt_authorizer[0].arn : null
   }
+}
+
+output "api_auth_login_url" {
+  description = "Public login endpoint (no JWT required)."
+  value       = "${aws_apigatewayv2_api.lab.api_endpoint}/auth/login"
 }
 
 output "test_cases_bucket" {

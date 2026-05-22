@@ -172,8 +172,32 @@ def _run_dbms(path: str, code: str) -> tuple[bool, str, str, str]:
         return False, "", "", "Execution timed out"
 
 
+def _normalize_lab_type(body: dict) -> str:
+    raw = (
+        body.get("labType")
+        or body.get("language")
+        or body.get("labId")
+        or LAB_TYPE_ENV
+        or ""
+    )
+    lab_type = str(raw).strip().lower()
+    if lab_type.endswith("-lab"):
+        lab_type = lab_type.replace("-lab", "")
+    return lab_type
+
+
+def _save_file(body: dict) -> dict:
+    path = _resolve_path(body, _normalize_lab_type(body) or "python")
+    content = body.get("content", body.get("code", ""))
+    if not isinstance(content, str):
+        content = str(content)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(content)
+    return {"success": True, "path": path, "message": "File saved"}
+
+
 def _execute(body: dict) -> dict:
-    lab_type = (body.get("labType") or body.get("labId") or LAB_TYPE_ENV or "").strip().lower()
+    lab_type = _normalize_lab_type(body)
     code = body.get("content", body.get("code", ""))
     if not isinstance(code, str):
         code = str(code)
@@ -226,7 +250,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         parsed = urlparse(self.path)
-        if parsed.path != "/execute":
+        if parsed.path not in ("/execute", "/api/run", "/api/save"):
             self.send_error(404)
             return
 
@@ -274,8 +298,20 @@ class Handler(BaseHTTPRequestHandler):
                 )
                 return
 
+        if parsed.path == "/api/save":
+            result = _save_file(body)
+            self._json(200, result)
+            return
+
         result = _execute(body)
-        self._json(200 if result.get("success") else 400, result)
+        normalized = {
+            "success": result.get("success", False),
+            "output": result.get("output", ""),
+            "error": result.get("runtimeError") or result.get("syntaxError") or "",
+            "syntaxError": result.get("syntaxError", ""),
+            "runtimeError": result.get("runtimeError", ""),
+        }
+        self._json(200 if normalized.get("success") else 400, normalized)
 
 
 def main() -> None:

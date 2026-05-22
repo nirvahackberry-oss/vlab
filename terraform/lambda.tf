@@ -151,6 +151,8 @@ resource "aws_lambda_function" "start_lab" {
       LAB_TASK_DEFINITION_MAP = jsonencode({ for lab_type, td in aws_ecs_task_definition.lab : lab_type => td.arn })
       ECS_SUBNET_IDS          = join(",", aws_subnet.private[*].id)
       ECS_SECURITY_GROUP_ID   = aws_security_group.ecs_tasks.id
+      CONTAINER_HOST_MODE     = "private"
+      JWT_SECRET              = local.effective_jwt_secret
     }
   }
 
@@ -207,6 +209,8 @@ resource "aws_lambda_function" "execute_code" {
       SESSIONS_TABLE_NAME     = aws_dynamodb_table.sessions.name
       RUNS_TABLE_NAME         = aws_dynamodb_table.runs.name
       LAB_LOG_GROUP_NAME      = aws_cloudwatch_log_group.ecs.name
+      CONTAINER_HOST_MODE     = "private"
+      JWT_SECRET              = local.effective_jwt_secret
     }
   }
 
@@ -383,6 +387,8 @@ resource "aws_lambda_function" "get_session" {
       DYNAMODB_TABLE_NAME = aws_dynamodb_table.sessions.name
       ECS_CLUSTER_ARN     = aws_ecs_cluster.lab.arn
       AWS_ACCOUNT_ID      = data.aws_caller_identity.current.account_id
+      CONTAINER_HOST_MODE = "private"
+      JWT_SECRET          = local.effective_jwt_secret
     }
   }
 

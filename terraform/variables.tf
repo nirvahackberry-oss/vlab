@@ -142,3 +142,22 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "jwt_secret" {
+  description = "JWT signing secret for API auth. Leave empty to auto-generate."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "jwt_expires_in" {
+  description = "JWT expiry (jsonwebtoken expiresIn format)."
+  type        = string
+  default     = "24h"
+}
+
+variable "use_node_api_gateway" {
+  description = "Route HTTP API through Node.js Lambda + JWT authorizer (recommended)."
+  type        = bool
+  default     = true
+}
