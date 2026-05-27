@@ -29,7 +29,7 @@ export const saveToContainer = async (session, { path, content }) => {
 
   // Fast reachability check (5s) to avoid 35s connection timeouts in local dev
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 5000);
+  const timer = setTimeout(() => controller.abort(), 6000);
   try {
     await fetch(baseUrl, { method: "HEAD", signal: controller.signal });
   } catch (err) {
@@ -53,6 +53,7 @@ export const saveToContainer = async (session, { path, content }) => {
 
 export const executeInContainer = async (session, payload) => {
   const baseUrl = getSessionApiBaseUrl(session);
+
   if (!baseUrl) return null;
 
   const labType = resolveLabType({
@@ -74,23 +75,62 @@ export const executeInContainer = async (session, payload) => {
 
   for (const path of ["/api/run", "/execute"]) {
     try {
+      console.log("=================================");
+      console.log("CONTAINER EXECUTION REQUEST");
+      console.log("URL:", `${baseUrl}${path}`);
+      console.log("LANGUAGE:", payload.language);
+      console.log(
+        "TIMEOUT:",
+        payload.language === "java" ? 60000 : 15000
+      );
+      console.log("=================================");
+
       const response = await containerFetch(`${baseUrl}${path}`, {
         method: "POST",
         headers: buildHeaders(session),
         body: JSON.stringify(body),
-        timeout: 5000, // Fail fast in 5 seconds if connection hangs/blocks
+
+        // Java needs longer compile time
+        timeout: payload.language === "java" ? 60000 : 15000,
       });
-      const data = await response.json();
+
+      const rawText = await response.text();
+
+      console.log("=================================");
+      console.log("RAW CONTAINER RESPONSE");
+      console.log("=================================");
+      console.log(rawText);
+      
+      let data;
+      
+      try {
+        data = JSON.parse(rawText);
+      } catch (err) {
+        throw new Error(`Invalid JSON response from container: ${rawText}`);
+      }
+
       return {
         success: data.success !== false,
         output: data.output || "",
-        error: data.error || data.runtimeError || data.syntaxError || null,
+        error:
+          data.error ||
+          data.runtimeError ||
+          data.syntaxError ||
+          null,
         syntaxError: data.syntaxError || "",
         runtimeError: data.runtimeError || "",
       };
     } catch (err) {
-      if (path === "/execute") throw err;
+      console.log(
+        `[Container Error] ${path}:`,
+        err.message
+      );
+
+      if (path === "/execute") {
+        throw err;
+      }
     }
   }
+
   return null;
 };

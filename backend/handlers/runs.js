@@ -74,7 +74,14 @@ export const runsCreateHandler = async ({ body, auth }) => {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 5000);
       try {
-        await fetch(baseUrl, { method: "HEAD", signal: controller.signal });
+        const healthResponse = await fetch(`${baseUrl}/health`, {
+          method: "GET",
+          signal: controller.signal,
+        });
+        
+        if (!healthResponse.ok) {
+          throw new Error(`Health check failed: ${healthResponse.status}`);
+        }
         isReachable = true;
         console.log(`[Reachability Check] Container is alive and reachable.`);
       } catch (err) {
@@ -92,12 +99,22 @@ export const runsCreateHandler = async ({ body, auth }) => {
     console.log(`Container Host:   ${host}`);
     console.log("-----------------------------------------");
     try {
+      console.log(`[Container Run] Sending execution request to container...`);
+
       result = await executeInContainer(session, payload);
-      if (!result || !result.success || result.error === "fetch failed") {
+      
+      console.log(`[Container Run] Raw Result:`);
+      console.log(JSON.stringify(result, null, 2));
+      if (
+        !result ||
+        result.success === false ||
+        result.error ||
+        result.runtimeError
+      )
         didContainerFail = true;
         console.log(`[Runs Handler] Container run returned success: false or fetch failed. Triggering local fallback...`);
       }
-    } catch (err) {
+     catch (err) {
       didContainerFail = true;
       console.log(`[Runs Handler] Container run threw exception: ${err.message}. Triggering local fallback...`);
     }

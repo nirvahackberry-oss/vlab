@@ -139,7 +139,7 @@ router.post(
     const payload = {
       path: filePath,
       language: language || file.language,
-      content: file.content,
+      content: req.body.content !== undefined ? req.body.content : file.content,
     };
 
     if (session.status === "running" && session.publicIp) {

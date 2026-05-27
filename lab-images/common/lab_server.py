@@ -82,13 +82,23 @@ def _run_python(path: str, code: str) -> tuple[bool, str, str, str]:
 
 
 def _run_java(path: str, code: str) -> tuple[bool, str, str, str]:
-    with open(path, "w", encoding="utf-8") as f:
-        f.write(code)
+    import re
+    # Extract the main class name from the Java code to determine the correct filename and execution target
+    class_match = re.search(r'\bpublic\s+class\s+([a-zA-Z0-9_]+)', code)
+    if not class_match:
+        class_match = re.search(r'\bclass\s+([a-zA-Z0-9_]+)', code)
+    
+    class_name = class_match.group(1) if class_match else "Main"
+    
     src_dir = os.path.dirname(path) or _workspace_real()
-    base_name = os.path.splitext(os.path.basename(path))[0]
+    actual_path = os.path.join(src_dir, f"{class_name}.java")
+    
+    with open(actual_path, "w", encoding="utf-8") as f:
+        f.write(code)
+        
     try:
         jc = subprocess.run(
-            ["javac", path],
+            ["javac", actual_path],
             cwd=src_dir,
             capture_output=True,
             text=True,
@@ -98,7 +108,7 @@ def _run_java(path: str, code: str) -> tuple[bool, str, str, str]:
             err = (jc.stderr or jc.stdout or "").strip()
             return False, "", err, "javac failed"
         jr = subprocess.run(
-            ["java", "-cp", src_dir, base_name],
+            ["java", "-cp", src_dir, class_name],
             cwd=src_dir,
             capture_output=True,
             text=True,
