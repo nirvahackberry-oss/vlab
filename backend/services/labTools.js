@@ -12,7 +12,7 @@ export const getLabRuntime = (labId) => {
 
 export const buildMainToolUrl = ({ labId, publicIp, sessionId }) => {
   const runtime = getLabRuntime(labId);
-
+  
   console.log("========== TOOL URL DEBUG ==========");
   console.log("Lab ID:", labId);
   console.log("Runtime Type:", runtime.type);
