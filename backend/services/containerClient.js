@@ -27,9 +27,9 @@ export const saveToContainer = async (session, { path, content }) => {
   const baseUrl = getSessionApiBaseUrl(session);
   if (!baseUrl) return { proxied: false };
 
-  // Fast reachability check (1.2s) to avoid 35s connection timeouts in local dev
+  // Fast reachability check (5s) to avoid 35s connection timeouts in local dev
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 1200);
+  const timer = setTimeout(() => controller.abort(), 5000);
   try {
     await fetch(baseUrl, { method: "HEAD", signal: controller.signal });
   } catch (err) {

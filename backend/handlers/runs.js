@@ -66,17 +66,22 @@ export const runsCreateHandler = async ({ body, auth }) => {
 
   let isReachable = false;
   if (session.status === "running" && baseUrl) {
-    console.log(`[Reachability Check] Checking container at ${baseUrl}...`);
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 1200);
-    try {
-      await fetch(baseUrl, { method: "HEAD", signal: controller.signal });
+    if (process.env.FORCE_CONTAINER_EXECUTION === "true") {
+      console.log(`[Reachability Check] BYPASSED because FORCE_CONTAINER_EXECUTION=true is set in your .env file.`);
       isReachable = true;
-      console.log(`[Reachability Check] Container is alive and reachable.`);
-    } catch (err) {
-      console.log(`[Reachability Check] Container check failed (unreachable/blocked): ${err.message}`);
-    } finally {
-      clearTimeout(timer);
+    } else {
+      console.log(`[Reachability Check] Checking container at ${baseUrl}...`);
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 5000);
+      try {
+        await fetch(baseUrl, { method: "HEAD", signal: controller.signal });
+        isReachable = true;
+        console.log(`[Reachability Check] Container is alive and reachable.`);
+      } catch (err) {
+        console.log(`[Reachability Check] Container check failed (unreachable/blocked): ${err.message}`);
+      } finally {
+        clearTimeout(timer);
+      }
     }
   }
 
