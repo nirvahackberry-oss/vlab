@@ -4,10 +4,12 @@ import { resolveLabType } from "../lib/labTypeMapper.js";
 const CONTAINER_TIMEOUT_MS = 35000;
 
 const containerFetch = async (url, options = {}) => {
+  const timeout = options.timeout || CONTAINER_TIMEOUT_MS;
+  const { timeout: _, ...fetchOptions } = options;
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), CONTAINER_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), timeout);
   try {
-    return await fetch(url, { ...options, signal: controller.signal });
+    return await fetch(url, { ...fetchOptions, signal: controller.signal });
   } finally {
     clearTimeout(timer);
   }
@@ -24,6 +26,18 @@ const buildHeaders = (session) => {
 export const saveToContainer = async (session, { path, content }) => {
   const baseUrl = getSessionApiBaseUrl(session);
   if (!baseUrl) return { proxied: false };
+
+  // Fast reachability check (1.2s) to avoid 35s connection timeouts in local dev
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 1200);
+  try {
+    await fetch(baseUrl, { method: "HEAD", signal: controller.signal });
+  } catch (err) {
+    console.warn("[saveToContainer] Container unreachable, skipping proxy:", err.message);
+    return { proxied: false };
+  } finally {
+    clearTimeout(timer);
+  }
 
   const response = await containerFetch(`${baseUrl}/api/save`, {
     method: "POST",
@@ -64,6 +78,7 @@ export const executeInContainer = async (session, payload) => {
         method: "POST",
         headers: buildHeaders(session),
         body: JSON.stringify(body),
+        timeout: 5000, // Fail fast in 5 seconds if connection hangs/blocks
       });
       const data = await response.json();
       return {

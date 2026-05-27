@@ -455,25 +455,136 @@ import {
 import { VscCode } from 'react-icons/vsc';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
-import { fetchUserActiveSession, startLabSession, fetchLabSessionStatus, stopLabSession } from '../../services/labService';
+import {
+  fetchUserActiveSession,
+  startLabSession,
+  fetchLabSessionStatus,
+  stopLabSession,
+  waitForLabSessionReady,
+  fetchJupyterHealth,
+} from '../../services/labService';
 import CloudEditor from './Editor';
 import Terminal from './Terminal';
 
 
-// NEW: Component to embed any tool URL in an iframe
-const IframeTool = ({ url, onStopLab, onBack }) => {
+const getLabToolUrl = (session) => {
+  if (!session) return null;
+  const isJupyter = session.tools?.main?.type === 'jupyter' || session.tools?.jupyter?.enabled;
+
+  if (isJupyter) {
+    if (session.tools?.jupyter?.url) return session.tools.jupyter.url;
+    if (session.tools?.main?.url) return session.tools.main.url;
+    if (session.publicIp) return `http://${session.publicIp}:8888/lab`;
+    return null;
+  }
+
+  if (session.tools?.main?.url) return session.tools.main.url;
+  if (session.publicIp) {
+    const port = session.tools?.main?.port || session.containerPort || 8080;
+    return `http://${session.publicIp}:${port}/`;
+  }
+  return null;
+};
+
+const isDataScienceLab = (labId, session) =>
+  labId === 'data-science-lab' || session?.tools?.main?.type === 'jupyter';
+
+/** Python/Java/Linux labs expose an API on :8080, not a web IDE — use built-in editor instead of iframe. */
+const shouldUseBuiltInEditor = (session, labId) =>
+  session?.tools?.main?.type === 'ide' ||
+  ['python-lab', 'java-lab', 'linux-lab', 'dbms-lab'].includes(
+    (session?.labId || labId || '').toLowerCase()
+  );
+
+const usesIframeEmbed = (session, labId) => {
+  const url = getLabToolUrl(session);
+  if (!url?.startsWith('http')) return false;
+  if (isDataScienceLab(labId, session) || session?.tools?.main?.type === 'jupyter') {
+    return true;
+  }
+  return !shouldUseBuiltInEditor(session, labId);
+};
+
+// Component to embed code-server (8080) or Jupyter (8888 / API proxy) in an iframe
+const IframeTool = ({ url, title, onStopLab, onBack, isJupyter, sessionId }) => {
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [iframeSrc, setIframeSrc] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    setIsLoading(true);
+    setLoadError('');
+    setIframeSrc('');
+
+    const run = async () => {
+      if (isJupyter && sessionId) {
+        try {
+          const health = await fetchJupyterHealth(sessionId);
+          if (cancelled) return;
+          if (!health.reachable) {
+            setLoadError(
+              health.message ||
+                'Cannot reach Jupyter on port 8888. Your AWS engineer must open inbound TCP 8888 on the ECS security group (terraform apply).'
+            );
+            setIsLoading(false);
+            return;
+          }
+        } catch (err) {
+          if (cancelled) return;
+          // Health endpoint missing or server old build — still try iframe
+          if (err?.status !== 404) {
+            console.warn('Jupyter health check skipped:', err.message);
+          }
+        }
+      }
+
+      if (!cancelled) {
+        setIframeSrc(url);
+      }
+    };
+
+    run();
+
+    const timeout = setTimeout(() => {
+      if (!cancelled) {
+        setIsLoading((loading) => {
+          if (loading) {
+            setLoadError(
+              'The lab IDE did not load in time. Open in a new tab, or ask AWS engineer to open port 8888 on the ECS security group.'
+            );
+          }
+          return false;
+        });
+      }
+    }, 45000);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeout);
+    };
+  }, [url, isJupyter, sessionId]);
 
   return (
     <Box className="w-full h-full flex flex-col bg-[#1e1e1e]">
       <Box className="bg-[#2d2d2d] px-4 py-2 flex justify-between items-center border-b border-white/10 shrink-0">
         <Box className="min-w-0">
-          <Typography className="text-white text-sm font-bold">Lab Environment</Typography>
+          <Typography className="text-white text-sm font-bold">{title || 'Lab Environment'}</Typography>
           <Typography className="text-slate-500 text-[10px] font-mono truncate max-w-[70vw]">
             {url}
           </Typography>
         </Box>
-        <Box className="flex gap-2">
+        <Box className="flex gap-2 flex-wrap justify-end">
+          <Button
+            size="small"
+            component="a"
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="!text-emerald-400 !text-[10px] !font-black uppercase"
+          >
+            Open in Tab
+          </Button>
           <Button
             size="small"
             onClick={onBack}
@@ -491,24 +602,43 @@ const IframeTool = ({ url, onStopLab, onBack }) => {
         </Box>
       </Box>
       <Box className="relative flex-1 min-h-0 bg-black">
-        {isLoading && (
+        {(isLoading || loadError) && (
           <Box className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-[#1e1e1e] text-center px-6">
             <Typography className="text-white text-sm font-black uppercase tracking-widest">
-              Loading lab IDE...
+              {loadError ? 'Could not embed Jupyter' : isJupyter ? 'Loading JupyterLab...' : 'Loading lab IDE...'}
             </Typography>
-            <Typography className="text-slate-500 text-xs font-mono break-all max-w-2xl">
-              {url}
+            <Typography className={`text-xs font-mono break-all max-w-2xl ${loadError ? 'text-amber-400' : 'text-slate-500'}`}>
+              {loadError || url}
             </Typography>
+            {loadError ? (
+              <Button
+                component="a"
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                variant="contained"
+                className="!bg-emerald-600 !mt-2"
+              >
+                Open IDE in New Tab
+              </Button>
+            ) : null}
           </Box>
         )}
+        {iframeSrc ? (
         <iframe
-          src={url}
+          src={iframeSrc}
           title="Lab Tool"
           className="absolute inset-0 h-full w-full border-none bg-white"
-          allow="clipboard-read; clipboard-write; fullscreen; autoplay"
+          allow="clipboard-read; clipboard-write; fullscreen; autoplay; microphone; camera"
+          sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads allow-modals"
+          referrerPolicy="no-referrer-when-downgrade"
           allowFullScreen
-          onLoad={() => setIsLoading(false)}
+          onLoad={() => {
+            setIsLoading(false);
+            setLoadError('');
+          }}
         />
+        ) : null}
       </Box>
     </Box>
   );
@@ -555,59 +685,66 @@ const RemoteDesktop = () => {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const labId = params.get('labId');
+    const sessionIdParam = params.get('sessionId');
 
     const initializeSession = async () => {
-      if (!labId || !user?.email || initStartedRef.current) return;
+      if (!labId || !user?.id || initStartedRef.current) return;
       initStartedRef.current = true;
 
       try {
-        setConnectionLog(prev => [`[${new Date().toLocaleTimeString()}] Connecting to Ignito Cloud Core...`]);
+        setConnectionLog(prev => [`[${new Date().toLocaleTimeString()}] Connecting to lab backend...`]);
 
-        // 1. Check for existing session
-        const activeRes = await fetchUserActiveSession(user.id);
         let activeSession = null;
 
-        if (activeRes.success && activeRes.session && activeRes.session.labId === labId) {
-          activeSession = activeRes.session;
-          setConnectionLog(prev => [...prev, `[${new Date().toLocaleTimeString()}] Found existing session: ${activeSession.sessionId}`]);
+        if (sessionIdParam) {
+          activeSession = await fetchLabSessionStatus(sessionIdParam);
+          setConnectionLog(prev => [...prev, `[${new Date().toLocaleTimeString()}] Resuming session ${sessionIdParam}`]);
         } else {
-          // 2. Start new session
-          const startRes = await startLabSession({ labId, userId: user.id });
-          activeSession = startRes;
-          setConnectionLog(prev => [...prev, `[${new Date().toLocaleTimeString()}] Provisioning new environment...`]);
-        }
+          const activeRes = await fetchUserActiveSession(user.id, labId);
 
-        // Wait if starting
-        let currentStatus = activeSession.status || 'starting';
-        let statusRes = activeSession;
-
-        while (currentStatus === 'starting') {
-          statusRes = await fetchLabSessionStatus(activeSession.sessionId);
-          currentStatus = statusRes.status;
-          if (currentStatus === 'starting') {
-            setConnectionLog(prev => [...prev, `[${new Date().toLocaleTimeString()}] Provisioning environment...`]);
-            await new Promise(r => setTimeout(r, 1000));
+          if (activeRes.session && activeRes.session.labId === labId) {
+            activeSession = activeRes.session;
+            setConnectionLog(prev => [...prev, `[${new Date().toLocaleTimeString()}] Found active session: ${activeSession.sessionId}`]);
+          } else {
+            const startRes = await startLabSession({ labId, userId: user.id });
+            activeSession = startRes;
+            setConnectionLog(prev => [...prev, `[${new Date().toLocaleTimeString()}] Provisioning container...`]);
           }
         }
 
-        if (currentStatus === 'running') {
-          setSession(statusRes);
-          setConnecting(false);
-        } else {
-          throw new Error(statusRes.message || 'Failed to start lab environment');
+        if (!activeSession?.sessionId) {
+          throw new Error('No lab session available');
         }
 
+        setConnectionLog(prev => [...prev, `[${new Date().toLocaleTimeString()}] Waiting for container public IP...`]);
+
+        const readySession = await waitForLabSessionReady(activeSession.sessionId, {
+          maxAttempts: 90,
+          intervalMs: 2000,
+        });
+
+        const toolUrl = getLabToolUrl(readySession);
+        if (readySession.publicIp) {
+          setConnectionLog(prev => [...prev, `[${new Date().toLocaleTimeString()}] Container ready at ${readySession.publicIp}`]);
+        }
+        if (toolUrl) {
+          setConnectionLog(prev => [...prev, `[${new Date().toLocaleTimeString()}] Opening ${toolUrl}`]);
+        }
+
+        setSession(readySession);
+        setConnecting(false);
+        hasAutoOpenedRef.current = true;
       } catch (err) {
         setError(err.message || 'Failed to initialize session');
         setConnectionLog(prev => [...prev, `[ERROR] ${err.message}`]);
-        initStartedRef.current = false; // Allow retry on error
+        initStartedRef.current = false;
       }
     };
 
-    if (user?.email) {
+    if (user?.id) {
       initializeSession();
     }
-  }, [location.search, user?.email]);
+  }, [location.search, user?.id]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -704,56 +841,27 @@ const RemoteDesktop = () => {
     }
   };
 
-  // --- MODIFIED: Open the correct tool once session is ready ---
-useEffect(() => {
-  if (connecting || !session || hasAutoOpenedRef.current) return;
+  useEffect(() => {
+    if (connecting || !session || hasAutoOpenedRef.current) return;
 
-  const params = new URLSearchParams(location.search);
-  const labId = (session.labId || params.get('labId') || '').toLowerCase();
-  const toolType = session.tools?.main?.type;
-
-  if (labId === 'python-lab' || toolType === 'ide') {
-    toggleWindow('vscode');
-    hasAutoOpenedRef.current = true;
-    return;
-  }
-
-  if (labId === 'data-science-lab' || toolType === 'jupyter') {
-    const url = session.tools?.main?.url;
-    if (url) {
-      openDynamicTool(url);
-    } else {
-      setError('Jupyter URL not found for this lab session.');
-    }
-    hasAutoOpenedRef.current = true;
-    return;
-  }
-
-  // 1. Check if backend provided a main tool URL
-  if (session.tools?.main?.url) {
-    const url = session.tools.main.url;
-    // If it's a relative URL (starts with '/'), it's the built‑in IDE → use toggleWindow
-    if (url.startsWith('/')) {
-      toggleWindow('vscode');
+    const toolUrl = getLabToolUrl(session);
+    if (toolUrl?.startsWith('http')) {
+      openDynamicTool(toolUrl);
       hasAutoOpenedRef.current = true;
       return;
     }
-    // Otherwise, it's an external tool (Jupyter, code‑server) → open in iframe
-    openDynamicTool(url);
-    hasAutoOpenedRef.current = true;
-    return;
-  }
 
-  // 2. Fallback (no main.url)
-  const appToOpen = params.get('app');
-  if (appToOpen) {
-    toggleWindow(appToOpen);
-  } else if (labId) {
-    const isTerminalLab = labId.includes('linux') || labId.includes('dbms') || labId.includes('sql');
-    toggleWindow(isTerminalLab ? 'terminal' : 'vscode');
-  }
-  hasAutoOpenedRef.current = true;
-}, [connecting, session, location.search]);   
+    const params = new URLSearchParams(location.search);
+    const labId = (session.labId || params.get('labId') || '').toLowerCase();
+    const appToOpen = params.get('app');
+    if (appToOpen) {
+      toggleWindow(appToOpen);
+    } else {
+      const isTerminalLab = labId.includes('linux') || labId.includes('dbms') || labId.includes('sql');
+      toggleWindow(isTerminalLab ? 'terminal' : 'vscode');
+    }
+    hasAutoOpenedRef.current = true;
+  }, [connecting, session, location.search]);
 
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [loadingStatus, setLoadingStatus] = useState('Initializing connection...');
@@ -775,14 +883,14 @@ useEffect(() => {
   useEffect(() => {
     if (!connecting) return;
     const statuses = [
-      'Allocating cloud resources...',
-      'Requesting Fargate task...',
-      'Pulling container image...',
-      'Configuring network bridge...',
-      'Initializing secure tunnel...',
-      'Starting container services...',
-      'Optimizing display stream...',
-      'Preparing your workspace...'
+      'Starting lab via backend API...',
+      'Launching ECS container...',
+      'Pulling lab image...',
+      'Assigning network interface...',
+      'Resolving container public IP...',
+      'Starting code-server on port 8080...',
+      'Starting Jupyter on port 8888...',
+      'Opening lab IDE...',
     ];
     let i = 0;
     const interval = setInterval(() => {
@@ -791,6 +899,87 @@ useEffect(() => {
     }, 3000);
     return () => clearInterval(interval);
   }, [connecting]);
+
+  const labToolUrl = getLabToolUrl(session);
+  const params = new URLSearchParams(location.search);
+  const labId = (session?.labId || params.get('labId') || '').toLowerCase();
+  const isJupyterSession = isDataScienceLab(labId, session) || session?.tools?.main?.type === 'jupyter';
+  const iframeTitle = isJupyterSession ? 'JupyterLab (Data Science)' : 'VS Code (code-server)';
+
+  if (!connecting && session && !isJupyterSession && labId.includes('big-data')) {
+    return (
+      <Box className="h-screen w-screen flex flex-col items-center justify-center gap-4 bg-[#1e1e1e] text-white p-8 text-center">
+        <Typography className="text-xl font-black">Big Data lab has no Jupyter UI</Typography>
+        <Typography className="text-slate-400 max-w-lg text-sm">
+          For Jupyter in the browser, start <strong>Data Science-I</strong> lab (port 8888), not Big Data Analytics.
+        </Typography>
+        <Button variant="contained" onClick={() => navigate('/')} className="!bg-red-600">
+          Back to Dashboard
+        </Button>
+      </Box>
+    );
+  }
+
+  const stopLabDialog = (
+    <Dialog
+      open={showStopModal}
+      onClose={() => !isStopping && setShowStopModal(false)}
+      PaperProps={{
+        className: 'bg-[#1e1e1e] border border-white/10 rounded-2xl p-2',
+        style: { backgroundColor: '#1e1e1e', borderRadius: '20px' },
+      }}
+    >
+      <Box className="p-4 flex flex-col items-center gap-4 text-center">
+        <Typography className="text-white text-xl font-black uppercase tracking-tighter">
+          Stop Lab Session?
+        </Typography>
+        <Box className="flex gap-3 w-full mt-4">
+          <Button onClick={() => setShowStopModal(false)} disabled={isStopping} className="flex-1">
+            Cancel
+          </Button>
+          <Button
+            onClick={handleStopLab}
+            disabled={isStopping}
+            variant="contained"
+            className="flex-1 !bg-red-600"
+          >
+            {isStopping ? 'Stopping...' : 'Stop Lab'}
+          </Button>
+        </Box>
+      </Box>
+    </Dialog>
+  );
+
+  if (!connecting && session && shouldUseBuiltInEditor(session, labId)) {
+    return (
+      <Box className="h-screen w-screen flex flex-col overflow-hidden bg-slate-50">
+        <CloudEditor
+          session={session}
+          hideHeader={false}
+          onStopLab={() => setShowStopModal(true)}
+          onBack={() => navigate('/')}
+          onMenuClick={() => {}}
+        />
+        {stopLabDialog}
+      </Box>
+    );
+  }
+
+  if (!connecting && labToolUrl?.startsWith('http') && usesIframeEmbed(session, labId)) {
+    return (
+      <>
+        <IframeTool
+          url={labToolUrl}
+          title={iframeTitle}
+          isJupyter={isJupyterSession}
+          sessionId={session?.sessionId}
+          onStopLab={() => setShowStopModal(true)}
+          onBack={() => navigate('/')}
+        />
+        {stopLabDialog}
+      </>
+    );
+  }
 
   if (connecting) {
     return (

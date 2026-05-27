@@ -5,8 +5,16 @@ const STORAGE_KEY = 'ignito_user_session';
 const savedSession = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null;
 const parsedSession = savedSession ? JSON.parse(savedSession) : null;
 
+const normalizeUser = (user) => {
+  if (!user) return null;
+  return {
+    credits: 1000,
+    ...user,
+  };
+};
+
 export const useAuthStore = create((set) => ({
-  user: parsedSession?.user || null,
+  user: normalizeUser(parsedSession?.user),
   token: parsedSession?.token || null,
   isAuthenticated: !!parsedSession?.user,
   isLoading: false,
@@ -17,7 +25,10 @@ export const useAuthStore = create((set) => ({
     try {
       const session = await loginWithCredentials({ email, password });
       set({
-        user: session.user,
+        user: {
+          credits: 1000,
+          ...session.user,
+        },
         token: session.token || null,
         isAuthenticated: true,
         isLoading: false,
@@ -40,7 +51,7 @@ export const useAuthStore = create((set) => ({
   },
   updateUser: (updates) => {
     set((state) => {
-      const newUser = { ...state.user, ...updates };
+      const newUser = normalizeUser({ ...state.user, ...updates });
       const newSession = { user: newUser, token: state.token };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(newSession));
       return { user: newUser };

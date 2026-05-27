@@ -21,6 +21,10 @@ export const ENV = {
   resultsTable: process.env.RESULTS_TABLE_NAME || "",
   containerHostMode: process.env.CONTAINER_HOST_MODE || "public",
   defaultSessionMinutes: Number(process.env.DEFAULT_SESSION_TIMEOUT || 120),
+  /** Public URL students' browsers use to reach this API (for Jupyter iframe proxy links). */
+  apiPublicUrl:
+    process.env.API_PUBLIC_URL ||
+    `http://localhost:${Number(process.env.PORT || 8080)}${process.env.API_PREFIX || "/api"}`,
 };
 
 export const useDynamoDb = () => Boolean(ENV.sessionsTable);

@@ -90,6 +90,7 @@ export const startEcsTask = async ({ labId, sessionId, sessionToken }) => {
   }
 
   const port = getContainerPort(labId);
+  const apiPrefix = process.env.API_PREFIX || "/api";
   const environment = [
     { name: "SESSION_ID", value: sessionId },
     { name: "SESSION_TOKEN", value: sessionToken },
@@ -97,6 +98,13 @@ export const startEcsTask = async ({ labId, sessionId, sessionToken }) => {
     { name: "LAB_SERVER_PORT", value: String(port) },
     { name: "LAB_WORKSPACE", value: "/workspace" },
   ];
+
+  if (labType === "datascience") {
+    environment.push({
+      name: "JUPYTER_BASE_URL",
+      value: `${apiPrefix}/lab-sessions/${sessionId}/jupyter`,
+    });
+  }
 
   const response = await ecsClient.send(
     new RunTaskCommand({

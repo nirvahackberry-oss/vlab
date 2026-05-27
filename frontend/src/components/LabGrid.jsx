@@ -22,10 +22,10 @@ import { useAuthStore } from '../store/authStore';
 import { useNavigate, Link } from 'react-router-dom';
 
 import {
-  fetchUserActiveSession,
-  fetchLabSessionStatus,
   stopLabSession,
-  startLabSession
+  startLabSession,
+  waitForLabSessionReady,
+  fetchUserActiveSession
 } from '../services/labService';
 
 import PaymentGateway from './PaymentGateway';
@@ -56,46 +56,38 @@ const LabGrid = ({ onLabClick, labs: labsProp, readOnly = false }) => {
 
   const [showWarningModal, setShowWarningModal] = React.useState(false);
 
+  const [startingLabId, setStartingLabId] = React.useState(null);
+
+  const [startError, setStartError] = React.useState('');
+
   // =========================
   // CHECK ACTIVE SESSION
   // =========================
 
-  const checkSessions = async () => {
-
-    if (!user) return;
-
-    try {
-
-      const response = await fetchUserActiveSession(user.id);
-
-      if (response.success && response.session) {
-
-        setActiveSessions({
-          [response.session.labId]: response.session
-        });
-
-      } else {
-
-        setActiveSessions({});
-
-      }
-
-    } catch (err) {
-
-      console.error('Session sync error:', err);
-
-    }
-  };
-
   React.useEffect(() => {
+    if (!user?.id) return;
+    let mounted = true;
 
-    checkSessions();
+    const checkActiveSession = async () => {
+      try {
+        const response = await fetchUserActiveSession(user.id);
+        if (mounted && response.session) {
+          setActiveSessions({
+            [response.session.labId]: response.session
+          });
+        }
+      } catch (err) {
+        console.error('Failed to load active session:', err);
+      }
+    };
 
-    const interval = setInterval(checkSessions, 3000);
+    checkActiveSession();
 
-    return () => clearInterval(interval);
+    return () => {
+      mounted = false;
+    };
+  }, [user?.id]);
 
-  }, [user]);
 
   // =========================
   // TIMER
@@ -162,7 +154,8 @@ const LabGrid = ({ onLabClick, labs: labsProp, readOnly = false }) => {
 
       setPendingStop(null);
 
-      await checkSessions();
+      // No need to re-check sessions after stopping.
+
     }
   };
 
@@ -218,66 +211,64 @@ const LabGrid = ({ onLabClick, labs: labsProp, readOnly = false }) => {
   };
 
   const handleStartClick = async (e, lab) => {
+    e?.stopPropagation?.();
+    e?.preventDefault?.();
 
-    e.stopPropagation();
+    setStartError('');
 
-    // CHECK CREDITS
-    const userCredits = user?.credits || 0;
-
-    if (userCredits < lab.credits) {
-
-      setShowCreditModal(lab);
-
+    if (!user) {
+      setStartError('Please log in again to start a lab.');
       return;
     }
 
-    // CHECK OTHER ACTIVE LABS
-    const otherActiveSession =
-      Object.keys(activeSessions).find(id => id !== lab.id);
+    const labId = lab?.id;
+    if (!labId) {
+      setStartError('Invalid lab configuration (missing lab id).');
+      return;
+    }
+
+    const isAdmin = user.role === 'Super Admin' || user.role === 'Tenant Admin';
+    const userCredits = Number(user.credits ?? 0);
+    const labCost = Number(lab.credits ?? 0);
+
+    if (!isAdmin && labCost > 0 && userCredits < labCost) {
+      setShowCreditModal(lab);
+      setIsPaymentOpen(true);
+      return;
+    }
+
+    const otherActiveSession = Object.keys(activeSessions).find(
+      (id) => id !== labId
+    );
 
     if (otherActiveSession) {
-
       setShowWarningModal(true);
-
       return;
     }
 
-    try {
+    setStartingLabId(labId);
 
-      // START SESSION
-      await startLabSession({
-        labId: lab.id,
-        userId: user.id
+    try {
+      const startResponse = await startLabSession({ labId });
+
+      const sessionId = startResponse.sessionId;
+      if (!sessionId) {
+        throw new Error('No session id returned from server');
+      }
+
+      const readySession = await waitForLabSessionReady(sessionId);
+
+      setActiveSessions({
+        [labId]: readySession
       });
 
-      // WAIT FOR ECS
-      setTimeout(async () => {
-
-        const response =
-          await fetchUserActiveSession(user.id);
-
-        if (response.success && response.session) {
-
-          const session = response.session;
-
-          setActiveSessions({
-            [session.labId]: session
-          });
-
-          const readySession =
-            session.status === 'starting'
-              ? await fetchLabSessionStatus(session.sessionId)
-              : session;
-
-          openLabSession(lab, readySession);
-        }
-
-      }, 8000);
-
+      openLabSession(lab, readySession);
     } catch (err) {
-
+      const message = err?.message || 'Failed to start lab';
+      setStartError(message);
       console.error('Failed to start lab:', err);
-
+    } finally {
+      setStartingLabId(null);
     }
   };
 
@@ -286,6 +277,12 @@ const LabGrid = ({ onLabClick, labs: labsProp, readOnly = false }) => {
 
   return (
     <>
+      {startError ? (
+        <Box className="mb-4 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-medium">
+          {startError}
+        </Box>
+      ) : null}
+
       <Box className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 font-sans">
 
         {labs.map((lab, idx) => (
@@ -470,6 +467,7 @@ const LabGrid = ({ onLabClick, labs: labsProp, readOnly = false }) => {
                       <Button
                         variant="contained"
                         fullWidth
+                        disabled={startingLabId === lab.id}
                         onClick={(e) =>
                           handleStartClick(e, lab)
                         }
@@ -479,7 +477,9 @@ const LabGrid = ({ onLabClick, labs: labsProp, readOnly = false }) => {
                         }
                       >
 
-                        Start Lab
+                        {startingLabId === lab.id
+                          ? 'Starting Lab...'
+                          : 'Start Lab'}
 
                       </Button>
                     )}
@@ -586,10 +586,11 @@ const LabGrid = ({ onLabClick, labs: labsProp, readOnly = false }) => {
 
       <PaymentGateway
         open={isPaymentOpen}
-        onClose={() =>
-          setIsPaymentOpen(false)
-        }
-        lab={showCreditModal}
+        onClose={() => {
+          setIsPaymentOpen(false);
+          setShowCreditModal(null);
+        }}
+        lab={showCreditModal ? { ...showCreditModal, name: showCreditModal.title || showCreditModal.name } : null}
         initialAmount={
           showCreditModal?.credits || 50
         }

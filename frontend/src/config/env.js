@@ -10,7 +10,7 @@ if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' &&
 // Sensible dev fallback: if no VITE_API_BASE_URL is provided, assume backend on :8080 under /api.
 // This prevents fetches from accidentally hitting the Vite dev server (:3000) as relative paths.
 if (typeof window !== 'undefined' && !rawApiBaseUrl) {
-  rawApiBaseUrl = `${window.location.protocol}//${window.location.hostname}:8080/api`;
+  rawApiBaseUrl = `${window.location.protocol}//${window.location.hostname}:8082/api`;
 }
 
 export const APP_ENV = {

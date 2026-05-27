@@ -28,7 +28,7 @@ export const sessionsStartHandler = async ({ body, auth }) => {
   const lab = getLabById(labId);
   if (!lab) throw notFound("Lab not found");
 
-  const existing = await findActiveSessionForUser(userId, labId);
+  const existing = await findActiveSessionForUser(userId);
   if (existing) {
     if (existing.labId === labId) {
       return ok({

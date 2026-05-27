@@ -77,6 +77,12 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
   const [files, setFiles] = useState([]);
   const [activeFileIndex, setActiveFileIndex] = useState(-1);
   const [labId, setLabId] = useState('');
+
+  const isPythonLab = () => {
+    const params = new URLSearchParams(location.search);
+    const lid = params.get('labId')?.toLowerCase() || propSession?.labId?.toLowerCase() || labId?.toLowerCase() || '';
+    return lid.includes('python');
+  };
   const [loadedPaths, setLoadedPaths] = useState(new Set());
   const [isSaving, setIsSaving] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
@@ -142,8 +148,8 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
           // Strict Filtering: Only show files relevant to the lab type
           const filteredFiles = response.files.filter(f => {
             const ext = f.name.split('.').pop().toLowerCase();
-            if (labId.includes('python')) return ext === 'py';
-            if (labId.includes('java')) return ext === 'java';
+            if (labId && labId.includes('python')) return ext === 'py';
+            if (labId && labId.includes('java')) return ext === 'java';
             return true;
           });
           setFiles(filteredFiles);
@@ -159,7 +165,7 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
     };
     loadFiles();
     return () => { isMounted = false; };
-  }, [sessionId]);
+  }, [sessionId, labId]);
 
   useEffect(() => {
     let isMounted = true;
@@ -187,12 +193,15 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
   useEffect(() => {
     if (activeFileIndex === -1 || !files[activeFileIndex]) return;
 
+    // For Python lab: stop unnecessary call of save file
+    if (isPythonLab()) return;
+
     const timeout = setTimeout(() => {
       handleSave(false);
     }, 1500); // Auto-save after 1.5 seconds of inactivity
 
     return () => clearTimeout(timeout);
-  }, [files, activeFileIndex]);
+  }, [files, activeFileIndex, labId]);
 
   const activeFile = files[activeFileIndex];
 
@@ -308,10 +317,19 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
         </body>
       </html>
     `);
-    // Auto-save silently before running
-    await handleSave(false);
+
+    const isPython = isPythonLab();
+    if (!isPython) {
+      // Auto-save silently before running for non-Python labs
+      await handleSave(false);
+    }
+
     try {
-      const response = await runFile({ path: activeFile.path, language: activeFile.language }, sessionId);
+      const payload = isPython
+        ? { path: activeFile.path, language: activeFile.language, content: activeFile.content }
+        : { path: activeFile.path, language: activeFile.language };
+
+      const response = await runFile(payload, sessionId);
       if (response.success) {
         const success = !response.error;
         const gradeReport = {
@@ -347,6 +365,19 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
           </html>
         `;
         setWebPreviewCode(outputHtml);
+      } else {
+        setRightPanelTab('preview');
+        const errorHtml = `
+          <html>
+            <body style="font-family:'Fira Code', monospace; background:#fff; color:#333; padding:20px; margin:0; line-height:1.5;">
+              <div style="display:flex; align-items:center; gap:8px; margin-bottom:15px; border-bottom:1px solid #fee2e2; padding-bottom:10px;">
+                <span style="color:#ef4444; font-weight:900; font-size:11px; letter-spacing:1px; text-transform:uppercase;">Execution Failed</span>
+              </div>
+              <pre style="background:#fff5f5; padding:16px; color:#b91c1c; border:1px solid #fecaca; border-radius:12px; font-size:13px; white-space:pre-wrap; word-break:break-all; margin:0;">${response.error || 'An unexpected execution error occurred.'}</pre>
+            </body>
+          </html>
+        `;
+        setWebPreviewCode(errorHtml);
       }
     } catch (err) {
       console.error('Run error:', err);
@@ -359,19 +390,68 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
     const fileName = window.prompt('Enter file name (e.g. main.py):', 'script.py');
     if (!fileName) return;
     const ext = fileName.split('.').pop().toLowerCase();
-    if (labId.includes('python') && ext !== 'py') {
+    const isPython = isPythonLab();
+    if (isPython && ext !== 'py') {
       setRestrictionMsg('This is a Python lab environment. You can only create or add .py files.');
       setShowRestrictionModal(true);
       return;
     }
     const newFile = { name: fileName, path: `/workspace/${fileName}`, type: 'file', language: detectLanguage(fileName), content: '' };
     if (sessionId) {
-      await saveFile(newFile, sessionId);
-      const res = await fetchFiles(sessionId);
-      if (res.success) {
-        setFiles(res.files);
-        const newIndex = res.files.findIndex(f => f.path === newFile.path);
-        setActiveFileIndex(newIndex);
+      // 1. Immediately update UI state
+      setFiles(prev => {
+        if (prev.some(f => f.path === newFile.path)) {
+          const idx = prev.findIndex(f => f.path === newFile.path);
+          setActiveFileIndex(idx);
+          return prev;
+        }
+        const updated = [...prev, newFile];
+        setActiveFileIndex(updated.length - 1);
+        return updated;
+      });
+
+      setLoadedPaths(prev => {
+        const next = new Set(prev);
+        next.add(newFile.path);
+        return next;
+      });
+
+      // 2. Call Save API in background
+      try {
+        await saveFile(newFile, sessionId);
+      } catch (err) {
+        console.error('Failed to save newly added file on backend:', err);
+      }
+
+      // 3. Sync from backend
+      try {
+        const res = await fetchFiles(sessionId);
+        if (res.success) {
+          const filteredFiles = res.files.filter(f => {
+            const ext = f.name.split('.').pop().toLowerCase();
+            if (isPython) return ext === 'py';
+            if (labId && labId.includes('java')) return ext === 'java';
+            return true;
+          });
+
+          setFiles(prev => {
+            const merged = [...filteredFiles];
+            if (!merged.some(f => f.path === newFile.path)) {
+              merged.push(newFile);
+            }
+            return merged;
+          });
+
+          setFiles(currentFiles => {
+            const idx = currentFiles.findIndex(f => f.path === newFile.path);
+            if (idx !== -1) {
+              setActiveFileIndex(idx);
+            }
+            return currentFiles;
+          });
+        }
+      } catch (err) {
+        console.error('Fetch files after add error:', err);
       }
     }
   };
@@ -381,12 +461,13 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
     if (!file) return;
 
     const ext = file.name.split('.').pop().toLowerCase();
-    if (labId.includes('python') && ext !== 'py') {
+    const isPython = isPythonLab();
+    if (isPython && ext !== 'py') {
       setRestrictionMsg('Strict Restriction: Only .py files are permitted in the Python workspace.');
       setShowRestrictionModal(true);
       return;
     }
-    if (labId.includes('java') && ext !== 'java') {
+    if (labId && labId.includes('java') && ext !== 'java') {
       setRestrictionMsg('Strict Restriction: Only .java files are permitted in the Java workspace.');
       setShowRestrictionModal(true);
       return;
@@ -394,21 +475,62 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
 
     const reader = new FileReader();
     reader.onload = async (e) => {
-      const newFile = { name: file.name, path: `/workspace/${file.name}`, type: 'file', language: detectLanguage(file.name), content: e.target.result };
+      const fileContent = e.target.result;
+      const newFile = { name: file.name, path: `/workspace/${file.name}`, type: 'file', language: detectLanguage(file.name), content: fileContent };
       if (sessionId) {
-        await saveFile(newFile, sessionId);
-        const res = await fetchFiles(sessionId);
-        if (res.success) {
-          // Re-apply filter
-          const filteredFiles = res.files.filter(f => {
-            const ext = f.name.split('.').pop().toLowerCase();
-            if (labId.includes('python')) return ext === 'py';
-            if (labId.includes('java')) return ext === 'java';
-            return true;
-          });
-          setFiles(filteredFiles);
-          const newIndex = filteredFiles.findIndex(f => f.path === newFile.path);
-          setActiveFileIndex(newIndex);
+        // 1. Immediately update UI state
+        setFiles(prev => {
+          const existingIdx = prev.findIndex(f => f.path === newFile.path);
+          if (existingIdx !== -1) {
+            const updated = [...prev];
+            updated[existingIdx] = newFile;
+            setActiveFileIndex(existingIdx);
+            return updated;
+          }
+          const updated = [...prev, newFile];
+          setActiveFileIndex(updated.length - 1);
+          return updated;
+        });
+
+        setLoadedPaths(prev => {
+          const next = new Set(prev);
+          next.add(newFile.path);
+          return next;
+        });
+
+        // 2. Call Save API in background
+        try {
+          await saveFile(newFile, sessionId);
+        } catch (err) {
+          console.error('Failed to save uploaded file on backend:', err);
+        }
+
+        // 3. Sync from backend
+        try {
+          const res = await fetchFiles(sessionId);
+          if (res.success) {
+            const filteredFiles = res.files.filter(f => {
+              const ext = f.name.split('.').pop().toLowerCase();
+              if (isPython) return ext === 'py';
+              if (labId && labId.includes('java')) return ext === 'java';
+              return true;
+            });
+
+            setFiles(prev => {
+              const merged = [...filteredFiles];
+              const localIdx = merged.findIndex(f => f.path === newFile.path);
+              if (localIdx === -1) {
+                merged.push(newFile);
+                setActiveFileIndex(merged.length - 1);
+              } else {
+                merged[localIdx].content = fileContent;
+                setActiveFileIndex(localIdx);
+              }
+              return merged;
+            });
+          }
+        } catch (err) {
+          console.error('Sync files after upload error:', err);
         }
       }
     };
@@ -529,9 +651,41 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
               <Box className="flex items-center gap-1 md:gap-2 px-1 md:px-3">
                 {saveSuccess && !isMobile && <Typography className="text-emerald-500 text-[9px] font-black uppercase tracking-widest animate-pulse">Saved!</Typography>}
                 <IconButton onClick={handleFormat} size="small" className="!text-white p-1" title="Format Document"><MdFormatAlignLeft size={16} /></IconButton>
-                <Button onClick={() => handleSave(true)} variant="contained" size="small" disabled={isSaving} className="!bg-emerald-600 !text-[9px] md:!text-[10px] !font-black h-7 md:h-6 px-2 md:px-3 rounded shadow-lg shadow-emerald-600/20" startIcon={!isMobile && <MdSave />}>
-                  {isSaving ? '...' : (isMobile ? 'SAVE' : 'Save')}
-                </Button>
+                {isPythonLab() ? (
+                  <>
+                    <Button
+                      onClick={() => handleSave(false)}
+                      variant="contained"
+                      size="small"
+                      disabled={isSaving}
+                      className="!bg-emerald-600 !text-[9px] md:!text-[10px] !font-black h-7 md:h-6 px-2 md:px-3 rounded shadow-lg shadow-emerald-600/20"
+                      startIcon={!isMobile && <MdSave />}
+                    >
+                      {isSaving ? '...' : (isMobile ? 'SAVE' : 'Save')}
+                    </Button>
+                    <Button
+                      onClick={() => handleSave(true)}
+                      variant="contained"
+                      size="small"
+                      disabled={isSaving}
+                      className="!bg-blue-600 !text-[9px] md:!text-[10px] !font-black h-7 md:h-6 px-2 md:px-3 rounded shadow-lg shadow-blue-600/20"
+                      startIcon={!isMobile && <MdDownload />}
+                    >
+                      {isSaving ? '...' : (isMobile ? 'DOWNLOAD' : 'Download')}
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    onClick={() => handleSave(true)}
+                    variant="contained"
+                    size="small"
+                    disabled={isSaving}
+                    className="!bg-emerald-600 !text-[9px] md:!text-[10px] !font-black h-7 md:h-6 px-2 md:px-3 rounded shadow-lg shadow-emerald-600/20"
+                    startIcon={!isMobile && <MdSave />}
+                  >
+                    {isSaving ? '...' : (isMobile ? 'SAVE' : 'Save')}
+                  </Button>
+                )}
                 <Button onClick={handleRun} variant="contained" size="small" className="!bg-red-600 !text-[9px] md:!text-[10px] !font-black h-7 md:h-6 px-2 md:px-3 min-w-[50px] md:min-w-[64px] rounded shadow-lg shadow-red-600/20" startIcon={!isMobile && <MdPlayArrow />}>RUN</Button>
                 <Box className="flex items-center gap-1">
                   {onBack && <IconButton onClick={onBack} size="small" className="!text-red-500 p-1" title="Back"><MdArrowBack size={18} /></IconButton>}

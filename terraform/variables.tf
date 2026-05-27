@@ -75,6 +75,12 @@ variable "enable_nat_gateway" {
   default     = false
 }
 
+variable "lab_browser_ingress_cidr_blocks" {
+  description = "CIDR blocks allowed to reach lab containers on 8080/8888 (browser iframe). Use 0.0.0.0/0 for student browsers."
+  type        = list(string)
+  default     = ["0.0.0.0/0"]
+}
+
 variable "enable_temp_data_bucket" {
   description = "Enable optional S3 bucket for temporary lab data."
   type        = bool

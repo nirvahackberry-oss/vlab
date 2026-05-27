@@ -2,8 +2,8 @@ import { ok } from "../lib/apigw.js";
 import { badRequest, forbidden, notFound } from "../lib/errors.js";
 import { getSession } from "../services/sessionRepository.js";
 import { createRun, getRun, completeRun } from "../services/runRepository.js";
-import { getFile } from "../services/fileRepository.js";
-import { executeInContainer } from "../services/containerClient.js";
+import { getFile, upsertFile } from "../services/fileRepository.js";
+import { executeInContainer, saveToContainer } from "../services/containerClient.js";
 import { executeLocally } from "../services/localExecutor.js";
 import { resolveLabType } from "../lib/labTypeMapper.js";
 
@@ -22,7 +22,18 @@ export const runsCreateHandler = async ({ body, auth }) => {
   }
 
   let code = content;
-  if (!code && filePath) {
+  if (code && filePath) {
+    const name = filePath.split("/").pop();
+    // Automatically save it so that the file is persisted and updated in the container/DB
+    await upsertFile(sessionId, { path: filePath, content: code, name, language });
+    if (session.status === "running") {
+      try {
+        await saveToContainer(session, { path: filePath, content: code });
+      } catch (err) {
+        console.warn(`[runsCreateHandler] container proxy save skipped: ${err.message}`);
+      }
+    }
+  } else if (!code && filePath) {
     const file = await getFile(sessionId, filePath);
     if (!file) throw notFound("File not found. Save your code before running.");
     code = file.content;
@@ -38,20 +49,60 @@ export const runsCreateHandler = async ({ body, auth }) => {
   const run = await createRun({ sessionId, labType });
   const payload = { path: filePath, language, content: code, labType };
 
+  console.log("\n=========================================");
+  console.log("             RUN CODE REQUEST            ");
+  console.log("=========================================");
+  console.log(`Session ID:  ${sessionId}`);
+  console.log(`Lab ID:      ${session.labId}`);
+  console.log(`Lab Type:    ${labType}`);
+  console.log(`Language:    ${language || "unknown"}`);
+  console.log(`File Path:   ${filePath || "ad-hoc code run"}`);
+  console.log(`Code length: ${code.length} chars`);
+
   let result;
   const host = session.publicIp || session.taskPrivateIp;
-  if (session.status === "running" && host) {
+  const port = session.containerPort || 8080;
+  const baseUrl = host ? `http://${host}:${port}` : null;
+
+  let isReachable = false;
+  if (session.status === "running" && baseUrl) {
+    console.log(`[Reachability Check] Checking container at ${baseUrl}...`);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 1200);
+    try {
+      await fetch(baseUrl, { method: "HEAD", signal: controller.signal });
+      isReachable = true;
+      console.log(`[Reachability Check] Container is alive and reachable.`);
+    } catch (err) {
+      console.log(`[Reachability Check] Container check failed (unreachable/blocked): ${err.message}`);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  let didContainerFail = false;
+  if (session.status === "running" && host && isReachable) {
+    console.log("-----------------------------------------");
+    console.log(`[EXECUTION SOURCE] >> CONTAINER (AWS Fargate)`);
+    console.log(`Container Host:   ${host}`);
+    console.log("-----------------------------------------");
     try {
       result = await executeInContainer(session, payload);
+      if (!result || !result.success || result.error === "fetch failed") {
+        didContainerFail = true;
+        console.log(`[Runs Handler] Container run returned success: false or fetch failed. Triggering local fallback...`);
+      }
     } catch (err) {
-      result = {
-        success: false,
-        output: "",
-        error: err.message,
-        runtimeError: err.message,
-      };
+      didContainerFail = true;
+      console.log(`[Runs Handler] Container run threw exception: ${err.message}. Triggering local fallback...`);
     }
-  } else {
+  }
+
+  if (session.status !== "running" || !host || !isReachable || didContainerFail) {
+    console.log("-----------------------------------------");
+    console.log("[EXECUTION SOURCE] >> LOCAL FALLBACK");
+    console.log(`Reason:            ${didContainerFail ? "Container run failed/timed out" : (!isReachable && host ? "Container is unreachable (blocked/offline)" : `Session status is "${session.status}"`)}`);
+    console.log("-----------------------------------------");
     const local = await executeLocally(payload);
     result = {
       success: !local.error,
@@ -60,6 +111,16 @@ export const runsCreateHandler = async ({ body, auth }) => {
       runtimeError: local.error,
     };
   }
+
+  console.log("-----------------------------------------");
+  console.log("            EXECUTION RESULTS            ");
+  console.log("-----------------------------------------");
+  console.log(`Success:  ${result.success}`);
+  console.log(`Output:\n${result.output || "(no output)"}`);
+  if (result.error) {
+    console.log(`Error:\n${result.error}`);
+  }
+  console.log("=========================================\n");
 
   await completeRun(run.runId, result);
 

@@ -103,8 +103,38 @@ export const createSessionRecord = ({
     sessionToken,
     startTime: new Date().toISOString(),
     expiryTime: ttlEpoch(durationMinutes),
+    durationMinutes,
     estimatedReadyInSeconds: 45,
     message: "Provisioning lab environment...",
     files: [],
   };
+};
+
+export const getAllActiveSessions = async () => {
+  if (useDynamoDb()) {
+    try {
+      const res = await getDocClient().send(
+        new ScanCommand({
+          TableName: ENV.sessionsTable,
+          FilterExpression: "#s = :starting OR #s = :running",
+          ExpressionAttributeNames: { "#s": "status" },
+          ExpressionAttributeValues: {
+            ":starting": "starting",
+            ":running": "running",
+          },
+        }),
+      );
+      return (res.Items || []).map((s) => enrichSession(s));
+    } catch (err) {
+      console.error("[getAllActiveSessions] Scan Error:", err);
+      return [];
+    }
+  }
+  const active = [];
+  for (const session of memorySessions.values()) {
+    if (["starting", "running"].includes(session.status)) {
+      active.push(enrichSession(session));
+    }
+  }
+  return active;
 };

@@ -6,6 +6,8 @@ import { ENV } from "./config/env.js";
 import { ROUTES } from "./router.js";
 import { expressRoute } from "./lib/apigw.js";
 import { setupTerminal } from "./terminalHandler.js";
+import { setupJupyterProxy, attachJupyterProxyUpgrade } from "./jupyterProxy.js";
+import { cleanupExpiredSessions } from "./services/sessionCleanup.js";
 
 const app = express();
 const httpServer = createServer(app);
@@ -29,7 +31,15 @@ for (const route of ROUTES) {
   expressRoute(app, route, ENV.apiPrefix);
 }
 
+setupJupyterProxy(app, ENV.apiPrefix);
+attachJupyterProxyUpgrade(httpServer, ENV.apiPrefix);
+
 setupTerminal(io);
+
+// Periodically check and auto-stop expired sessions every 30 seconds
+setInterval(() => {
+  cleanupExpiredSessions();
+}, 30000);
 
 httpServer.listen(ENV.port, () => {
   console.log(`VLab API server: http://localhost:${ENV.port}${ENV.apiPrefix}`);

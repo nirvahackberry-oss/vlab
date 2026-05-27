@@ -9,6 +9,7 @@ const USERS = [
     password: "admin123",
     name: "Meet Nayak",
     role: "Super Admin",
+    credits: 1000,
   },
   {
     id: "user-002",
@@ -16,6 +17,7 @@ const USERS = [
     password: "admin123",
     name: "Meet Nayak",
     role: "Tenant Admin",
+    credits: 1000,
   },
 ];
 
@@ -35,6 +37,7 @@ export const authLoginHandler = async ({ body }) => {
       name: user.name,
       email: user.email,
       role: user.role,
+      credits: user.credits ?? 1000,
     },
     token,
     expiresIn: process.env.JWT_EXPIRES_IN || "24h",

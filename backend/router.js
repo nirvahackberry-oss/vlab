@@ -16,6 +16,7 @@ import {
   filesDeleteHandler,
 } from "./handlers/files.js";
 import { submitHandler } from "./handlers/submit.js";
+import { jupyterHealthHandler } from "./handlers/jupyterHealth.js";
 
 /**
  * Route table — paths match AWS API Gateway (no /api prefix).
@@ -36,6 +37,12 @@ export const ROUTES = [
     method: "GET",
     path: "/lab-sessions/user/:userId",
     handler: sessionsListByUserHandler,
+    auth: true,
+  },
+  {
+    method: "GET",
+    path: "/lab-sessions/:sessionId/jupyter-health",
+    handler: jupyterHealthHandler,
     auth: true,
   },
   { method: "GET", path: "/lab-sessions/:sessionId", handler: sessionsGetHandler, auth: true },
