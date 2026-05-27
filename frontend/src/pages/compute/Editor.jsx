@@ -83,6 +83,16 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
     const lid = params.get('labId')?.toLowerCase() || propSession?.labId?.toLowerCase() || labId?.toLowerCase() || '';
     return lid.includes('python');
   };
+
+  const isJavaLab = () => {
+    const params = new URLSearchParams(location.search);
+    const lid = params.get('labId')?.toLowerCase() || propSession?.labId?.toLowerCase() || labId?.toLowerCase() || '';
+    return lid.includes('java');
+  };
+
+  const isNoAutoSaveLab = () => {
+    return isPythonLab() || isJavaLab();
+  };
   const [loadedPaths, setLoadedPaths] = useState(new Set());
   const [isSaving, setIsSaving] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
@@ -148,8 +158,8 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
           // Strict Filtering: Only show files relevant to the lab type
           const filteredFiles = response.files.filter(f => {
             const ext = f.name.split('.').pop().toLowerCase();
-            if (labId && labId.includes('python')) return ext === 'py';
-            if (labId && labId.includes('java')) return ext === 'java';
+            if (isPythonLab()) return ext === 'py';
+            if (isJavaLab()) return ext === 'java';
             return true;
           });
           setFiles(filteredFiles);
@@ -193,8 +203,8 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
   useEffect(() => {
     if (activeFileIndex === -1 || !files[activeFileIndex]) return;
 
-    // For Python lab: stop unnecessary call of save file
-    if (isPythonLab()) return;
+    // For Python and Java labs: stop unnecessary call of save file
+    if (isNoAutoSaveLab()) return;
 
     const timeout = setTimeout(() => {
       handleSave(false);
@@ -318,14 +328,14 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
       </html>
     `);
 
-    const isPython = isPythonLab();
-    if (!isPython) {
-      // Auto-save silently before running for non-Python labs
+    const bypassSaveBeforeRun = isNoAutoSaveLab();
+    if (!bypassSaveBeforeRun) {
+      // Auto-save silently before running for other labs
       await handleSave(false);
     }
 
     try {
-      const payload = isPython
+      const payload = bypassSaveBeforeRun
         ? { path: activeFile.path, language: activeFile.language, content: activeFile.content }
         : { path: activeFile.path, language: activeFile.language };
 
@@ -387,15 +397,22 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
   };
 
   const handleAddFile = async () => {
-    const fileName = window.prompt('Enter file name (e.g. main.py):', 'script.py');
+    const defaultName = isJavaLab() ? 'Main.java' : (isPythonLab() ? 'script.py' : 'script.txt');
+    const fileName = window.prompt(`Enter file name (e.g. ${defaultName}):`, defaultName);
     if (!fileName) return;
     const ext = fileName.split('.').pop().toLowerCase();
-    const isPython = isPythonLab();
-    if (isPython && ext !== 'py') {
+    
+    if (isPythonLab() && ext !== 'py') {
       setRestrictionMsg('This is a Python lab environment. You can only create or add .py files.');
       setShowRestrictionModal(true);
       return;
     }
+    if (isJavaLab() && ext !== 'java') {
+      setRestrictionMsg('This is a Java lab environment. You can only create or add .java files.');
+      setShowRestrictionModal(true);
+      return;
+    }
+
     const newFile = { name: fileName, path: `/workspace/${fileName}`, type: 'file', language: detectLanguage(fileName), content: '' };
     if (sessionId) {
       // 1. Immediately update UI state
@@ -429,8 +446,8 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
         if (res.success) {
           const filteredFiles = res.files.filter(f => {
             const ext = f.name.split('.').pop().toLowerCase();
-            if (isPython) return ext === 'py';
-            if (labId && labId.includes('java')) return ext === 'java';
+            if (isPythonLab()) return ext === 'py';
+            if (isJavaLab()) return ext === 'java';
             return true;
           });
 
@@ -461,13 +478,13 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
     if (!file) return;
 
     const ext = file.name.split('.').pop().toLowerCase();
-    const isPython = isPythonLab();
-    if (isPython && ext !== 'py') {
+    
+    if (isPythonLab() && ext !== 'py') {
       setRestrictionMsg('Strict Restriction: Only .py files are permitted in the Python workspace.');
       setShowRestrictionModal(true);
       return;
     }
-    if (labId && labId.includes('java') && ext !== 'java') {
+    if (isJavaLab() && ext !== 'java') {
       setRestrictionMsg('Strict Restriction: Only .java files are permitted in the Java workspace.');
       setShowRestrictionModal(true);
       return;
@@ -511,8 +528,8 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
           if (res.success) {
             const filteredFiles = res.files.filter(f => {
               const ext = f.name.split('.').pop().toLowerCase();
-              if (isPython) return ext === 'py';
-              if (labId && labId.includes('java')) return ext === 'java';
+              if (isPythonLab()) return ext === 'py';
+              if (isJavaLab()) return ext === 'java';
               return true;
             });
 
@@ -651,7 +668,7 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
               <Box className="flex items-center gap-1 md:gap-2 px-1 md:px-3">
                 {saveSuccess && !isMobile && <Typography className="text-emerald-500 text-[9px] font-black uppercase tracking-widest animate-pulse">Saved!</Typography>}
                 <IconButton onClick={handleFormat} size="small" className="!text-white p-1" title="Format Document"><MdFormatAlignLeft size={16} /></IconButton>
-                {isPythonLab() ? (
+                {isNoAutoSaveLab() ? (
                   <>
                     <Button
                       onClick={() => handleSave(false)}
