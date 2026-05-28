@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Typography,
@@ -9,13 +9,65 @@ import {
   MenuItem,
   Select,
   FormControl,
-  InputLabel
+  Alert,
+  Snackbar
 } from '@mui/material';
 import { MdChevronRight } from 'react-icons/md';
 import Header from '../components/Header';
 import { motion } from 'motion/react';
+import { useNavigate } from 'react-router-dom';
+import { createUser } from '../services/userService';
+
 const CreateUser = ({ onMenuClick }) => {
-  const [role, setRole] = React.useState('');
+  const navigate = useNavigate();
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [role, setRole] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+
+  const handleSubmit = async () => {
+    if (!firstName.trim() || !email.trim() || !password.trim()) {
+      setSnackbar({ open: true, message: 'Please fill in First Name, Email, and Password.', severity: 'error' });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
+      await createUser({
+        name: fullName,
+        email: email.trim(),
+        password: password.trim(),
+        role: role || 'Tenant User',
+      });
+      setSnackbar({ open: true, message: `User "${fullName}" created successfully! They can now log in.`, severity: 'success' });
+      // Reset form
+      setFirstName('');
+      setLastName('');
+      setEmail('');
+      setPassword('');
+      setRole('');
+    } catch (err) {
+      setSnackbar({ open: true, message: err.message || 'Failed to create user.', severity: 'error' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const inputSx = {
+    '& .MuiOutlinedInput-root': {
+      borderRadius: '16px',
+      bgcolor: '#f8fafc',
+      color: '#1e293b',
+      '& fieldset': { borderColor: '#e2e8f0' },
+      '&:hover fieldset': { borderColor: '#cbd5e1' },
+      '&.Mui-focused fieldset': { borderColor: '#dc2626' }
+    }
+  };
+
   return (
     <Box className="flex-1 flex flex-col min-h-0 bg-slate-50 app-shell h-full overflow-hidden">
       <Header
@@ -47,16 +99,9 @@ const CreateUser = ({ onMenuClick }) => {
                     fullWidth
                     placeholder="First Name"
                     variant="outlined"
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        borderRadius: '16px',
-                        bgcolor: '#f8fafc',
-                        color: '#1e293b',
-                        '& fieldset': { borderColor: '#e2e8f0' },
-                        '&:hover fieldset': { borderColor: '#cbd5e1' },
-                        '&.Mui-focused fieldset': { borderColor: '#dc2626' }
-                      }
-                    }}
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    sx={inputSx}
                   />
                 </Box>
                 <Box>
@@ -65,16 +110,9 @@ const CreateUser = ({ onMenuClick }) => {
                     fullWidth
                     placeholder="Last Name"
                     variant="outlined"
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        borderRadius: '16px',
-                        bgcolor: '#f8fafc',
-                        color: '#1e293b',
-                        '& fieldset': { borderColor: '#e2e8f0' },
-                        '&:hover fieldset': { borderColor: '#cbd5e1' },
-                        '&.Mui-focused fieldset': { borderColor: '#dc2626' }
-                      }
-                    }}
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    sx={inputSx}
                   />
                 </Box>
                 <Box className="md:col-span-2">
@@ -83,16 +121,21 @@ const CreateUser = ({ onMenuClick }) => {
                     fullWidth
                     placeholder="email@vlab.io"
                     variant="outlined"
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        borderRadius: '16px',
-                        bgcolor: '#f8fafc',
-                        color: '#1e293b',
-                        '& fieldset': { borderColor: '#e2e8f0' },
-                        '&:hover fieldset': { borderColor: '#cbd5e1' },
-                        '&.Mui-focused fieldset': { borderColor: '#dc2626' }
-                      }
-                    }}
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    sx={inputSx}
+                  />
+                </Box>
+                <Box className="md:col-span-2">
+                  <Typography variant="caption" className="text-slate-500 font-black text-[10px] uppercase tracking-widest mb-2 block ml-1">ACCESS KEY (PASSWORD)</Typography>
+                  <TextField
+                    fullWidth
+                    placeholder="Enter password for this user"
+                    type="password"
+                    variant="outlined"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    sx={inputSx}
                   />
                 </Box>
                 <Box className="md:col-span-2">
@@ -108,15 +151,16 @@ const CreateUser = ({ onMenuClick }) => {
                         '& .MuiSelect-select': { fontWeight: 'bold' }
                       }}
                       renderValue={(selected) => {
-                        if (selected.length === 0) {
+                        if (!selected || selected.length === 0) {
                           return <span className="text-slate-500">Select user clearance level</span>;
                         }
                          return <span className="text-slate-900">{selected}</span>;
                       }}
                     >
-                      <MenuItem value="Admin">System Administrator</MenuItem>
+                      <MenuItem value="Tenant Admin">System Administrator</MenuItem>
                       <MenuItem value="Super Admin">Root Supervisor</MenuItem>
-                      <MenuItem value="User">Standard Operator</MenuItem>
+                      <MenuItem value="Tenant User">Standard Operator</MenuItem>
+                      <MenuItem value="Student">Student</MenuItem>
                     </Select>
                   </FormControl>
                 </Box>
@@ -125,9 +169,11 @@ const CreateUser = ({ onMenuClick }) => {
               <div className="flex gap-4">
                 <Button
                   variant="contained"
+                  onClick={handleSubmit}
+                  disabled={isSubmitting}
                   className="!bg-red-600 hover:!bg-red-700 text-white font-bold py-3 px-8 rounded-xl shadow-lg shadow-red-600/20"
                 >
-                  INITIALIZE IDENTITY
+                  {isSubmitting ? 'CREATING...' : 'INITIALIZE IDENTITY'}
                 </Button>
                 <Button
                   className="text-slate-400 font-bold px-8 py-3 normal-case hover:text-slate-600"
@@ -140,6 +186,21 @@ const CreateUser = ({ onMenuClick }) => {
           </Paper>
         </Box>
       </main>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={5000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          className="rounded-2xl font-bold"
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

@@ -29,7 +29,9 @@ import {
 } from '@mui/material';
 import { MdChevronRight, MdSearch, MdChevronLeft } from 'react-icons/md';
 import { motion } from 'motion/react';
+import { useNavigate } from 'react-router-dom';
 import { fetchUsers, updateUserStatus } from '../services/userService';
+import Header from '../components/Header';
 
 const AllUsers = ({ onMenuClick }) => {
   const navigate = useNavigate();

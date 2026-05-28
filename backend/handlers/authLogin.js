@@ -1,33 +1,13 @@
 import { ok } from "../lib/apigw.js";
 import { signAccessToken } from "../lib/jwt.js";
 import { badRequest, unauthorized } from "../lib/errors.js";
-
-const USERS = [
-  {
-    id: "user-admin-001",
-    email: "admin@ignito.com",
-    password: "admin123",
-    name: "Meet Nayak",
-    role: "Super Admin",
-    credits: 1000,
-  },
-  {
-    id: "user-002",
-    email: "meet.nayak@hackberrysoftech.in",
-    password: "admin123",
-    name: "Meet Nayak",
-    role: "Tenant Admin",
-    credits: 1000,
-  },
-];
+import { findUserByCredentials } from "../data/users.js";
 
 export const authLoginHandler = async ({ body }) => {
   const { email, password } = body || {};
   if (!email || !password) throw badRequest("email and password are required");
 
-  const user = USERS.find(
-    (u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password,
-  );
+  const user = findUserByCredentials(email, password);
   if (!user) throw unauthorized("Invalid email or password");
 
   const token = signAccessToken(user);

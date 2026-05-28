@@ -17,6 +17,11 @@ import {
 } from "./handlers/files.js";
 import { submitHandler } from "./handlers/submit.js";
 import { jupyterHealthHandler } from "./handlers/jupyterHealth.js";
+import {
+  usersListHandler,
+  usersCreateHandler,
+  usersUpdateStatusHandler,
+} from "./handlers/users.js";
 
 /**
  * Route table — paths match AWS API Gateway (no /api prefix).
@@ -27,6 +32,10 @@ export const ROUTES = [
   { method: "GET", path: "/health", handler: healthHandler, auth: false },
 
   { method: "POST", path: "/auth/login", handler: authLoginHandler, auth: false },
+
+  { method: "GET", path: "/users", handler: usersListHandler, auth: true },
+  { method: "POST", path: "/users", handler: usersCreateHandler, auth: true },
+  { method: "PATCH", path: "/users/:userId/status", handler: usersUpdateStatusHandler, auth: true },
 
   { method: "GET", path: "/labs", handler: labsListHandler, auth: true },
   { method: "GET", path: "/labs/:labId", handler: labsGetHandler, auth: true },

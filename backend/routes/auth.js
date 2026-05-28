@@ -1,27 +1,40 @@
 import express from 'express';
-const router = express.Router();
+import { findUserByCredentials } from '../data/users.js';
 
-// Mock User Data
-const MOCK_USER = {
-  id: "user-admin-001",
-  name: "Meet Nayak",
-  role: "Super Admin",
-  email: "admin@ignito.com"
-};
+const router = express.Router();
 
 // POST /api/auth/login
 router.post('/login', (req, res) => {
-  const { email, password } = req.body;
-  if (email === 'admin@ignito.com' && password === 'admin123') {
-    res.json({
-      success: true,
-      user: MOCK_USER,
-      token: "demo-jwt-token-12345"
-    });
-  } else {
-    res.status(401).json({
+  try {
+    console.log("LOGIN BODY:", req.body);
+
+    const { email, loginId, password } = req.body;
+
+    const userEmail = email || loginId;
+
+    const user = findUserByCredentials(userEmail, password);
+
+    if (user) {
+      // Return user without password
+      const { password: _pw, ...safeUser } = user;
+      return res.json({
+        success: true,
+        user: safeUser,
+        token: "demo-jwt-token-12345"
+      });
+    }
+
+    return res.status(401).json({
       success: false,
       message: "Invalid email or password"
+    });
+
+  } catch (err) {
+    console.error("LOGIN ERROR:", err);
+
+    return res.status(500).json({
+      success: false,
+      message: err.message
     });
   }
 });
