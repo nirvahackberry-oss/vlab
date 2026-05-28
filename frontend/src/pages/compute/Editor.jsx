@@ -4,9 +4,6 @@ import {
   Button,
   IconButton,
   Typography,
-  LinearProgress,
-  Divider,
-  Stack,
   Dialog,
   Snackbar,
   Alert
@@ -18,20 +15,12 @@ import {
   MdFormatAlignLeft,
   MdInsertDriveFile,
   MdSave,
-  MdFolder,
   MdPlayArrow,
   MdFileUpload,
-  MdCode,
   MdHtml,
   MdCss,
   MdPowerSettingsNew,
-  MdAssignmentTurnedIn,
   MdWarning,
-  MdSearch,
-  MdSettings,
-  MdAccountCircle,
-  MdBugReport,
-  MdExtension,
   MdChevronRight,
   MdSchool,
   MdArrowBack,
@@ -40,9 +29,9 @@ import {
 } from 'react-icons/md';
 import { SiPython, SiJavascript } from 'react-icons/si';
 import { FaJava } from 'react-icons/fa';
-import { motion, AnimatePresence } from 'framer-motion';
+
 import Editor from '@monaco-editor/react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import Header from '../../components/Header';
 // import ChemistryLab from '../../components/ChemistryLab';
 import { fetchFileContent, fetchFiles, runFile, saveFile, deleteFile } from '../../services/ideService';
@@ -98,7 +87,6 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
   const [isRunning, setIsRunning] = useState(false);
   const [webPreviewCode, setWebPreviewCode] = useState('');
   const [rightPanelTab, setRightPanelTab] = useState('preview');
-  const [lastGrade, setLastGrade] = useState(null);
   const [sessionId, setSessionId] = useState('');
   const [showRestrictionModal, setShowRestrictionModal] = useState(false);
   const [restrictionMsg, setRestrictionMsg] = useState('');
@@ -108,10 +96,11 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
   const [showSaveToast, setShowSaveToast] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [forcedLabType, setForcedLabType] = useState(null);
-  const [showGradingModal, setShowGradingModal] = useState(false);
+  const [showStopModal, setShowStopModal] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth > 1024);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [activeView, setActiveView] = useState('code'); // 'code' or 'output'
+  const [openFilePaths, setOpenFilePaths] = useState([]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -134,16 +123,6 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
     if (finalSessionId) {
       setSessionId(finalSessionId);
       setLabId(currentLabId);
-
-      // Recover lastGrade from localStorage
-      const savedGrade = localStorage.getItem(`lastGrade_${finalSessionId}`);
-      if (savedGrade) {
-        try {
-          setLastGrade(JSON.parse(savedGrade));
-        } catch (e) {
-          console.error("Failed to parse saved grade:", e);
-        }
-      }
     }
   }, [propSession, location.search, forcedLabType]);
 
@@ -163,6 +142,7 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
             return true;
           });
           setFiles(filteredFiles);
+          setOpenFilePaths(filteredFiles.map(f => f.path));
           if (filteredFiles.length > 0 && activeFileIndex === -1) {
             setActiveFileIndex(0);
           }
@@ -341,21 +321,6 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
 
       const response = await runFile(payload, sessionId);
       if (response.success) {
-        const success = !response.error;
-        const gradeReport = {
-          fileName: activeFile.name,
-          score: success ? 95 : 20,
-          status: success ? 'Passed' : 'Failed',
-          timestamp: new Date().toLocaleTimeString(),
-          details: [
-            { label: 'Compilation', value: success ? 100 : 0, weight: 100 },
-            { label: 'Logic Execution', value: success ? 90 : 20, weight: 100 }
-          ]
-        };
-        setLastGrade(gradeReport);
-        if (sessionId) {
-          localStorage.setItem(`lastGrade_${sessionId}`, JSON.stringify(gradeReport));
-        }
         setRightPanelTab('preview');
         const outputHtml = `
           <html>
@@ -401,7 +366,7 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
     const fileName = window.prompt(`Enter file name (e.g. ${defaultName}):`, defaultName);
     if (!fileName) return;
     const ext = fileName.split('.').pop().toLowerCase();
-    
+
     if (isPythonLab() && ext !== 'py') {
       setRestrictionMsg('This is a Python lab environment. You can only create or add .py files.');
       setShowRestrictionModal(true);
@@ -425,6 +390,11 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
         const updated = [...prev, newFile];
         setActiveFileIndex(updated.length - 1);
         return updated;
+      });
+
+      setOpenFilePaths(prev => {
+        if (prev.includes(newFile.path)) return prev;
+        return [...prev, newFile.path];
       });
 
       setLoadedPaths(prev => {
@@ -478,7 +448,7 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
     if (!file) return;
 
     const ext = file.name.split('.').pop().toLowerCase();
-    
+
     if (isPythonLab() && ext !== 'py') {
       setRestrictionMsg('Strict Restriction: Only .py files are permitted in the Python workspace.');
       setShowRestrictionModal(true);
@@ -507,6 +477,11 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
           const updated = [...prev, newFile];
           setActiveFileIndex(updated.length - 1);
           return updated;
+        });
+
+        setOpenFilePaths(prev => {
+          if (prev.includes(newFile.path)) return prev;
+          return [...prev, newFile.path];
         });
 
         setLoadedPaths(prev => {
@@ -559,14 +534,47 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
     setShowDeleteModal(true);
   };
 
+  const handleCloseFile = (path) => {
+    setOpenFilePaths(prev => {
+      const next = prev.filter(p => p !== path);
+      const closedFileIdx = files.findIndex(f => f.path === path);
+      if (activeFileIndex === closedFileIdx) {
+        if (next.length > 0) {
+          const newActivePath = next[next.length - 1];
+          const newActiveIdx = files.findIndex(f => f.path === newActivePath);
+          setActiveFileIndex(newActiveIdx);
+        } else {
+          setActiveFileIndex(-1);
+        }
+      }
+      return next;
+    });
+  };
+
   const confirmDeleteFile = async () => {
     const file = files[fileToDeleteIndex];
     if (!file || !sessionId) return;
     try {
       await deleteFile(file.path, sessionId);
       const newFiles = files.filter((_, i) => i !== fileToDeleteIndex);
+      
+      setOpenFilePaths(prev => {
+        const next = prev.filter(p => p !== file.path);
+        if (activeFileIndex === fileToDeleteIndex) {
+          if (next.length > 0) {
+            const newActivePath = next[next.length - 1];
+            const newActiveIdx = newFiles.findIndex(f => f.path === newActivePath);
+            setActiveFileIndex(newActiveIdx);
+          } else {
+            setActiveFileIndex(-1);
+          }
+        } else if (activeFileIndex > fileToDeleteIndex) {
+          setActiveFileIndex(prevIdx => prevIdx - 1);
+        }
+        return next;
+      });
+
       setFiles(newFiles);
-      if (activeFileIndex === fileToDeleteIndex) setActiveFileIndex(-1);
     } catch (err) {
       console.error('Delete error:', err);
     } finally {
@@ -587,10 +595,10 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
   return (
     <>
       <Box className="h-full flex flex-col bg-[#1e1e1e] overflow-hidden select-none">
-        {!hideHeader && <Header onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} title="Ignito Cloud IDE" />}
+        {/* {!hideHeader && <Header onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} title="Ignito Cloud IDE" />} */}
 
         <Box className="flex-1 flex overflow-hidden">
-          {/* Activity Bar */}
+          {/* Activity Bar
           <Box className="w-12 bg-[#333333] flex flex-col items-center py-4 gap-4 shrink-0 border-r border-black/20">
             <IconButton
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -599,55 +607,132 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
               <MdInsertDriveFile size={24} />
             </IconButton>
           </Box>
+          */}
 
           {/* Sidebar Overlay for Mobile */}
           {isMobile && isSidebarOpen && (
             <Box
               onClick={() => setIsSidebarOpen(false)}
-              className="fixed inset-0 bg-black/50 z-[1000] backdrop-blur-sm"
+              className="fixed inset-0 bg-black/40 z-40"
             />
           )}
 
           {/* Sidebar */}
           {isSidebarOpen && (
-            <Box className={`${isMobile ? 'fixed inset-y-0 left-12 w-64 z-[1001] shadow-2xl animate-in slide-in-from-left' : 'w-60'} bg-[#252526] flex flex-col shrink-0 border-r border-black/20`}>
-              <Box className="p-3 flex justify-between items-center bg-[#252526]">
-                <Typography className="text-white text-[11px] font-bold uppercase tracking-wider opacity-60">Explorer</Typography>
-                <Box className="flex gap-1">
-                  <IconButton onClick={handleAddFile} size="small" className="!text-white p-1"><MdAdd size={20} /></IconButton>
-                  <IconButton onClick={() => fileInputRef.current?.click()} size="small" className="!text-white p-1"><MdFileUpload size={20} /></IconButton>
-                  <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} />
+            <Box
+              className={`
+        ${isMobile
+                  ? 'fixed left-0 top-0 bottom-0 z-50 w-[260px]'
+                  : 'w-[240px]'
+                }
+        bg-[#252526]
+        border-r border-[#1f1f1f]
+        flex flex-col
+        shrink-0
+      `}
+            >
+
+              {/* SIDEBAR HEADER */}
+              <Box className="h-11 px-4 flex items-center justify-between border-b border-[#1f1f1f]">
+                <Typography className="text-[11px] text-white/60 uppercase font-bold tracking-widest">
+                  Explorer
+                </Typography>
+
+                <Box className="flex items-center gap-1">
+
+                  <IconButton
+                    onClick={handleAddFile}
+                    size="small"
+                    className="!text-white/70 hover:!bg-white/10"
+                  >
+                    <MdAdd size={18} />
+                  </IconButton>
+
+                  <IconButton
+                    onClick={() => fileInputRef.current?.click()}
+                    size="small"
+                    className="!text-white/70 hover:!bg-white/10"
+                  >
+                    <MdFileUpload size={17} />
+                  </IconButton>
+
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    className="hidden"
+                    onChange={handleFileUpload}
+                  />
                 </Box>
               </Box>
-              <Box className="flex-1 overflow-auto">
-                <Box className="px-3 py-1 bg-[#37373d] flex items-center gap-1 cursor-pointer">
-                  <MdChevronRight className="text-white/40" />
-                  <Typography className="text-white text-[10px] font-black uppercase">WORKSPACE</Typography>
-                </Box>
-                <Box className="py-2">
-                  {files.map((file, i) => (
-                    <Box
-                      key={file.path}
-                      onClick={() => {
-                        setActiveFileIndex(i);
-                        if (isMobile) setIsSidebarOpen(false);
+
+              {/* WORKSPACE TITLE */}
+              <Box className="px-3 py-2 border-b border-[#1f1f1f]">
+                <Typography className="text-[10px] text-white/40 uppercase font-bold tracking-widest">
+                  Workspace
+                </Typography>
+              </Box>
+
+              {/* FILES */}
+              <Box className="flex-1 overflow-y-auto py-2">
+
+                {files.map((file, i) => (
+                  <Box
+                    key={file.path}
+                    onClick={() => {
+                      setOpenFilePaths(prev => {
+                        if (prev.includes(file.path)) return prev;
+                        return [...prev, file.path];
+                      });
+                      setActiveFileIndex(i);
+
+                      if (isMobile) {
+                        setIsSidebarOpen(false);
+                      }
+                    }}
+                    className={`
+              group
+              flex items-center gap-2
+              px-3 py-1.5
+              cursor-pointer
+              border-l-2
+              transition-all
+
+              ${activeFileIndex === i
+                        ? 'bg-[#37373d] border-l-blue-500 text-white'
+                        : 'border-l-transparent text-slate-400 hover:bg-[#2a2d2e] hover:text-white'
+                      }
+            `}
+                  >
+
+                    {getFileIcon(file.name)}
+
+                    <Typography className="text-[12px] truncate flex-1">
+                      {file.name}
+                    </Typography>
+
+                    <IconButton
+                      size="small"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteFile(i);
                       }}
-                      className={`group flex items-center gap-2 px-6 py-1.5 cursor-pointer transition-colors ${activeFileIndex === i ? 'bg-[#37373d] text-white' : 'text-slate-400 hover:bg-[#2a2d2e]'}`}
+                      className="opacity-0 group-hover:opacity-100 !text-slate-400 hover:!text-red-500 !p-[2px]"
                     >
-                      {getFileIcon(file.name)}
-                      <Typography className="text-[13px] truncate flex-1">{file.name}</Typography>
-                      <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleDeleteFile(i); }} className="opacity-0 group-hover:opacity-100 !text-white hover:!text-red-500 p-0"><MdDelete size={14} /></IconButton>
-                    </Box>
-                  ))}
-                </Box>
+                      <MdClose size={12} />
+                    </IconButton>
+
+                  </Box>
+                ))}
+
               </Box>
             </Box>
           )}
 
+
           {/* Workspace */}
           <Box className="flex-1 flex flex-col min-w-0">
             <Box className="h-9 bg-[#2d2d2d] flex items-center justify-between shrink-0 border-b border-black/40">
-              <Box className="flex h-full items-center">
+              <Box className="flex h-full items-center flex-1 min-w-0">
                 <IconButton
                   onClick={() => setIsSidebarOpen(!isSidebarOpen)}
                   size="small"
@@ -655,78 +740,50 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
                 >
                   <MdMenu size={18} />
                 </IconButton>
-                <Box className="flex h-full overflow-x-auto no-scrollbar">
-                  {files.map((file, i) => (
-                    <Box key={file.path} onClick={() => setActiveFileIndex(i)} className={`h-full flex items-center gap-2 px-4 cursor-pointer border-r border-black/20 min-w-[120px] transition-all ${activeFileIndex === i ? 'bg-[#1e1e1e] text-white border-t border-t-red-600' : 'bg-[#2d2d2d] text-white/40 hover:bg-[#1e1e1e]'}`}>
-                      {getFileIcon(file.name)}
-                      <Typography className="text-[12px] truncate">{file.name}</Typography>
-                      <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleDeleteFile(i); }} className="ml-auto p-0.5 hover:bg-white/10 rounded !text-white"><MdClose size={12} /></IconButton>
-                    </Box>
-                  ))}
+                <Box className="flex h-full overflow-x-auto no-scrollbar flex-1">
+                  {openFilePaths.map((path) => {
+                    const file = files.find(f => f.path === path);
+                    if (!file) return null;
+                    const fileIdx = files.findIndex(f => f.path === path);
+                    const isActive = activeFileIndex === fileIdx;
+                    return (
+                      <Box
+                        key={file.path}
+                        onClick={() => setActiveFileIndex(fileIdx)}
+                        className={`h-full flex items-center gap-2 px-4 cursor-pointer border-r border-black/20 min-w-[120px] transition-all ${isActive ? 'bg-[#1e1e1e] text-white' : 'bg-[#2d2d2d] text-white/40 hover:bg-[#1e1e1e]'}`}
+                      >
+                        {getFileIcon(file.name)}
+                        <Typography className="text-[12px] truncate">{file.name}</Typography>
+                        <IconButton
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCloseFile(file.path);
+                          }}
+                          className="ml-auto p-0.5 hover:bg-white/10 rounded !text-white"
+                        >
+                          <MdClose size={12} />
+                        </IconButton>
+                      </Box>
+                    );
+                  })}
                 </Box>
               </Box>
-              <Box className="flex items-center gap-1 md:gap-2 px-1 md:px-3">
-                {saveSuccess && !isMobile && <Typography className="text-emerald-500 text-[9px] font-black uppercase tracking-widest animate-pulse">Saved!</Typography>}
-                <IconButton onClick={handleFormat} size="small" className="!text-white p-1" title="Format Document"><MdFormatAlignLeft size={16} /></IconButton>
-                {isNoAutoSaveLab() ? (
-                  <>
-                    <Button
-                      onClick={() => handleSave(false)}
-                      variant="contained"
-                      size="small"
-                      disabled={isSaving}
-                      className="!bg-emerald-600 !text-[9px] md:!text-[10px] !font-black h-7 md:h-6 px-2 md:px-3 rounded shadow-lg shadow-emerald-600/20"
-                      startIcon={!isMobile && <MdSave />}
-                    >
-                      {isSaving ? '...' : (isMobile ? 'SAVE' : 'Save')}
-                    </Button>
-                    <Button
-                      onClick={() => handleSave(true)}
-                      variant="contained"
-                      size="small"
-                      disabled={isSaving}
-                      className="!bg-blue-600 !text-[9px] md:!text-[10px] !font-black h-7 md:h-6 px-2 md:px-3 rounded shadow-lg shadow-blue-600/20"
-                      startIcon={!isMobile && <MdDownload />}
-                    >
-                      {isSaving ? '...' : (isMobile ? 'DOWNLOAD' : 'Download')}
-                    </Button>
-                  </>
-                ) : (
-                  <Button
-                    onClick={() => handleSave(true)}
-                    variant="contained"
-                    size="small"
-                    disabled={isSaving}
-                    className="!bg-emerald-600 !text-[9px] md:!text-[10px] !font-black h-7 md:h-6 px-2 md:px-3 rounded shadow-lg shadow-emerald-600/20"
-                    startIcon={!isMobile && <MdSave />}
-                  >
-                    {isSaving ? '...' : (isMobile ? 'SAVE' : 'Save')}
-                  </Button>
-                )}
+              <Box className="flex items-center gap-1 px-2 shrink-0 min-w-fit">
+                <IconButton
+                  onClick={() => handleSave(true)}
+                  size="small"
+                  className="!text-blue-500 hover:!bg-blue-500/10"
+                  title="Download File"
+                >
+                  <MdDownload size={18} />
+                </IconButton>
                 <Button onClick={handleRun} variant="contained" size="small" className="!bg-red-600 !text-[9px] md:!text-[10px] !font-black h-7 md:h-6 px-2 md:px-3 min-w-[50px] md:min-w-[64px] rounded shadow-lg shadow-red-600/20" startIcon={!isMobile && <MdPlayArrow />}>RUN</Button>
                 <Box className="flex items-center gap-1">
                   {onBack && <IconButton onClick={onBack} size="small" className="!text-red-500 p-1" title="Back"><MdArrowBack size={18} /></IconButton>}
                   {onStopLab && (
                     <IconButton
-                      onClick={() => {
-                        // Final attempt to recover grade if state is lost
-                        let currentGrade = lastGrade;
-                        if (!currentGrade && sessionId) {
-                          const saved = localStorage.getItem(`lastGrade_${sessionId}`);
-                          if (saved) {
-                            try {
-                              currentGrade = JSON.parse(saved);
-                              setLastGrade(currentGrade);
-                            } catch (e) { }
-                          }
-                        }
-
-                        if (currentGrade) {
-                          setShowGradingModal(true);
-                        } else {
-                          onStopLab();
-                        }
-                      }}
+                      onClick={() => setShowStopModal(true)}
                       size="small"
                       className="!text-red-500 p-1"
                       title="Stop Lab"
@@ -774,7 +831,16 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
                       fontFamily: 'Fira Code, monospace',
                       formatOnType: true,
                       autoIndent: 'full',
-                      tabSize: 4
+                      tabSize: 4,
+                      padding: {
+                        top: 0
+                      },
+                      lineNumbersMinChars: 2,
+                      glyphMargin: false,
+                      folding: false,
+                      lineDecorationsWidth: 0,
+                      lineNumbers: 'on',
+                      scrollBeyondLastLine: false,
                     }}
                   />
                 ) : (
@@ -798,9 +864,7 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
               </Box>
               <Box className={`${isMobile ? (activeView === 'output' ? 'flex-1' : 'hidden') : 'w-[420px] hidden xl:flex'} bg-white flex flex-col shrink-0 border-l border-black/20`}>
                 <Box className="flex bg-[#f3f3f3] border-b border-[#e5e5e5]">
-                  {['preview', 'grading'].map(t => (
-                    <Button key={t} onClick={() => setRightPanelTab(t)} className={`flex-1 !rounded-none !py-3 !text-[10px] !font-black uppercase tracking-widest ${rightPanelTab === t ? '!text-red-600 !border-b-2 !border-red-600 !bg-white' : '!text-slate-400'}`}>{t}</Button>
-                  ))}
+                  <Button onClick={() => setRightPanelTab('preview')} className={`flex-1 !rounded-none !py-3 !text-[10px] !font-black uppercase tracking-widest ${rightPanelTab === 'preview' ? '!text-red-600 !border-b-2 !border-red-600 !bg-white' : '!text-slate-400'}`}>Preview</Button>
                 </Box>
                 <Box className="flex-1 overflow-auto relative bg-[#f9f9f9]">
                   {rightPanelTab === 'preview' && (
@@ -832,23 +896,7 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
                     </Box>
                   )}
 
-                  {rightPanelTab === 'grading' && (
-                    <Box className="p-8">
-                      {lastGrade ? (
-                        <Box className="space-y-8">
-                          <Box className="flex items-center justify-between"><Typography className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Performance Report</Typography><Typography className="text-emerald-500 text-[10px] font-black uppercase tracking-widest">{lastGrade.status}</Typography></Box>
-                          <Box className="flex items-center gap-5"><Box className="w-16 h-16 rounded-full border-4 border-red-600 flex items-center justify-center shadow-lg"><Typography className="font-black text-2xl text-slate-800">{lastGrade.score}</Typography></Box><div><Typography className="font-black text-slate-800 uppercase tracking-tight">{lastGrade.fileName}</Typography><Typography className="text-[10px] text-slate-400 uppercase font-bold">{lastGrade.timestamp}</Typography></div></Box>
-                          <Divider />
-                          <Stack spacing={4}>{lastGrade.details.map(d => (<div key={d.label}><div className="flex justify-between mb-2"><Typography className="text-[11px] font-black text-slate-600 uppercase tracking-tighter">{d.label}</Typography><Typography className="text-[11px] font-black text-red-600">{d.value}%</Typography></div><LinearProgress variant="determinate" value={d.value} className="!h-1.5 !rounded-full !bg-slate-200" sx={{ '& .MuiLinearProgress-bar': { backgroundColor: '#ef4444' } }} /></div>))}</Stack>
-                        </Box>
-                      ) : (
-                        <Box className="h-full flex flex-col items-center justify-center text-slate-300 py-32 gap-4">
-                          <MdAssignmentTurnedIn size={48} className="opacity-20" />
-                          <Typography className="text-[10px] font-black uppercase tracking-widest opacity-40">NO GRADING DATA AVAILABLE</Typography>
-                        </Box>
-                      )}
-                    </Box>
-                  )}
+
                 </Box>
               </Box>
             </Box>
@@ -871,120 +919,41 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
           </Box>
         </Dialog>
 
-        {/* Ultra-Premium Grading Result Modal */}
+        {/* Stop Lab Confirmation Popup */}
         <Dialog
-          open={showGradingModal}
-          onClose={() => setShowGradingModal(false)}
+          open={showStopModal}
+          onClose={() => setShowStopModal(false)}
           maxWidth="xs"
           fullWidth
           PaperProps={{
-            className: "bg-transparent shadow-none overflow-visible",
-            style: { backgroundColor: 'transparent', boxShadow: 'none', overflow: 'visible' }
+            style: { backgroundColor: '#1a1a2e', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.08)', color: 'white' }
           }}
         >
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0, y: 20 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            className="relative bg-[#0c0c0c]/90 backdrop-blur-3xl border border-white/10 rounded-[40px] overflow-hidden p-1"
-          >
-            {/* Top Dynamic Gradient Bar */}
-            <div className={`absolute top-0 left-0 right-0 h-2 transition-colors duration-1000 ${lastGrade?.score >= 60 ? 'bg-emerald-500 shadow-[0_0_20px_#10b981]' : 'bg-red-600 shadow-[0_0_20px_#ef4444]'}`} />
-
-            <Box className="p-10 flex flex-col items-center gap-8 relative">
-              {/* Background Atmosphere Glows */}
-              <div className={`absolute -top-20 -left-20 w-64 h-64 blur-[100px] rounded-full opacity-30 transition-colors duration-1000 ${lastGrade?.score >= 60 ? 'bg-emerald-600' : 'bg-red-600'}`} />
-              <div className="absolute -bottom-20 -right-20 w-64 h-64 bg-blue-600/10 blur-[100px] rounded-full" />
-
-              {/* Status Badge */}
-              <motion.div
-                initial={{ y: -20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                className={`px-6 py-2 rounded-full border font-black text-[10px] uppercase tracking-[0.4em] mb-2 ${lastGrade?.score >= 60
-                  ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
-                  : 'bg-red-600/10 text-red-500 border-red-600/20'
-                  }`}
-              >
-                Performance Report • {lastGrade?.status}
-              </motion.div>
-
-              {/* Large Score Indicator */}
-              <Box className="relative">
-                <svg className="w-40 h-40 -rotate-90">
-                  <circle cx="80" cy="80" r="72" className="stroke-white/5" strokeWidth="12" fill="transparent" />
-                  <motion.circle
-                    initial={{ strokeDashoffset: 452.4 }}
-                    animate={{ strokeDashoffset: 452.4 - (452.4 * (lastGrade?.score || 0)) / 100 }}
-                    transition={{ duration: 1.5, ease: "easeOut" }}
-                    cx="80" cy="80" r="72"
-                    className={`${lastGrade?.score >= 60 ? 'stroke-emerald-500' : 'stroke-red-500'}`}
-                    strokeWidth="12"
-                    fill="transparent"
-                    strokeDasharray="452.4"
-                    strokeLinecap="round"
-                  />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <Typography className="text-white text-5xl font-black tracking-tighter">{lastGrade?.score}</Typography>
-                  <Typography className="text-white/20 text-[10px] font-black uppercase tracking-widest">Points</Typography>
-                </div>
-              </Box>
-              {/* File Info */}
-              <div className="text-center space-y-1">
-                <Typography className="text-white text-2xl font-black uppercase tracking-tight">{lastGrade?.fileName}</Typography>
-                <Typography className="text-slate-500 text-[12px] font-bold uppercase tracking-widest">{lastGrade?.timestamp}</Typography>
-              </div>
-
-              <Divider className="w-full !bg-white/5" />
-
-              {/* Performance Metrics */}
-              <Stack spacing={4} className="w-full px-2">
-                {lastGrade?.details.map((d, i) => (
-                  <motion.div
-                    key={d.label}
-                    initial={{ x: -20, opacity: 0 }}
-                    animate={{ x: 0, opacity: 1 }}
-                    transition={{ delay: 0.2 + (i * 0.1) }}
-                    className="space-y-3"
-                  >
-                    <div className="flex justify-between items-end">
-                      <div className="flex items-center gap-3">
-                        <Box className={`w-2 h-2 rounded-full ${d.value >= 60 ? 'bg-emerald-500' : 'bg-red-500'}`} />
-                        <Typography className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">{d.label}</Typography>
-                      </div>
-                      <Typography className={`text-[12px] font-black ${d.value >= 60 ? 'text-emerald-500' : 'text-red-500'}`}>{d.value}%</Typography>
-                    </div>
-                    <Box className="h-2 w-full bg-white/5 rounded-full overflow-hidden p-0.5">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${d.value}%` }}
-                        transition={{ duration: 1.2, ease: "easeOut", delay: 0.5 }}
-                        className={`h-full rounded-full ${d.value >= 60 ? 'bg-emerald-500' : 'bg-red-500'} shadow-[0_0_15px_rgba(16,185,129,0.2)]`}
-                      />
-                    </Box>
-                  </motion.div>
-                ))}
-              </Stack>
-
-              {/* Final Actions */}
-              <Box className="flex flex-col gap-4 w-full mt-6">
-                <Button
-                  onClick={() => {
-                    setShowGradingModal(false);
-                    onStopLab();
-                  }}
-                  className="w-full !py-5 !rounded-2xl !bg-red-600 hover:!bg-red-700 !text-white !font-black !text-[12px] uppercase tracking-[0.2em] shadow-[0_10px_30px_rgba(239,68,68,0.2)] transition-all active:scale-95"
-                >
-                  Accept & Terminate Session
-                </Button>
-                <Button
-                  onClick={() => setShowGradingModal(false)}
-                  className="w-full !py-5 !rounded-2xl !bg-white/5 hover:!bg-white/10 !text-slate-400 !font-black !text-[12px] uppercase tracking-[0.2em] transition-all"
-                >
-                  Return to Editor
-                </Button>
-              </Box>
+          <Box className="p-8 flex flex-col items-center gap-6 text-center">
+            <Box className="w-16 h-16 rounded-full bg-red-600/10 border border-red-600/20 flex items-center justify-center">
+              <MdPowerSettingsNew size={32} className="text-red-500" />
             </Box>
-          </motion.div>
+            <div className="space-y-2">
+              <Typography className="font-black text-xl uppercase tracking-tight">Stop Lab?</Typography>
+              <Typography className="text-slate-400 text-[13px] leading-relaxed">
+                Are you sure you want to stop the lab? Any unsaved progress may be lost.
+              </Typography>
+            </div>
+            <Box className="flex flex-col gap-3 w-full mt-2">
+              <Button
+                onClick={() => { setShowStopModal(false); onStopLab && onStopLab(); }}
+                className="w-full !py-4 !rounded-xl !bg-red-600 hover:!bg-red-700 !text-white !font-black !text-[11px] uppercase tracking-widest shadow-lg shadow-red-600/20"
+              >
+                Stop Lab
+              </Button>
+              <Button
+                onClick={() => setShowStopModal(false)}
+                className="w-full !py-4 !rounded-xl !bg-white/5 hover:!bg-white/10 !text-slate-400 !font-black !text-[11px] uppercase tracking-widest"
+              >
+                Return to Editor
+              </Button>
+            </Box>
+          </Box>
         </Dialog>
 
         <Snackbar
