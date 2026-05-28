@@ -362,6 +362,12 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
   };
 
   const handleAddFile = async () => {
+    if (openFilePaths.length >= 8) {
+      setRestrictionMsg('Maximum of 8 files can be open in the tabs at the same time. Please close some tabs first.');
+      setShowRestrictionModal(true);
+      return;
+    }
+
     const defaultName = isJavaLab() ? 'Main.java' : (isPythonLab() ? 'script.py' : 'script.txt');
     const fileName = window.prompt(`Enter file name (e.g. ${defaultName}):`, defaultName);
     if (!fileName) return;
@@ -422,7 +428,13 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
           });
 
           setFiles(prev => {
-            const merged = [...filteredFiles];
+            const merged = filteredFiles.map(newF => {
+              const existingF = prev.find(oldF => oldF.path === newF.path);
+              if (existingF) {
+                return { ...newF, content: existingF.content };
+              }
+              return newF;
+            });
             if (!merged.some(f => f.path === newFile.path)) {
               merged.push(newFile);
             }
@@ -446,6 +458,20 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
   const handleFileUpload = (event) => {
     const file = event.target.files[0];
     if (!file) return;
+
+    const filePath = `/workspace/${file.name}`;
+    const exists = files.some(f => f.path === filePath);
+    if (!exists && files.length >= 5) {
+      setRestrictionMsg('Workspace Limit Reached: You can have a maximum of 5 files in the workspace.');
+      setShowRestrictionModal(true);
+      return;
+    }
+
+    if (!openFilePaths.includes(filePath) && openFilePaths.length >= 8) {
+      setRestrictionMsg('Maximum of 8 files can be open in the tabs at the same time. Please close some tabs first.');
+      setShowRestrictionModal(true);
+      return;
+    }
 
     const ext = file.name.split('.').pop().toLowerCase();
 
@@ -509,7 +535,14 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
             });
 
             setFiles(prev => {
-              const merged = [...filteredFiles];
+              const merged = filteredFiles.map(newF => {
+                const existingF = prev.find(oldF => oldF.path === newF.path);
+                if (existingF) {
+                  return { ...newF, content: existingF.content };
+                }
+                return newF;
+              });
+
               const localIdx = merged.findIndex(f => f.path === newFile.path);
               if (localIdx === -1) {
                 merged.push(newFile);
@@ -679,10 +712,14 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
                   <Box
                     key={file.path}
                     onClick={() => {
-                      setOpenFilePaths(prev => {
-                        if (prev.includes(file.path)) return prev;
-                        return [...prev, file.path];
-                      });
+                      if (!openFilePaths.includes(file.path)) {
+                        if (openFilePaths.length >= 8) {
+                          setRestrictionMsg('Maximum of 8 files can be open in the tabs at the same time. Please close some tabs first.');
+                          setShowRestrictionModal(true);
+                          return;
+                        }
+                        setOpenFilePaths(prev => [...prev, file.path]);
+                      }
                       setActiveFileIndex(i);
 
                       if (isMobile) {
