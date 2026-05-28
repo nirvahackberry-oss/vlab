@@ -1,5 +1,5 @@
 import { ok } from "../lib/apigw.js";
-import { badRequest, forbidden, notFound } from "../lib/errors.js";
+import { badRequest, forbidden, notFound, unauthorized } from "../lib/errors.js";
 import { canonicalLabType } from "../lib/labTypeMapper.js";
 import { getLabById } from "../config/labs.js";
 import { ENV } from "../config/env.js";
@@ -21,6 +21,7 @@ import { clearSessionFiles } from "../services/fileRepository.js";
 
 export const sessionsStartHandler = async ({ body, auth }) => {
   const labId = body?.labId;
+  if (!auth?.userId) throw unauthorized("Authentication required");
   const userId = auth.userId;
   const durationMinutes = Number(body?.duration || ENV.defaultSessionMinutes);
 
@@ -69,6 +70,7 @@ export const sessionsStartHandler = async ({ body, auth }) => {
 };
 
 export const sessionsGetHandler = async ({ pathParameters, auth }) => {
+  if (!auth?.userId) throw unauthorized("Authentication required");
   const sessionId = pathParameters?.sessionId;
   let session = await getSession(sessionId);
   if (!session) throw notFound("Session not found");
@@ -88,6 +90,7 @@ export const sessionsGetHandler = async ({ pathParameters, auth }) => {
 };
 
 export const sessionsStopHandler = async ({ pathParameters, auth }) => {
+  if (!auth?.userId) throw unauthorized("Authentication required");
   const sessionId = pathParameters?.sessionId;
   const session = await getSession(sessionId);
   if (!session) throw notFound("Session not found");
@@ -114,6 +117,7 @@ export const sessionsListByUserHandler = async ({
   queryStringParameters,
   auth,
 }) => {
+  if (!auth?.userId) throw unauthorized("Authentication required");
   const requestedUser = decodeURIComponent(pathParameters?.userId || "");
   const labId = queryStringParameters?.labId;
 

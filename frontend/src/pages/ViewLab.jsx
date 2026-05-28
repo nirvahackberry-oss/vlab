@@ -1,4 +1,4 @@
-    import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Alert,
@@ -51,7 +51,7 @@ const ViewLab = ({ onMenuClick }) => {
         }
 
         // Check if user already has an active session for this lab
-        if (user?.email) {
+        if (user?.id) {
           const sessionResponse = await fetchUserActiveSession(user.id, id);
           if (mounted && sessionResponse.success && sessionResponse.session) {
             setSession(sessionResponse.session);
@@ -69,7 +69,7 @@ const ViewLab = ({ onMenuClick }) => {
     return () => {
       mounted = false;
     };
-  }, [id]);
+  }, [id, user?.id]);
 
   // Polling for session status
   useEffect(() => {
@@ -115,7 +115,6 @@ const ViewLab = ({ onMenuClick }) => {
       setError('');
       const startResponse = await startLabSession({
         labId: id,
-        userId: user?.id,
       });
 
       const statusResponse = await fetchLabSessionStatus(startResponse.sessionId);
