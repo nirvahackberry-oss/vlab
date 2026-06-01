@@ -1,428 +1,3 @@
-// import React, { useState, useEffect, useRef } from 'react';
-// import {
-//   Box,
-//   Typography,
-//   IconButton,
-//   Tooltip,
-//   Paper,
-//   Avatar,
-//   Divider,
-//   Button,
-//   Dialog,
-//   DialogTitle,
-//   DialogContent,
-//   DialogActions
-// } from '@mui/material';
-// import {
-//   MdClose,
-//   MdMinimize,
-//   MdCropSquare,
-//   MdTerminal,
-//   MdLanguage,
-//   MdSettings,
-//   MdFolder,
-//   MdPowerSettingsNew,
-//   MdWifi,
-//   MdVolumeUp,
-//   MdSearch,
-//   MdWarning
-// } from 'react-icons/md';
-// import { VscCode } from 'react-icons/vsc';
-// import { useNavigate, useLocation } from 'react-router-dom';
-// import { useAuthStore } from '../../store/authStore';
-// import { fetchUserActiveSession, startLabSession, fetchLabSessionStatus, stopLabSession } from '../../services/labService';
-// import CloudEditor from './Editor';
-// import Terminal from './Terminal';
-
-// const appsConfig = [
-//   { id: 'vscode', title: 'Visual Studio Code', icon: 'vscode', component: CloudEditor },
-//   { id: 'terminal', title: 'SSH Terminal', icon: 'terminal', component: Terminal },
-//   { id: 'browser', title: 'Ignito Browser', icon: 'browser', component: () => <Box className="p-10 text-white">Browser simulation coming soon...</Box> },
-//   { id: 'files', title: 'File Explorer', icon: 'files', component: () => <Box className="p-10 text-white">Files simulation coming soon...</Box> }
-// ];
-
-// const getAppIcon = (iconId, size = 24) => {
-//   switch (iconId) {
-//     case 'vscode': return <VscCode size={size} className="text-blue-400" />;
-//     case 'terminal': return <MdTerminal size={size} className="text-emerald-400" />;
-//     case 'browser': return <MdLanguage size={size} className="text-red-400" />;
-//     case 'files': return <MdFolder size={size} className="text-yellow-400" />;
-//     default: return <MdSettings size={size} />;
-//   }
-// };
-
-// const RemoteDesktop = () => {
-//   const navigate = useNavigate();
-//   const location = useLocation();
-//   const [connecting, setConnecting] = useState(true);
-//   const [connectionLog, setConnectionLog] = useState([]);
-//   const [openWindows, setOpenWindows] = useState([]);
-//   const [activeWindow, setActiveWindow] = useState(null);
-//   const [maximizedWindows, setMaximizedWindows] = useState([]);
-//   const [minimizedWindows, setMinimizedWindows] = useState([]);
-//   const [showStartMenu, setShowStartMenu] = useState(false);
-//   const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-//   const hasAutoOpenedRef = useRef(false);
-
-//   const user = useAuthStore(state => state.user);
-//   const [session, setSession] = useState(null);
-//   const [error, setError] = useState('');
-
-//   const initStartedRef = useRef(false);
-//   const [showStopModal, setShowStopModal] = useState(false);
-//   const [isStopping, setIsStopping] = useState(false);
-
-//   useEffect(() => {
-//     const params = new URLSearchParams(location.search);
-//     const labId = params.get('labId');
-
-//     const initializeSession = async () => {
-//       if (!labId || !user?.email || initStartedRef.current) return;
-//       initStartedRef.current = true;
-
-//       try {
-//         setConnectionLog(prev => [`[${new Date().toLocaleTimeString()}] Connecting to Ignito Cloud Core...`]);
-
-//         // 1. Check for existing session
-//         const activeRes = await fetchUserActiveSession(user.email);
-//         let activeSession = null;
-
-//         if (activeRes.success && activeRes.session && activeRes.session.labId === labId) {
-//           activeSession = activeRes.session;
-//           setConnectionLog(prev => [...prev, `[${new Date().toLocaleTimeString()}] Found existing session: ${activeSession.sessionId}`]);
-//         } else {
-//           // 2. Start new session
-//           const startRes = await startLabSession({ labId, userId: user.email });
-//           activeSession = startRes;
-//           setConnectionLog(prev => [...prev, `[${new Date().toLocaleTimeString()}] Provisioning new environment...`]);
-//         }
-
-//         // Wait if starting
-//         let currentStatus = activeSession.status || 'starting';
-//         let statusRes = activeSession;
-
-//         while (currentStatus === 'starting') {
-//           statusRes = await fetchLabSessionStatus(activeSession.sessionId);
-//           currentStatus = statusRes.status;
-//           if (currentStatus === 'starting') {
-//             setConnectionLog(prev => [...prev, `[${new Date().toLocaleTimeString()}] Provisioning environment...`]);
-//             await new Promise(r => setTimeout(r, 1000));
-//           }
-//         }
-
-//         if (currentStatus === 'running') {
-//           setSession(statusRes);
-//           setConnecting(false);
-//         } else {
-//           throw new Error(statusRes.message || 'Failed to start lab environment');
-//         }
-
-//       } catch (err) {
-//         setError(err.message || 'Failed to initialize session');
-//         setConnectionLog(prev => [...prev, `[ERROR] ${err.message}`]);
-//         initStartedRef.current = false; // Allow retry on error
-//       }
-//     };
-
-//     if (user?.email) {
-//       initializeSession();
-//     }
-//   }, [location.search, user?.email]);
-
-//   useEffect(() => {
-//     const timer = setInterval(() => {
-//       setCurrentTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-//     }, 60000);
-//     return () => clearInterval(timer);
-//   }, []);
-
-//   const toggleWindow = (appId) => {
-//     const app = appsConfig.find(a => a.id === appId);
-//     if (!app) return;
-
-//     if (openWindows.find(w => w.id === appId)) {
-//       if (minimizedWindows.includes(appId)) {
-//         setMinimizedWindows(minimizedWindows.filter(id => id !== appId));
-//       }
-//       setActiveWindow(appId);
-//     } else {
-//       setOpenWindows([...openWindows, app]);
-//       setActiveWindow(appId);
-//       if (appId === 'vscode' || appId === 'terminal') {
-//         setMaximizedWindows(prev => [...prev, appId]);
-//       }
-//     }
-//     setShowStartMenu(false);
-//   };
-
-//   const handleStopLab = async () => {
-//     setIsStopping(true);
-//     try {
-//       if (session?.sessionId) {
-//         await stopLabSession(session.sessionId);
-//         localStorage.removeItem(`lastGrade_${session.sessionId}`);
-//       }
-//       navigate('/');
-//     } catch (err) {
-//       console.error('Failed to stop lab:', err);
-//       navigate('/');
-//     } finally {
-//       setIsStopping(false);
-//       setShowStopModal(false);
-//     }
-//   };
-
-//   const closeWindow = (id) => {
-//     setOpenWindows(openWindows.filter(w => w.id !== id));
-//     setMaximizedWindows(maximizedWindows.filter(winId => winId !== id));
-//     setMinimizedWindows(minimizedWindows.filter(winId => winId !== id));
-//     if (activeWindow === id) setActiveWindow(null);
-//   };
-
-//   const minimizeWindow = (id) => {
-//     setMinimizedWindows(prev => [...prev, id]);
-//     if (activeWindow === id) setActiveWindow(null);
-//   };
-
-//   const toggleMaximize = (id) => {
-//     if (maximizedWindows.includes(id)) {
-//       setMaximizedWindows(maximizedWindows.filter(winId => winId !== id));
-//     } else {
-//       setMaximizedWindows([...maximizedWindows, id]);
-//     }
-//   };
-
-//   useEffect(() => {
-//     if (connecting || hasAutoOpenedRef.current) return;
-
-//     const params = new URLSearchParams(location.search);
-//     const appToOpen = params.get('app');
-//     const labId = params.get('labId')?.toLowerCase() || '';
-
-//     // If explicit app is requested, open it
-//     if (appToOpen) {
-//       toggleWindow(appToOpen);
-//       hasAutoOpenedRef.current = true;
-//     }
-//     // Fallback based on labId if no app requested
-//     else if (labId) {
-//       const isTerminalLab = labId.includes('linux') || labId.includes('dbms') || labId.includes('sql');
-//       toggleWindow(isTerminalLab ? 'terminal' : 'vscode');
-//       hasAutoOpenedRef.current = true;
-//     }
-//   }, [connecting, location.search]);
-
-//   const [loadingProgress, setLoadingProgress] = useState(0);
-//   const [loadingStatus, setLoadingStatus] = useState('Initializing connection...');
-
-//   useEffect(() => {
-//     if (!connecting) return;
-
-//     const interval = setInterval(() => {
-//       setLoadingProgress(prev => {
-//         if (prev >= 95) return 95;
-//         // Progress slows down as it gets closer to 95
-//         const increment = Math.max(0.1, (95 - prev) / 20);
-//         return prev + increment;
-//       });
-//     }, 100);
-
-//     return () => clearInterval(interval);
-//   }, [connecting]);
-
-//   useEffect(() => {
-//     if (!connecting) return;
-//     const statuses = [
-//       'Allocating cloud resources...',
-//       'Requesting Fargate task...',
-//       'Pulling container image...',
-//       'Configuring network bridge...',
-//       'Initializing secure tunnel...',
-//       'Starting container services...',
-//       'Optimizing display stream...',
-//       'Preparing your workspace...'
-//     ];
-//     let i = 0;
-//     const interval = setInterval(() => {
-//       setLoadingStatus(statuses[i % statuses.length]);
-//       i++;
-//     }, 3000);
-//     return () => clearInterval(interval);
-//   }, [connecting]);
-
-//   if (connecting) {
-//     return (
-//       <Box className="h-screen w-screen bg-[#0a0a0a] flex items-center justify-center p-6">
-//         <Box className="max-w-md w-full relative">
-//           {/* Animated Background Glow */}
-//           <div className="absolute -inset-20 bg-red-600/10 blur-[100px] rounded-full animate-pulse" />
-
-//           <div className="relative flex flex-col items-center gap-8 text-center">
-//             {/* Logo / Icon */}
-//             <Box className="w-24 h-24 rounded-3xl bg-white/5 backdrop-blur-xl flex items-center justify-center border border-white/10 shadow-2xl animate-bounce">
-//               <img src="/assets/logo.png" alt="Ignito Vlab" className="w-16 h-16 object-contain" />
-//             </Box>
-
-//             <div className="space-y-2">
-//               <Typography className="text-white font-black text-3xl tracking-tighter uppercase">Ignito Vlab</Typography>
-//               <Typography className="text-slate-500 text-xs uppercase tracking-[0.3em] font-bold">Secure WebRTC Tunnel</Typography>
-//             </div>
-
-//             {/* Progress Area */}
-//             <Box className="w-full space-y-6">
-//               {!error ? (
-//                 <>
-//                   <Box className="relative h-2 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
-//                     <Box
-//                       className="absolute inset-y-0 left-0 bg-gradient-to-r from-red-600 to-orange-500 transition-all duration-300 shadow-[0_0_20px_rgba(239,68,68,0.5)]"
-//                       style={{ width: `${loadingProgress}%` }}
-//                     />
-//                   </Box>
-
-//                   <div className="flex justify-between items-center px-1">
-//                     <Typography className="text-slate-400 text-[11px] font-black uppercase tracking-widest animate-pulse">
-//                       {loadingStatus}
-//                     </Typography>
-//                     <Typography className="text-red-500 font-mono text-sm font-bold">
-//                       {Math.round(loadingProgress)}%
-//                     </Typography>
-//                   </div>
-//                 </>
-//               ) : (
-//                 <Box className="bg-red-500/10 border border-red-500/20 rounded-2xl p-6 text-center">
-//                   <Typography className="text-red-500 text-sm font-bold mb-4">{error}</Typography>
-//                   <Button
-//                     onClick={() => navigate('/')}
-//                     variant="outlined"
-//                     className="!border-red-500 !text-red-500 !font-black !text-[10px] uppercase tracking-widest !rounded-xl !px-6"
-//                   >
-//                     Go Back to Dashboard
-//                   </Button>
-//                 </Box>
-//               )}
-//             </Box>
-//           </div>
-//         </Box>
-//       </Box>
-//     );
-//   }
-
-//   return (
-//     <Box
-//       className="h-screen w-screen overflow-hidden relative select-none"
-//       sx={{
-//         background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
-//       }}
-//     >
-
-//       {/* Desktop Icons */}
-//       <Box className="p-6 flex flex-col gap-6">
-//         {appsConfig.map(app => (
-//           <div
-//             key={app.id}
-//             onDoubleClick={() => toggleWindow(app.id)}
-//             className="w-20 flex flex-col items-center gap-1 cursor-pointer group"
-//           >
-//             <Box className="w-14 h-14 bg-white/10 backdrop-blur-xl rounded-2xl flex items-center justify-center border border-white/20 group-hover:bg-white/20 transition-all shadow-2xl">
-//               {getAppIcon(app.icon)}
-//             </Box>
-//             <Typography className="text-white text-[11px] font-bold text-center drop-shadow-lg">{app.title}</Typography>
-//           </div>
-//         ))}
-//       </Box>
-
-//       {/* Windows Overlay */}
-//       <div className="absolute inset-0 pointer-events-none">
-//         {openWindows.map((win, index) => {
-//           const isMaximized = maximizedWindows.includes(win.id);
-//           const isMinimized = minimizedWindows.includes(win.id);
-//           if (isMinimized) return null;
-
-//           return (
-//             <div
-//               key={win.id}
-//               onMouseDown={() => setActiveWindow(win.id)}
-//               className={`absolute bg-[#1e1e1e] shadow-2xl border border-white/10 overflow-hidden flex flex-col pointer-events-auto transition-all duration-300 ${(isMaximized || window.innerWidth < 768) ? 'inset-0 bottom-0' : 'inset-10 rounded-2xl'}`}
-//               style={{ zIndex: activeWindow === win.id ? 100 : 10 + index }}
-//             >
-//               <Box className="flex-1 overflow-hidden">
-//                 <win.component
-//                   onMenuClick={() => { }}
-//                   session={session}
-//                   onStopLab={() => setShowStopModal(true)}
-//                   onBack={() => navigate('/')}
-//                   hideHeader={win.id === 'terminal' ? !((new URLSearchParams(location.search).get('labId')?.toLowerCase() || '').includes('linux') || (new URLSearchParams(location.search).get('labId')?.toLowerCase() || '').includes('dbms') || (new URLSearchParams(location.search).get('labId')?.toLowerCase() || '').includes('sql')) : true}
-//                   onOpenTerminal={() => {
-//                     // Minimize VS Code and Open Terminal Fullscreen
-//                     minimizeWindow('vscode');
-//                     toggleWindow('terminal');
-//                     if (!maximizedWindows.includes('terminal')) {
-//                       setMaximizedWindows(prev => [...prev, 'terminal']);
-//                     }
-//                   }}
-//                 />
-//               </Box>
-//             </div>
-//           );
-//         })}
-//       </div>
-//       {/* Start Menu Simulation */}
-//       {showStartMenu && (
-//         <Box className="absolute bottom-16 left-2 w-[400px] h-[500px] bg-black/80 backdrop-blur-3xl rounded-3xl border border-white/10 p-6 z-[500]">
-//           <Typography className="text-white/40 text-[10px] font-black uppercase mb-4">Pinned</Typography>
-//           <Box className="grid grid-cols-4 gap-4">
-//             {appsConfig.map(app => (
-//               <div key={app.id} onClick={() => toggleWindow(app.id)} className="flex flex-col items-center gap-2 cursor-pointer hover:bg-white/5 p-2 rounded-xl">
-//                 {getAppIcon(app.icon)}
-//                 <Typography className="text-white/80 text-[10px]">{app.title.split(' ')[0]}</Typography>
-//               </div>
-//             ))}
-//           </Box>
-//         </Box>
-//       )}
-//       {/* Stop Lab Confirmation Modal */}
-//       <Dialog
-//         open={showStopModal}
-//         onClose={() => !isStopping && setShowStopModal(false)}
-//         PaperProps={{
-//           className: "bg-[#1e1e1e] border border-white/10 rounded-2xl p-2",
-//           style: { backgroundColor: '#1e1e1e', borderRadius: '20px' }
-//         }}
-//       >
-//         <Box className="p-4 flex flex-col items-center gap-4 text-center">
-//           <Box className="w-16 h-16 rounded-full bg-red-600/10 flex items-center justify-center text-red-500 mb-2">
-//             <MdWarning size={32} />
-//           </Box>
-//           <div className="space-y-1">
-//             <Typography className="text-white text-xl font-black uppercase tracking-tighter">Stop Lab Session?</Typography>
-//             <Typography className="text-slate-400 text-sm">Are you sure you want to stop this lab? All unsaved work will be permanently lost.</Typography>
-//           </div>
-//           <Box className="flex gap-3 w-full mt-4">
-//             <Button
-//               onClick={() => setShowStopModal(false)}
-//               disabled={isStopping}
-//               className="flex-1 !py-3 !rounded-xl !text-slate-400 !bg-white/5 hover:!bg-white/10 !font-black !text-[11px] uppercase tracking-widest"
-//             >
-//               No, Keep Working
-//             </Button>
-//             <Button
-//               onClick={handleStopLab}
-//               disabled={isStopping}
-//               variant="contained"
-//               className="flex-1 !py-3 !rounded-xl !bg-red-600 hover:!bg-red-700 !text-white !font-black !text-[11px] uppercase tracking-widest shadow-xl shadow-red-600/20"
-//             >
-//               {isStopping ? 'Stopping...' : 'Yes, Stop Lab'}
-//             </Button>
-//           </Box>
-//         </Box>
-//       </Dialog>
-//     </Box>
-//   );
-// };
-
-// export default RemoteDesktop;
-
-
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
@@ -465,20 +40,41 @@ import {
 } from '../../services/labService';
 import CloudEditor from './Editor';
 import Terminal from './Terminal';
+import { APP_ENV } from '../../config/env';
 
+
+const resolveToolUrl = (url) => {
+  if (!url) return null;
+  // Already absolute
+  if (url.startsWith('http')) return url;
+  // Relative path from backend (e.g. /api/lab-sessions/.../jupyter/lab?access_token=...)
+  // Resolve against the backend origin the frontend is configured to use
+  const apiBase = APP_ENV.apiBaseUrl || '';
+  if (apiBase) {
+    // Extract origin from apiBaseUrl (e.g. "http://1.2.3.4:8082/api" → "http://1.2.3.4:8082")
+    try {
+      const parsed = new URL(apiBase);
+      return `${parsed.origin}${url}`;
+    } catch {
+      return url;
+    }
+  }
+  // Fallback: use current browser origin
+  return `${window.location.protocol}//${window.location.hostname}:8082${url}`;
+};
 
 const getLabToolUrl = (session) => {
   if (!session) return null;
   const isJupyter = session.tools?.main?.type === 'jupyter' || session.tools?.jupyter?.enabled;
 
   if (isJupyter) {
-    if (session.tools?.jupyter?.url) return session.tools.jupyter.url;
-    if (session.tools?.main?.url) return session.tools.main.url;
+    if (session.tools?.jupyter?.url) return resolveToolUrl(session.tools.jupyter.url);
+    if (session.tools?.main?.url) return resolveToolUrl(session.tools.main.url);
     if (session.publicIp) return `http://${session.publicIp}:8888/lab`;
     return null;
   }
 
-  if (session.tools?.main?.url) return session.tools.main.url;
+  if (session.tools?.main?.url) return resolveToolUrl(session.tools.main.url);
   if (session.publicIp) {
     const port = session.tools?.main?.port || session.containerPort || 8080;
     return `http://${session.publicIp}:${port}/`;
@@ -489,12 +85,32 @@ const getLabToolUrl = (session) => {
 const isDataScienceLab = (labId, session) =>
   labId === 'data-science-lab' || session?.tools?.main?.type === 'jupyter';
 
-/** Python/Java/Linux labs expose an API on :8080, not a web IDE — use built-in editor instead of iframe. */
-const shouldUseBuiltInEditor = (session, labId) =>
-  session?.tools?.main?.type === 'ide' ||
-  ['python-lab', 'java-lab', 'linux-lab', 'dbms-lab'].includes(
-    (session?.labId || labId || '').toLowerCase()
+/** Labs that explicitly need code-server (VS Code iframe) — full file tree, import-aware IDE. */
+const shouldUseCodeServer = (session, labId) => {
+  const lid = (session?.labId || labId || '').toLowerCase();
+  return (
+    lid === 'testing-lab' ||
+    lid === 'mobile-app-lab' ||
+    lid === 'dotnet-lab' ||
+    lid === 'software-eng-lab'
   );
+};
+
+/** Python/Java/Linux/BigData/Agile labs expose an API on :8080, use built-in editor. */
+const shouldUseBuiltInEditor = (session, labId) => {
+  const lid = (session?.labId || labId || '').toLowerCase();
+  // Code-server labs are handled separately — do NOT fall back to built-in editor
+  if (shouldUseCodeServer(session, labId)) return false;
+  return (
+    session?.tools?.main?.type === 'ide' ||
+    ['python-lab', 'java-lab'].includes(lid) ||
+    lid.includes('big-data') ||
+    lid.includes('bigdata') ||
+    lid.includes('big data') ||
+    lid.includes('analytics') ||
+    lid.includes('agile')
+  );
+};
 
 const usesIframeEmbed = (session, labId) => {
   const url = getLabToolUrl(session);
@@ -519,23 +135,37 @@ const IframeTool = ({ url, title, onStopLab, onBack, isJupyter, sessionId }) => 
 
     const run = async () => {
       if (isJupyter && sessionId) {
-        try {
-          const health = await fetchJupyterHealth(sessionId);
+        let reachable = false;
+        let lastErrorMsg = '';
+        for (let i = 0; i < 30; i++) {
           if (cancelled) return;
-          if (!health.reachable) {
-            setLoadError(
-              health.message ||
-                'Cannot reach Jupyter on port 8888. Your AWS engineer must open inbound TCP 8888 on the ECS security group (terraform apply).'
-            );
-            setIsLoading(false);
-            return;
+          try {
+            const health = await fetchJupyterHealth(sessionId);
+            if (health.reachable) {
+              reachable = true;
+              break;
+            }
+            lastErrorMsg = health.message;
+          } catch (err) {
+            if (err?.status === 404) {
+              // Health endpoint missing or old build — still try iframe
+              console.warn('Jupyter health check skipped:', err.message);
+              reachable = true;
+              break;
+            }
+            lastErrorMsg = err.message;
           }
-        } catch (err) {
-          if (cancelled) return;
-          // Health endpoint missing or server old build — still try iframe
-          if (err?.status !== 404) {
-            console.warn('Jupyter health check skipped:', err.message);
-          }
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+        }
+
+        if (cancelled) return;
+        if (!reachable) {
+          setLoadError(
+            lastErrorMsg ||
+              'Cannot reach Jupyter on port 8888. Your AWS engineer must open inbound TCP 8888 on the ECS security group (terraform apply).'
+          );
+          setIsLoading(false);
+          return;
         }
       }
 
@@ -630,8 +260,6 @@ const IframeTool = ({ url, title, onStopLab, onBack, isJupyter, sessionId }) => 
           title="Lab Tool"
           className="absolute inset-0 h-full w-full border-none bg-white"
           allow="clipboard-read; clipboard-write; fullscreen; autoplay; microphone; camera"
-          sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads allow-modals"
-          referrerPolicy="no-referrer-when-downgrade"
           allowFullScreen
           onLoad={() => {
             setIsLoading(false);
@@ -644,12 +272,83 @@ const IframeTool = ({ url, title, onStopLab, onBack, isJupyter, sessionId }) => 
   );
 };
 
+// Code-server (VS Code) cannot be embedded in an iframe (X-Frame-Options: SAMEORIGIN).
+// Instead, auto-open it in a new tab and show a clean launch panel with session controls.
+const CodeServerLauncher = ({ url, onStopLab, onBack, labTitle }) => {
+  const [opened, setOpened] = useState(false);
+
+  useEffect(() => {
+    if (url) {
+      const w = window.open(url, '_blank', 'noopener,noreferrer');
+      setOpened(!!w);
+    }
+  }, [url]);
+
+  return (
+    <Box className="h-screen w-screen flex flex-col bg-[#0c0c0c] text-white">
+      <Box className="bg-[#1e1e1e] border-b border-white/10 px-4 py-3 flex items-center justify-between">
+        <Box>
+          <Typography className="text-white font-black text-sm">VS Code (code-server)</Typography>
+          <Typography className="text-slate-500 text-[10px] font-mono">{url}</Typography>
+        </Box>
+        <Box className="flex gap-2">
+          <Button component="a" href={url} target="_blank" rel="noopener noreferrer" size="small" className="!text-emerald-400 !text-[10px] !font-black uppercase">Open in Tab</Button>
+          <Button size="small" onClick={onBack} className="!text-slate-400 !text-[10px] !font-black uppercase">Dashboard</Button>
+          <Button size="small" onClick={onStopLab} className="!text-red-400 !text-[10px] !font-black uppercase">Stop Lab</Button>
+        </Box>
+      </Box>
+      <Box className="flex-1 flex flex-col items-center justify-center gap-6 px-8">
+        <Box className="w-24 h-24 rounded-2xl bg-[#1e1e1e] border border-blue-500/40 flex items-center justify-center shadow-2xl">
+          <svg viewBox="0 0 100 100" className="w-14 h-14">
+            <path fill="#2196F3" d="M74.9 7.3L52.5 30.6 32.4 13.5l-9.7 4.4v64.5l9.7 4.4 20.1-17.1 22.5 23.3L90 82.5V17.5L74.9 7.3zm-3 64.4L50.4 51l21.5-20.7v41.4z"/>
+          </svg>
+        </Box>
+        <Box className="text-center max-w-lg">
+          <Typography className="text-white text-2xl font-black mb-2">{labTitle || 'VS Code is Ready!'}</Typography>
+          <Typography className="text-slate-400 text-sm leading-relaxed">
+            {opened
+              ? 'VS Code opened in a new tab. Switch to that tab to start coding with full multi-file project support and IntelliSense.'
+              : 'Your browser blocked the popup. Click the button below to open VS Code in a new tab.'}
+          </Typography>
+        </Box>
+        <Button
+          component="a"
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          variant="contained"
+          size="large"
+          className="!bg-blue-600 hover:!bg-blue-500 !px-8 !py-3 !text-base !font-black !rounded-xl"
+          onClick={() => setOpened(true)}
+        >
+          {opened ? '↗ Open VS Code Again' : '↗ Open VS Code'}
+        </Button>
+        <Box className="flex gap-3 flex-wrap justify-center">
+          <Box className="bg-[#1e1e1e] border border-white/10 rounded-lg px-4 py-2 text-center">
+            <Typography className="text-[10px] text-slate-500 uppercase font-bold">Port</Typography>
+            <Typography className="text-white text-sm font-mono font-bold">8080</Typography>
+          </Box>
+          <Box className="bg-[#1e1e1e] border border-white/10 rounded-lg px-4 py-2 text-center">
+            <Typography className="text-[10px] text-slate-500 uppercase font-bold">Editor</Typography>
+            <Typography className="text-white text-sm font-mono font-bold">VS Code</Typography>
+          </Box>
+          <Box className="bg-[#1e1e1e] border border-white/10 rounded-lg px-4 py-2 text-center">
+            <Typography className="text-[10px] text-slate-500 uppercase font-bold">Multi-file</Typography>
+            <Typography className="text-emerald-400 text-sm font-mono font-bold">✓ Yes</Typography>
+          </Box>
+        </Box>
+      </Box>
+    </Box>
+  );
+};
+
 const appsConfig = [
   { id: 'vscode', title: 'Visual Studio Code', icon: 'vscode', component: CloudEditor },
   { id: 'terminal', title: 'SSH Terminal', icon: 'terminal', component: Terminal },
   { id: 'browser', title: 'Ignito Browser', icon: 'browser', component: () => <Box className="p-10 text-white">Browser simulation coming soon...</Box> },
   { id: 'files', title: 'File Explorer', icon: 'files', component: () => <Box className="p-10 text-white">Files simulation coming soon...</Box> }
 ];
+
 
 const getAppIcon = (iconId, size = 24) => {
   switch (iconId) {
@@ -844,15 +543,15 @@ const RemoteDesktop = () => {
   useEffect(() => {
     if (connecting || !session || hasAutoOpenedRef.current) return;
 
+    const params = new URLSearchParams(location.search);
+    const labId = (session.labId || params.get('labId') || '').toLowerCase();
+
     const toolUrl = getLabToolUrl(session);
-    if (toolUrl?.startsWith('http')) {
+    if (toolUrl?.startsWith('http') && usesIframeEmbed(session, labId)) {
       openDynamicTool(toolUrl);
       hasAutoOpenedRef.current = true;
       return;
     }
-
-    const params = new URLSearchParams(location.search);
-    const labId = (session.labId || params.get('labId') || '').toLowerCase();
     const appToOpen = params.get('app');
     if (appToOpen) {
       toggleWindow(appToOpen);
@@ -906,19 +605,7 @@ const RemoteDesktop = () => {
   const isJupyterSession = isDataScienceLab(labId, session) || session?.tools?.main?.type === 'jupyter';
   const iframeTitle = isJupyterSession ? 'JupyterLab (Data Science)' : 'VS Code (code-server)';
 
-  if (!connecting && session && !isJupyterSession && labId.includes('big-data')) {
-    return (
-      <Box className="h-screen w-screen flex flex-col items-center justify-center gap-4 bg-[#1e1e1e] text-white p-8 text-center">
-        <Typography className="text-xl font-black">Big Data lab has no Jupyter UI</Typography>
-        <Typography className="text-slate-400 max-w-lg text-sm">
-          For Jupyter in the browser, start <strong>Data Science-I</strong> lab (port 8888), not Big Data Analytics.
-        </Typography>
-        <Button variant="contained" onClick={() => navigate('/')} className="!bg-red-600">
-          Back to Dashboard
-        </Button>
-      </Box>
-    );
-  }
+
 
   const stopLabDialog = (
     <Dialog
@@ -950,20 +637,54 @@ const RemoteDesktop = () => {
     </Dialog>
   );
 
+  const isTerminalSession =
+    labId.includes('linux') || labId.includes('dbms') || labId.includes('sql');
+
+  if (!connecting && session && isTerminalSession) {
+    return (
+      <Box className="h-screen w-screen flex flex-col overflow-hidden bg-[#0c0c0c]">
+        <Terminal
+          session={session}
+          hideHeader={false}
+          onStopLab={handleStopLab}
+          onBack={() => navigate('/')}
+        />
+      </Box>
+    );
+  }
+
   if (!connecting && session && shouldUseBuiltInEditor(session, labId)) {
     return (
       <Box className="h-screen w-screen flex flex-col overflow-hidden bg-slate-50">
         <CloudEditor
           session={session}
           hideHeader={false}
-          onStopLab={() => setShowStopModal(true)}
+          onStopLab={handleStopLab}
           onBack={() => navigate('/')}
           onMenuClick={() => {}}
         />
-        {stopLabDialog}
       </Box>
     );
   }
+
+  // Code-server labs: use backend proxy URL (strips X-Frame-Options) → embed VS Code in iframe
+  if (!connecting && session && shouldUseCodeServer(session, labId) && labToolUrl?.startsWith('http')) {
+    return (
+      <>
+        <IframeTool
+          url={labToolUrl}
+          title="VS Code (code-server)"
+          isJupyter={false}
+          sessionId={session?.sessionId}
+          onStopLab={() => setShowStopModal(true)}
+          onBack={() => navigate('/')}
+        />
+        {stopLabDialog}
+      </>
+    );
+  }
+
+
 
   if (!connecting && labToolUrl?.startsWith('http') && usesIframeEmbed(session, labId)) {
     return (

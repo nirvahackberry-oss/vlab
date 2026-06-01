@@ -1,4 +1,5 @@
 import { createProxyMiddleware } from "http-proxy-middleware";
+import { gunzipSync, brotliDecompressSync, inflateSync } from "zlib";
 import { getBearerToken, verifyAccessToken, verifyJupyterEmbedToken } from "./lib/jwt.js";
 import { getSession } from "./services/sessionRepository.js";
 import { getLabRuntime, getContainerHost } from "./lib/labTools.js";
@@ -149,6 +150,10 @@ export const setupJupyterProxy = (app, apiPrefix) => {
     router: (req) => req.jupyterTarget || "http://127.0.0.1:8888",
     pathRewrite: (path, req) => stripJupyterPrefix(req, apiPrefix),
     on: {
+      proxyReq(proxyReq) {
+        // Remove accept-encoding so upstream sends uncompressed HTML we can rewrite
+        proxyReq.removeHeader("accept-encoding");
+      },
       error(err, req, res) {
         console.error("[jupyterProxy]", err.message, "target=", req.jupyterTarget);
         if (res.writeHead) {
@@ -164,6 +169,7 @@ export const setupJupyterProxy = (app, apiPrefix) => {
       proxyRes(proxyRes, req, res) {
         delete proxyRes.headers["x-frame-options"];
         proxyRes.headers["content-security-policy"] = "frame-ancestors *";
+        proxyRes.headers["access-control-allow-origin"] = "*";
 
         const contentType = proxyRes.headers["content-type"] || "";
         if (!contentType.includes("text/html") || !req.jupyterProxyBase) {
@@ -176,10 +182,27 @@ export const setupJupyterProxy = (app, apiPrefix) => {
 
         proxyRes.on("data", (chunk) => chunks.push(chunk));
         proxyRes.on("end", () => {
-          const body = Buffer.concat(chunks).toString("utf8");
+          let body;
+          try {
+            const raw = Buffer.concat(chunks);
+            const encoding = (proxyRes.headers["content-encoding"] || "").toLowerCase();
+            if (encoding === "gzip") {
+              body = gunzipSync(raw).toString("utf8");
+            } else if (encoding === "br") {
+              body = brotliDecompressSync(raw).toString("utf8");
+            } else if (encoding === "deflate") {
+              body = inflateSync(raw).toString("utf8");
+            } else {
+              body = raw.toString("utf8");
+            }
+          } catch {
+            body = Buffer.concat(chunks).toString("utf8");
+          }
           const rewritten = rewriteJupyterHtml(body, req.jupyterProxyBase);
           const buf = Buffer.from(rewritten);
           delete proxyRes.headers["content-length"];
+          delete proxyRes.headers["content-encoding"];
+          res.removeHeader("content-encoding");
           res.setHeader("content-length", buf.length);
           originalWrite(buf);
           originalEnd();

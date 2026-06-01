@@ -2,9 +2,9 @@
 # Package Node.js API + JWT authorizer for AWS Lambda (linux x64).
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BACKEND="${ROOT}/backend"
-OUT_DIR="${ROOT}/vlab/terraform/dist"
+OUT_DIR="${ROOT}/terraform/dist"
 ZIP="${OUT_DIR}/node-lambdas.zip"
 
 echo "==> Packaging Node Lambdas from ${BACKEND}"

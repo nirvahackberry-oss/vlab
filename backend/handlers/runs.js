@@ -64,7 +64,16 @@ export const runsCreateHandler = async ({ body, auth }) => {
   const port = session.containerPort || 8080;
   const baseUrl = host ? `http://${host}:${port}` : null;
 
-  let isReachable = false;
+ let isReachable = false;
+
+if (session.status === "running" && baseUrl) {
+
+  console.log(
+    `[Reachability Check] AUTO-BYPASS FOR ECS TASK`
+  );
+
+  isReachable = true;
+}
   if (session.status === "running" && baseUrl) {
     if (process.env.FORCE_CONTAINER_EXECUTION === "true") {
       console.log(`[Reachability Check] BYPASSED because FORCE_CONTAINER_EXECUTION=true is set in your .env file.`);
@@ -79,7 +88,7 @@ export const runsCreateHandler = async ({ body, auth }) => {
           signal: controller.signal,
         });
         
-        if (!healthResponse.ok) {
+        if (!healthResponse.ok && healthResponse.status !== 404) {
           throw new Error(`Health check failed: ${healthResponse.status}`);
         }
         isReachable = true;
@@ -100,30 +109,31 @@ export const runsCreateHandler = async ({ body, auth }) => {
     console.log("-----------------------------------------");
     try {
       console.log(`[Container Run] Sending execution request to container...`);
-
+      console.log("EXECUTING INSIDE ECS CONTAINER");
       result = await executeInContainer(session, payload);
       
       console.log(`[Container Run] Raw Result:`);
       console.log(JSON.stringify(result, null, 2));
-      if (
-        !result ||
-        result.success === false ||
-        result.error ||
-        result.runtimeError
-      )
-        didContainerFail = true;
-        console.log(`[Runs Handler] Container run returned success: false or fetch failed. Triggering local fallback...`);
+      
+      if (!result) {
+        throw new Error("No response received from container execution server.");
       }
-     catch (err) {
+    } catch (err) {
       didContainerFail = true;
-      console.log(`[Runs Handler] Container run threw exception: ${err.message}. Triggering local fallback...`);
+      console.log(`[Runs Handler] Container run threw exception: ${err.message}.`);
+      result = {
+        success: false,
+        output: "",
+        error: `[Container Error] ${err.message}`,
+        runtimeError: err.message,
+      };
     }
   }
 
-  if (session.status !== "running" || !host || !isReachable || didContainerFail) {
+  if (session.status !== "running" || !host || !isReachable) {
     console.log("-----------------------------------------");
     console.log("[EXECUTION SOURCE] >> LOCAL FALLBACK");
-    console.log(`Reason:            ${didContainerFail ? "Container run failed/timed out" : (!isReachable && host ? "Container is unreachable (blocked/offline)" : `Session status is "${session.status}"`)}`);
+    console.log(`Reason:            ${!isReachable && host ? "Container is unreachable (blocked/offline)" : `Session status is "${session.status}"`}`);
     console.log("-----------------------------------------");
     const local = await executeLocally(payload);
     result = {

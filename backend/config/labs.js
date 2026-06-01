@@ -132,7 +132,12 @@ export const LABS = [
     description: "Hands-on experience with Hadoop, Spark, and big data ecosystems.",
     status: "ready",
     taskDefinition: "vlab-dev-bigdata-task",
-    runtime: { type: "web", port: LAB_PORTS.WEB_LAB, path: "/" },
+    runtime: {
+      type: "ide",
+      port: LAB_PORTS.WEB_LAB,
+      path: "/",
+      containerApi: { enabled: true, port: LAB_PORTS.WEB_LAB },
+    },
   },
   {
     id: "testing-lab",
@@ -149,7 +154,12 @@ export const LABS = [
     description: "Automate web testing using Selenium, JUnit, and modern QA frameworks.",
     status: "ready",
     taskDefinition: "vlab-dev-testing-task",
-    runtime: { type: "web", port: LAB_PORTS.WEB_LAB, path: "/" },
+    runtime: {
+      type: "ide",
+      port: LAB_PORTS.WEB_LAB,
+      path: "/",
+      containerApi: { enabled: true, port: LAB_PORTS.WEB_LAB },
+    },
   },
   {
     id: "agile-lab",
@@ -166,7 +176,12 @@ export const LABS = [
     description: "Learn Agile frameworks, Sprint planning, and team collaboration tools.",
     status: "ready",
     taskDefinition: "vlab-dev-agilemethodology-task",
-    runtime: { type: "web", port: LAB_PORTS.WEB_LAB, path: "/" },
+    runtime: {
+      type: "ide",
+      port: LAB_PORTS.WEB_LAB,
+      path: "/",
+      containerApi: { enabled: true, port: LAB_PORTS.WEB_LAB },
+    },
   },
   {
     id: "mobile-app-lab",
@@ -183,7 +198,12 @@ export const LABS = [
     description: "Build mobile interfaces and applications using React Native or Flutter.",
     status: "ready",
     taskDefinition: "vlab-dev-android-task",
-    runtime: { type: "web", port: LAB_PORTS.WEB_LAB, path: "/" },
+    runtime: {
+      type: "ide",
+      port: LAB_PORTS.WEB_LAB,
+      path: "/",
+      containerApi: { enabled: true, port: LAB_PORTS.WEB_LAB },
+    },
   },
   {
     id: "dotnet-lab",
@@ -200,7 +220,12 @@ export const LABS = [
     description: "Develop enterprise-grade web applications with C# and .NET Core.",
     status: "ready",
     taskDefinition: "vlab-dev-dotnet-task",
-    runtime: { type: "web", port: LAB_PORTS.WEB_LAB, path: "/" },
+    runtime: {
+      type: "ide",
+      port: LAB_PORTS.WEB_LAB,
+      path: "/",
+      containerApi: { enabled: true, port: LAB_PORTS.WEB_LAB },
+    },
   },
   {
     id: "software-eng-lab",
@@ -217,7 +242,12 @@ export const LABS = [
     description: "Design robust software systems using modern architecture and patterns.",
     status: "ready",
     taskDefinition: "vlab-dev-softwareengeering-task",
-    runtime: { type: "web", port: LAB_PORTS.WEB_LAB, path: "/" },
+    runtime: {
+      type: "ide",
+      port: LAB_PORTS.WEB_LAB,
+      path: "/",
+      containerApi: { enabled: true, port: LAB_PORTS.WEB_LAB },
+    },
   },
 ];
 

@@ -1,8 +1,8 @@
 # Package Node.js API + JWT authorizer for AWS Lambda
 $ErrorActionPreference = "Stop"
-$Root = Resolve-Path (Join-Path $PSScriptRoot "..\..")
+$Root = Resolve-Path (Join-Path $PSScriptRoot "..")
 $Backend = Join-Path $Root "backend"
-$OutDir = Join-Path $Root "vlab\terraform\dist"
+$OutDir = Join-Path $Root "terraform\dist"
 $Build = Join-Path $OutDir "build"
 $Zip = Join-Path $OutDir "node-lambdas.zip"
 

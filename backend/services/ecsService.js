@@ -160,6 +160,7 @@ export const startEcsTask = async ({ labId, sessionId, sessionToken }) => {
       cluster: ENV.ecsCluster,
       taskDefinition,
       launchType: "FARGATE",
+      enableExecuteCommand: true,
       networkConfiguration: {
         awsvpcConfiguration: {
           subnets: ENV.ecsSubnets,

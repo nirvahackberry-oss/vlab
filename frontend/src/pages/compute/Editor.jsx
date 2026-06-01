@@ -40,11 +40,16 @@ const getFileIcon = (fileName) => {
   const ext = fileName.split('.').pop().toLowerCase();
   switch (ext) {
     case 'py': return <SiPython className="text-[#3776AB] shrink-0" />;
+    case 'ipynb': return <SiPython className="text-[#4E93C7] shrink-0" />;
     case 'js':
     case 'jsx': return <SiJavascript className="text-[#F7DF1E] shrink-0" />;
     case 'html': return <MdHtml className="text-orange-500 shrink-0" />;
     case 'css': return <MdCss className="text-blue-300 shrink-0" />;
     case 'java': return <FaJava className="text-[#007396] shrink-0" />;
+    case 'csv': return <MdInsertDriveFile className="text-emerald-500 shrink-0" />;
+    case 'json': return <SiJavascript className="text-amber-500 shrink-0" />;
+    case 'md': return <MdInsertDriveFile className="text-sky-500 shrink-0" />;
+    case 'pdf': return <MdInsertDriveFile className="text-red-500 shrink-0" />;
     default: return <MdInsertDriveFile className="text-slate-400 shrink-0" />;
   }
 };
@@ -56,6 +61,9 @@ const detectLanguage = (fileName) => {
   if (ext === 'html') return 'html';
   if (ext === 'css') return 'css';
   if (ext === 'js' || ext === 'jsx') return 'javascript';
+  if (ext === 'json') return 'json';
+  if (ext === 'md') return 'markdown';
+  if (ext === 'ipynb') return 'python';
   return 'text';
 };
 
@@ -79,8 +87,20 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
     return lid.includes('java');
   };
 
+  const isAgileLab = () => {
+    const params = new URLSearchParams(location.search);
+    const lid = params.get('labId')?.toLowerCase() || propSession?.labId?.toLowerCase() || labId?.toLowerCase() || '';
+    return lid.includes('agile');
+  };
+
+  const isBigDataLab = () => {
+    const params = new URLSearchParams(location.search);
+    const lid = params.get('labId')?.toLowerCase() || propSession?.labId?.toLowerCase() || labId?.toLowerCase() || '';
+    return lid.includes('big-data') || lid.includes('bigdata') || lid.includes('big data') || lid.includes('analytics');
+  };
+
   const isNoAutoSaveLab = () => {
-    return isPythonLab() || isJavaLab();
+    return isPythonLab() || isJavaLab() || isBigDataLab();
   };
   const [loadedPaths, setLoadedPaths] = useState(new Set());
   const [isSaving, setIsSaving] = useState(false);
@@ -139,6 +159,8 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
             const ext = f.name.split('.').pop().toLowerCase();
             if (isPythonLab()) return ext === 'py';
             if (isJavaLab()) return ext === 'java';
+            if (isAgileLab()) return ['txt', 'md', 'doc', 'docx', 'pdf', 'js', 'jsx', 'html', 'css', 'json'].includes(ext);
+            if (isBigDataLab()) return ['py', 'ipynb', 'csv', 'json', 'txt'].includes(ext);
             return true;
           });
           setFiles(filteredFiles);
@@ -322,24 +344,31 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
       const response = await runFile(payload, sessionId);
       if (response.success) {
         setRightPanelTab('preview');
-        const outputHtml = `
-          <html>
-            <body style="font-family:'Fira Code', monospace; background:#fff; color:#333; padding:20px; margin:0; line-height:1.5;">
-              <div style="display:flex; align-items:center; gap:8px; margin-bottom:15px; border-bottom:1px solid #eee; padding-bottom:10px;">
-                <span style="color:#d32f2f; font-weight:900; font-size:11px; letter-spacing:1px; text-transform:uppercase;">Terminal Output</span>
-              </div>
-              <pre style="background:#f9f9f9; padding:16px; border-radius:12px; border:1px solid #eee; font-size:13px; white-space:pre-wrap; word-break:break-word; margin:0; color:#444;">${response.output || '(No output)'}</pre>
-              
-              ${response.error ? `
-                <div style="display:flex; align-items:center; gap:8px; margin-top:25px; margin-bottom:15px; border-bottom:1px solid #fee2e2; padding-bottom:10px;">
-                  <span style="color:#ef4444; font-weight:900; font-size:11px; letter-spacing:1px; text-transform:uppercase;">Errors Detected</span>
+        
+        // Render HTML content directly in the iframe for HTML files
+        const isHtmlFile = activeFile.name.endsWith('.html') || activeFile.name.endsWith('.htm');
+        if (isHtmlFile) {
+          setWebPreviewCode(activeFile.content);
+        } else {
+          const outputHtml = `
+            <html>
+              <body style="font-family:'Fira Code', monospace; background:#fff; color:#333; padding:20px; margin:0; line-height:1.5;">
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:15px; border-bottom:1px solid #eee; padding-bottom:10px;">
+                  <span style="color:#d32f2f; font-weight:900; font-size:11px; letter-spacing:1px; text-transform:uppercase;">Terminal Output</span>
                 </div>
-                <pre style="background:#fff5f5; padding:16px; color:#b91c1c; border:1px solid #fecaca; border-radius:12px; font-size:13px; white-space:pre-wrap; word-break:break-all; margin:0;">${response.error}</pre>
-              ` : ''}
-            </body>
-          </html>
-        `;
-        setWebPreviewCode(outputHtml);
+                <pre style="background:#f9f9f9; padding:16px; border-radius:12px; border:1px solid #eee; font-size:13px; white-space:pre-wrap; word-break:break-word; margin:0; color:#444;">${response.output || '(No output)'}</pre>
+                
+                ${response.error ? `
+                  <div style="display:flex; align-items:center; gap:8px; margin-top:25px; margin-bottom:15px; border-bottom:1px solid #fee2e2; padding-bottom:10px;">
+                    <span style="color:#ef4444; font-weight:900; font-size:11px; letter-spacing:1px; text-transform:uppercase;">Errors Detected</span>
+                  </div>
+                  <pre style="background:#fff5f5; padding:16px; color:#b91c1c; border:1px solid #fecaca; border-radius:12px; font-size:13px; white-space:pre-wrap; word-break:break-all; margin:0;">${response.error}</pre>
+                ` : ''}
+              </body>
+            </html>
+          `;
+          setWebPreviewCode(outputHtml);
+        }
       } else {
         setRightPanelTab('preview');
         const errorHtml = `
@@ -368,7 +397,7 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
       return;
     }
 
-    const defaultName = isJavaLab() ? 'Main.java' : (isPythonLab() ? 'script.py' : 'script.txt');
+    const defaultName = isJavaLab() ? 'Main.java' : (isPythonLab() ? 'script.py' : (isBigDataLab() ? 'script.py' : (isAgileLab() ? 'document.md' : 'script.txt')));
     const fileName = window.prompt(`Enter file name (e.g. ${defaultName}):`, defaultName);
     if (!fileName) return;
     const ext = fileName.split('.').pop().toLowerCase();
@@ -382,6 +411,22 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
       setRestrictionMsg('This is a Java lab environment. You can only create or add .java files.');
       setShowRestrictionModal(true);
       return;
+    }
+    if (isAgileLab()) {
+      const allowed = ['txt', 'md', 'doc', 'docx', 'pdf', 'js', 'jsx', 'html', 'css', 'json'];
+      if (!allowed.includes(ext)) {
+        setRestrictionMsg(`This is an Agile Methodology lab. You can only create or add these extensions: ${allowed.join(', ')}`);
+        setShowRestrictionModal(true);
+        return;
+      }
+    }
+    if (isBigDataLab()) {
+      const allowed = ['py', 'ipynb', 'csv', 'json', 'txt'];
+      if (!allowed.includes(ext)) {
+        setRestrictionMsg(`This is a Big Data Analytics lab. You can only create or add these extensions: ${allowed.join(', ')}`);
+        setShowRestrictionModal(true);
+        return;
+      }
     }
 
     const newFile = { name: fileName, path: `/workspace/${fileName}`, type: 'file', language: detectLanguage(fileName), content: '' };
@@ -424,6 +469,8 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
             const ext = f.name.split('.').pop().toLowerCase();
             if (isPythonLab()) return ext === 'py';
             if (isJavaLab()) return ext === 'java';
+            if (isAgileLab()) return ['txt', 'md', 'doc', 'docx', 'pdf', 'js', 'jsx', 'html', 'css', 'json'].includes(ext);
+            if (isBigDataLab()) return ['py', 'ipynb', 'csv', 'json', 'txt'].includes(ext);
             return true;
           });
 
@@ -485,6 +532,22 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
       setShowRestrictionModal(true);
       return;
     }
+    if (isAgileLab()) {
+      const allowed = ['txt', 'md', 'doc', 'docx', 'pdf', 'js', 'jsx', 'html', 'css', 'json'];
+      if (!allowed.includes(ext)) {
+        setRestrictionMsg(`This is an Agile Methodology lab. You can only upload these extensions: ${allowed.join(', ')}`);
+        setShowRestrictionModal(true);
+        return;
+      }
+    }
+    if (isBigDataLab()) {
+      const allowed = ['py', 'ipynb', 'csv', 'json', 'txt'];
+      if (!allowed.includes(ext)) {
+        setRestrictionMsg(`This is a Big Data Analytics lab. You can only upload these extensions: ${allowed.join(', ')}`);
+        setShowRestrictionModal(true);
+        return;
+      }
+    }
 
     const reader = new FileReader();
     reader.onload = async (e) => {
@@ -531,6 +594,8 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
               const ext = f.name.split('.').pop().toLowerCase();
               if (isPythonLab()) return ext === 'py';
               if (isJavaLab()) return ext === 'java';
+              if (isAgileLab()) return ['txt', 'md', 'doc', 'docx', 'pdf', 'js', 'jsx', 'html', 'css', 'json'].includes(ext);
+              if (isBigDataLab()) return ['py', 'ipynb', 'csv', 'json', 'txt'].includes(ext);
               return true;
             });
 

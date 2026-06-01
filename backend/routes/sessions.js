@@ -152,6 +152,7 @@ router.post("/", async (req, res) => {
       taskDefinition:
         lab.taskDefinition || process.env.ECS_TASK_DEFINITION_FAMILY,
       launchType: "FARGATE",
+      enableExecuteCommand: true,
       networkConfiguration: {
         awsvpcConfiguration: {
           

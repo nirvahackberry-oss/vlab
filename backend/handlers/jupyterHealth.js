@@ -1,7 +1,7 @@
 import { ok } from "../lib/apigw.js";
 import { forbidden, notFound } from "../lib/errors.js";
 import { getSession } from "../services/sessionRepository.js";
-import { getLabRuntime } from "../lib/labTools.js";
+import { getLabRuntime, getContainerHost } from "../lib/labTools.js";
 
 export const jupyterHealthHandler = async ({ pathParameters, auth }) => {
   const sessionId = pathParameters?.sessionId;

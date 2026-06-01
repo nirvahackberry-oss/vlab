@@ -6,6 +6,7 @@ import { FitAddon } from 'xterm-addon-fit';
 import { io } from 'socket.io-client';
 import { Button } from '@mui/material';
 import 'xterm/css/xterm.css';
+import { APP_ENV } from '../../config/env';
 
 const Terminal = ({ session, hideHeader, onStopLab, onBack }) => {
   const [tabs, setTabs] = useState([
@@ -18,8 +19,13 @@ const Terminal = ({ session, hideHeader, onStopLab, onBack }) => {
   const fitAddonRef = useRef(null);
 
   useEffect(() => {
-    // Initialize Socket.io
-    const socket = io('http://localhost:8080');
+    // Initialize Socket.io (Dynamically resolve socket.io base URL from API endpoint)
+    const socketUrl = APP_ENV.apiBaseUrl ? APP_ENV.apiBaseUrl.replace(/\/api$/, '') : `${window.location.protocol}//${window.location.hostname}:8082`;
+    const socket = io(socketUrl, {
+      query: {
+        sessionId: session?.sessionId || '',
+      },
+    });
     socketRef.current = socket;
 
     // Initialize XTerm
@@ -79,7 +85,7 @@ const Terminal = ({ session, hideHeader, onStopLab, onBack }) => {
     };
 
     window.addEventListener('resize', handleResize);
-
+ 
     return () => {
       window.removeEventListener('resize', handleResize);
       socket.disconnect();
