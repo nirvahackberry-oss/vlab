@@ -5,7 +5,10 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+    bash \
+    dash \
+    && rm -rf /var/lib/apt/lists/* \
+    && test -x /bin/sh && test -x /bin/bash
 
 RUN useradd --create-home --uid 1000 --shell /bin/bash labuser
 

@@ -122,6 +122,7 @@ def lambda_handler(event, context):
         cluster=cluster_arn,
         taskDefinition=task_definition_map[lab_type],
         launchType="FARGATE",
+        enableExecuteCommand=True,
         count=1,
         networkConfiguration={
             "awsvpcConfiguration": {
