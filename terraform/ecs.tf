@@ -5,6 +5,9 @@ locals {
       value = v
     }
   ]
+  lab_container_port = {
+    for lab_type in var.lab_types : lab_type => lab_type == "datascience" ? 8888 : 8080
+  }
 }
 
 resource "aws_ecs_cluster" "lab" {
@@ -13,6 +16,12 @@ resource "aws_ecs_cluster" "lab" {
   setting {
     name  = "containerInsights"
     value = "enabled"
+  }
+
+  configuration {
+    execute_command_configuration {
+      logging = "DEFAULT"
+    }
   }
 
   tags = merge(local.common_tags, {
@@ -32,6 +41,7 @@ resource "aws_ecs_task_definition" "lab" {
   family                   = "${local.name_prefix}-${each.key}-task"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
+  # ECS Exec is enabled per task at launch (enableExecuteCommand in lambda/start_lab.py).
   cpu                      = tostring(lookup(var.lab_cpu_by_type, each.key, var.lab_cpu))
   memory                   = tostring(lookup(var.lab_memory_by_type, each.key, var.lab_memory))
   execution_role_arn       = aws_iam_role.ecs_task_execution.arn
@@ -49,7 +59,7 @@ resource "aws_ecs_task_definition" "lab" {
       environment = local.lab_environment_list
       portMappings = [
         {
-          containerPort = 8080
+          containerPort = local.lab_container_port[each.key]
           protocol      = "tcp"
         }
       ]

@@ -12,6 +12,13 @@ _LAB_ID_ALIASES = {
     "java-lab": "java",
     "linux-lab": "linux",
     "dbms-lab": "dbms",
+    "agilemethodology-lab": "agilemethodology",
+    "android-lab": "android",
+    "bigdata-lab": "bigdata",
+    "datascience-lab": "datascience",
+    "dotnet-lab": "dotnet",
+    "softwareengeering-lab": "softwareengeering",
+    "testing-lab": "testing",
 }
 
 
@@ -115,6 +122,7 @@ def lambda_handler(event, context):
         cluster=cluster_arn,
         taskDefinition=task_definition_map[lab_type],
         launchType="FARGATE",
+        enableExecuteCommand=True,
         count=1,
         networkConfiguration={
             "awsvpcConfiguration": {

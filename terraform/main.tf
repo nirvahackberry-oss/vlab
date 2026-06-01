@@ -24,6 +24,10 @@ terraform {
       source  = "hashicorp/random"
       version = "~> 3.6"
     }
+    null = {
+      source  = "hashicorp/null"
+      version = "~> 3.2"
+    }
   }
 }
 
@@ -44,6 +48,8 @@ locals {
 
   # Job model: no inbound to tasks is required (tasks are short-lived and write results to DynamoDB).
   effective_lab_task_ingress_cidr_blocks = []
+
+  effective_jwt_secret = var.jwt_secret != "" ? var.jwt_secret : try(random_password.jwt_secret[0].result, "local-dev-change-me")
 }
 
 data "aws_caller_identity" "current" {}

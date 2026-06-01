@@ -13,6 +13,15 @@ output "ecr_repository_urls" {
   value       = { for lab_type, repo in aws_ecr_repository.lab_images : lab_type => repo.repository_url }
 }
 
+output "ecr_lab_base_repository_urls" {
+  description = "ECR repository URLs for shared build bases (linux=Ubuntu tools, python=3.11-slim, java=Temurin 21)."
+  value = {
+    linux  = aws_ecr_repository.lab_base_linux.repository_url
+    python = aws_ecr_repository.lab_base_python.repository_url
+    java   = aws_ecr_repository.lab_base_java.repository_url
+  }
+}
+
 output "ecs_cluster_name" {
   description = "ECS cluster name."
   value       = aws_ecs_cluster.lab.name
@@ -48,7 +57,14 @@ output "lambda_arns" {
     grade_lab       = aws_lambda_function.grade_lab.arn
     cleanup_expired = aws_lambda_function.cleanup_expired.arn
     get_result      = aws_lambda_function.get_result.arn
+    node_api        = var.use_node_api_gateway ? aws_lambda_function.node_api[0].arn : null
+    jwt_authorizer  = var.use_node_api_gateway ? aws_lambda_function.jwt_authorizer[0].arn : null
   }
+}
+
+output "api_auth_login_url" {
+  description = "Public login endpoint (no JWT required)."
+  value       = "${aws_apigatewayv2_api.lab.api_endpoint}/auth/login"
 }
 
 output "test_cases_bucket" {

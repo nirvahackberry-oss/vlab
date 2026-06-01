@@ -1,31 +1,13 @@
-FROM eclipse-temurin:21-jdk-jammy
+ARG LAB_BASE_IMAGE=465443875617.dkr.ecr.ap-south-1.amazonaws.com/vlab-dev-lab-base-java:latest
+FROM ${LAB_BASE_IMAGE}
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3 \
-    python3-pip \
-    maven \
-    gradle \
-    git \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
-
-RUN useradd --create-home --uid 1000 --shell /bin/bash labuser
-
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1 \
-    LAB_WORKSPACE=/workspace
-
-WORKDIR /workspace
-
-# Ensure runtime user can write to /workspace (used by ECS Exec writes/runs).
-RUN mkdir -p /workspace && chown -R labuser:labuser /workspace
+USER root
 
 WORKDIR /app
 COPY --chown=labuser:labuser lab-images/common/lab_server.py /app/lab_server.py
 
 USER labuser
+WORKDIR /workspace
 
-# Warm session: keep task alive and accept /execute requests.
 EXPOSE 8080
 CMD ["python3", "/app/lab_server.py"]

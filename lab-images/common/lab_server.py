@@ -1,180 +1,363 @@
+#!/usr/bin/env python3
+"""Small HTTP server inside ECS lab tasks: POST /execute runs learner code (warm session)."""
+
+from __future__ import annotations
+
 import json
 import os
 import subprocess
-import time
-import traceback
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import sys
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import urlparse
 
+LAB_WORKSPACE = os.environ.get("LAB_WORKSPACE", "/workspace").rstrip("/") or "/workspace"
+PORT = int(os.environ.get("LAB_SERVER_PORT", "8080"))
+SESSION_TOKEN = (os.environ.get("SESSION_TOKEN") or "").strip()
+SESSION_ID = (os.environ.get("SESSION_ID") or "").strip()
+LAB_TYPE_ENV = (os.environ.get("LAB_TYPE") or "").strip().lower()
 
-def _json_response(handler: BaseHTTPRequestHandler, status: int, payload: dict):
-    raw = json.dumps(payload).encode("utf-8")
-    handler.send_response(status)
-    handler.send_header("Content-Type", "application/json")
-    handler.send_header("Content-Length", str(len(raw)))
-    handler.end_headers()
-    handler.wfile.write(raw)
+SUPPORTED_LABS = frozenset({"python", "java", "linux", "dbms", "agilemethodology", "agile", "bigdata", "big-data", "javascript"})
+
+DEFAULT_FILES = {
+    "python": "main.py",
+    "bigdata": "main.py",
+    "big-data": "main.py",
+    "java": "Main.java",
+    "linux": "script.sh",
+    "dbms": "query.sql",
+    "javascript": "script.js",
+    "agile": "document.js",
+    "agilemethodology": "document.js",
+}
 
 
-def _read_body_json(handler: BaseHTTPRequestHandler) -> dict:
-    length = int(handler.headers.get("Content-Length", "0") or "0")
-    raw = handler.rfile.read(length) if length > 0 else b"{}"
+def _workspace_real() -> str:
     try:
-        return json.loads(raw.decode("utf-8") or "{}")
-    except json.JSONDecodeError:
-        return {}
+        return os.path.realpath(LAB_WORKSPACE)
+    except OSError:
+        return os.path.abspath(LAB_WORKSPACE)
 
 
-def _truncate(s: str, limit: int) -> str:
-    if s is None:
-        return ""
-    if len(s) <= limit:
-        return s
-    return s[:limit] + "\n... (truncated)\n"
+def _safe_target_path(rel: str) -> str | None:
+    if not rel or rel.strip() == "":
+        return None
+    rel = rel.lstrip("/").replace("\\", "/")
+    if ".." in rel.split("/"):
+        return None
+    full = os.path.realpath(os.path.join(_workspace_real(), rel))
+    root = _workspace_real()
+    if not full.startswith(root + os.sep) and full != root:
+        return None
+    return full
 
 
-def _lab_defaults(lab_type: str) -> str | None:
+def _resolve_path(body: dict, lab_type: str) -> str:
+    raw = (body.get("path") or body.get("filePath") or "").strip()
+    rel = raw or DEFAULT_FILES.get(lab_type, "main.py")
+    full = _safe_target_path(rel)
+    if not full:
+        full = os.path.join(_workspace_real(), rel.lstrip("/"))
+    parent = os.path.dirname(full)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
+    return full
+
+
+def _run_python(path: str, code: str) -> tuple[bool, str, str, str]:
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(code)
+    for exe in ("python3", "python"):
+        try:
+            proc = subprocess.run(
+                [exe, path],
+                cwd=_workspace_real(),
+                capture_output=True,
+                text=True,
+                timeout=25,
+            )
+            out = (proc.stdout or "") + (proc.stderr or "")
+            if proc.returncode == 0:
+                return True, out, "", ""
+            return False, out, "", f"exit code {proc.returncode}"
+        except FileNotFoundError:
+            continue
+        except subprocess.TimeoutExpired:
+            return False, "", "", "Execution timed out"
+    return False, "", "", "Python interpreter not found"
+
+
+def _run_java(path: str, code: str) -> tuple[bool, str, str, str]:
+    import re
+    # Extract the main class name from the Java code to determine the correct filename and execution target
+    class_match = re.search(r'\bpublic\s+class\s+([a-zA-Z0-9_]+)', code)
+    if not class_match:
+        class_match = re.search(r'\bclass\s+([a-zA-Z0-9_]+)', code)
+    
+    class_name = class_match.group(1) if class_match else "Main"
+    
+    src_dir = os.path.dirname(path) or _workspace_real()
+    actual_path = os.path.join(src_dir, f"{class_name}.java")
+    
+    with open(actual_path, "w", encoding="utf-8") as f:
+        f.write(code)
+        
+    try:
+        jc = subprocess.run(
+            ["javac", actual_path],
+            cwd=src_dir,
+            capture_output=True,
+            text=True,
+            timeout=25,
+        )
+        if jc.returncode != 0:
+            err = (jc.stderr or jc.stdout or "").strip()
+            return False, "", err, "javac failed"
+        jr = subprocess.run(
+            ["java", "-cp", src_dir, class_name],
+            cwd=src_dir,
+            capture_output=True,
+            text=True,
+            timeout=25,
+        )
+        out = (jr.stdout or "") + (jr.stderr or "")
+        if jr.returncode == 0:
+            return True, out, "", ""
+        return False, out, "", f"java exit {jr.returncode}"
+    except FileNotFoundError:
+        return False, "", "", "javac/java not found"
+    except subprocess.TimeoutExpired:
+        return False, "", "", "Execution timed out"
+
+
+def _run_linux(path: str, code: str) -> tuple[bool, str, str, str]:
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
+        f.write(code)
+    try:
+        os.chmod(path, 0o755)
+    except OSError:
+        pass
+    try:
+        proc = subprocess.run(
+            ["/bin/bash", path],
+            cwd=_workspace_real(),
+            capture_output=True,
+            text=True,
+            timeout=25,
+        )
+        out = (proc.stdout or "") + (proc.stderr or "")
+        if proc.returncode == 0:
+            return True, out, "", ""
+        return False, out, "", f"exit code {proc.returncode}"
+    except subprocess.TimeoutExpired:
+        return False, "", "", "Execution timed out"
+
+
+def _run_dbms(path: str, code: str) -> tuple[bool, str, str, str]:
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(code)
+    env = {**os.environ, "PGPASSWORD": os.environ.get("PGPASSWORD", "student")}
+    try:
+        proc = subprocess.run(
+            [
+                "psql",
+                "-h",
+                "localhost",
+                "-U",
+                os.environ.get("PGUSER", "student"),
+                "-d",
+                os.environ.get("PGDATABASE", "labdb"),
+                "-f",
+                path,
+                "-v",
+                "ON_ERROR_STOP=1",
+            ],
+            cwd=_workspace_real(),
+            capture_output=True,
+            text=True,
+            timeout=25,
+            env=env,
+        )
+        out = (proc.stdout or "") + (proc.stderr or "")
+        if proc.returncode == 0:
+            return True, out, "", ""
+        return False, out, "", f"psql exit {proc.returncode}"
+    except FileNotFoundError:
+        return False, "", "", "psql not found"
+    except subprocess.TimeoutExpired:
+        return False, "", "", "Execution timed out"
+def _run_javascript(path: str, code: str) -> tuple[bool, str, str, str]:
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(code)
+    try:
+        proc = subprocess.run(
+            ["node", path],
+            cwd=_workspace_real(),
+            capture_output=True,
+            text=True,
+            timeout=25,
+        )
+        out = (proc.stdout or "") + (proc.stderr or "")
+        if proc.returncode == 0:
+            return True, out, "", ""
+        return False, out, "", f"exit code {proc.returncode}"
+    except FileNotFoundError:
+        return False, "", "", "Node.js interpreter not found"
+    except subprocess.TimeoutExpired:
+        return False, "", "", "Execution timed out"
+
+def _normalize_lab_type(body: dict) -> str:
+    raw = (
+        body.get("labType")
+        or body.get("language")
+        or body.get("labId")
+        or LAB_TYPE_ENV
+        or ""
+    )
+    lab_type = str(raw).strip().lower()
+    if lab_type.endswith("-lab"):
+        lab_type = lab_type.replace("-lab", "")
+    return lab_type
+
+
+def _save_file(body: dict) -> dict:
+    path = _resolve_path(body, _normalize_lab_type(body) or "python")
+    content = body.get("content", body.get("code", ""))
+    if not isinstance(content, str):
+        content = str(content)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(content)
+    return {"success": True, "path": path, "message": "File saved"}
+
+
+def _execute(body: dict) -> dict:
+    lab_type = _normalize_lab_type(body)
+    code = body.get("content", body.get("code", ""))
+    if not isinstance(code, str):
+        code = str(code)
+
+    if lab_type not in SUPPORTED_LABS:
+        return {
+            "success": False,
+            "output": "",
+            "syntaxError": "",
+            "runtimeError": f"lab_server: unsupported labType {lab_type!r}",
+        }
+
+    path = _resolve_path(body, lab_type)
+
+    if lab_type in ("python", "bigdata", "big-data"):
+        ok, out, se, re = _run_python(path, code)
+    elif lab_type == "java":
+        ok, out, se, re = _run_java(path, code)
+    elif lab_type == "linux":
+        ok, out, se, re = _run_linux(path, code)
+    elif lab_type in ("javascript", "agile", "agilemethodology"):
+        ok, out, se, re = _run_javascript(path, code)
+    else:
+        ok, out, se, re = _run_dbms(path, code)
+
     return {
-        "python": "main.py",
-        "java": "Main.java",
-        "linux": "script.sh",
-        "dbms": "query.sql",
-    }.get(lab_type)
-
-
-def _build_run_cmd(lab_type: str, filename: str) -> str | None:
-    if lab_type == "python":
-        return f"python -m py_compile '{filename}' && python '{filename}'"
-    if lab_type == "linux":
-        return f"bash -n '{filename}' && bash '{filename}'"
-    if lab_type == "java":
-        return "javac Main.java && java Main"
-    if lab_type == "dbms":
-        return "psql -U student -d labdb -f query.sql"
-    return None
+        "success": ok,
+        "output": out,
+        "syntaxError": se,
+        "runtimeError": re,
+    }
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "vlab-lab-server/1.0"
-
-    def log_message(self, fmt, *args):
-        # Keep logs minimal; ECS logs can get noisy.
+    def log_message(self, fmt: str, *args) -> None:
         return
 
-    def do_GET(self):
-        path = urlparse(self.path).path
-        if path == "/health":
-            return _json_response(self, 200, {"ok": True})
-        return _json_response(self, 404, {"ok": False, "error": "not found"})
+    def _json(self, status: int, payload: dict) -> None:
+        body = json.dumps(payload).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
 
-    def do_POST(self):
+    def do_GET(self) -> None:
+        parsed = urlparse(self.path)
+        if parsed.path in ("/", "/health"):
+            self._json(200, {"ok": True, "service": "lab_server"})
+            return
+        self.send_error(404)
+
+    def do_POST(self) -> None:
+        parsed = urlparse(self.path)
+        if parsed.path not in ("/execute", "/api/run", "/api/save"):
+            self.send_error(404)
+            return
+
+        if SESSION_TOKEN:
+            token = (self.headers.get("X-Session-Token") or "").strip()
+            if token != SESSION_TOKEN:
+                self._json(
+                    401,
+                    {
+                        "success": False,
+                        "output": "",
+                        "syntaxError": "",
+                        "runtimeError": "Unauthorized",
+                    },
+                )
+                return
+
+        length = int(self.headers.get("Content-Length") or 0)
+        raw = self.rfile.read(length) if length else b"{}"
         try:
-            path = urlparse(self.path).path
-            if path != "/execute":
-                return _json_response(self, 404, {"success": False, "runtimeError": "not found"})
-
-            expected = os.environ.get("SESSION_TOKEN", "")
-            if expected:
-                token = self.headers.get("X-Session-Token", "")
-                if token != expected:
-                    return _json_response(self, 401, {"success": False, "runtimeError": "unauthorized"})
-
-            payload = _read_body_json(self)
-            lab_type = (payload.get("labType") or payload.get("labId") or os.environ.get("LAB_TYPE") or "").strip()
-            code = payload.get("content", payload.get("code", "")) or ""
-            raw_path = (payload.get("path") or payload.get("filePath") or "").strip()
-
-            if not lab_type:
-                return _json_response(self, 400, {"success": False, "runtimeError": "labType is required"})
-
-            default_filename = _lab_defaults(lab_type)
-            if not default_filename:
-                return _json_response(self, 400, {"success": False, "runtimeError": f"Unsupported labType: {lab_type}"})
-
-            filename = default_filename
-            if raw_path and lab_type in ("python", "linux"):
-                base = raw_path.split("/")[-1].split("\\")[-1]
-                if base:
-                    filename = base
-
-            if lab_type == "java":
-                filename = "Main.java"
-            if lab_type == "dbms":
-                filename = "query.sql"
-
-            run_cmd = _build_run_cmd(lab_type, filename)
-            if not run_cmd:
-                return _json_response(self, 400, {"success": False, "runtimeError": f"Unsupported labType: {lab_type}"})
-
-            workspace = os.environ.get("LAB_WORKSPACE", "/workspace")
-            os.makedirs(workspace, exist_ok=True)
-
-            file_path = os.path.join(workspace, filename)
-            with open(file_path, "w", encoding="utf-8") as f:
-                f.write(code)
-
-            timeout_s = int(os.environ.get("EXEC_TIMEOUT_SECONDS", "10") or "10")
-            max_output = int(os.environ.get("MAX_OUTPUT_CHARS", "20000") or "20000")
-
-            started = time.time()
-            proc = subprocess.run(
-                ["bash", "-lc", f"cd '{workspace}' && {run_cmd}"],
-                capture_output=True,
-                text=True,
-                timeout=timeout_s,
-            )
-            elapsed_ms = int((time.time() - started) * 1000)
-
-            stdout = proc.stdout or ""
-            stderr = proc.stderr or ""
-
-            # Preserve existing API fields.
-            syntax_error = ""
-            runtime_error = ""
-
-            if proc.returncode != 0:
-                # Treat the first failure stage as "syntax" for compile/check style steps.
-                if lab_type in ("python", "linux", "java"):
-                    syntax_error = _truncate(stderr or stdout, max_output)
-                else:
-                    runtime_error = _truncate(stderr or stdout, max_output)
-
-            output = _truncate(stdout, max_output)
-            runtime_error = _truncate(runtime_error, max_output)
-            syntax_error = _truncate(syntax_error, max_output)
-
-            return _json_response(
-                self,
-                200,
+            body = json.loads(raw.decode("utf-8") or "{}")
+        except json.JSONDecodeError:
+            self._json(
+                400,
                 {
-                    "success": proc.returncode == 0,
-                    "output": output,
-                    "syntaxError": syntax_error,
-                    "runtimeError": runtime_error,
-                    "meta": {"exitCode": proc.returncode, "elapsedMs": elapsed_ms},
+                    "success": False,
+                    "output": "",
+                    "syntaxError": "",
+                    "runtimeError": "Invalid JSON body",
                 },
             )
-        except subprocess.TimeoutExpired:
-            return _json_response(
-                self,
-                200,
-                {"success": False, "output": "", "syntaxError": "", "runtimeError": "Execution timed out"},
-            )
-        except Exception:
-            return _json_response(
-                self,
-                500,
-                {"success": False, "output": "", "syntaxError": "", "runtimeError": traceback.format_exc()},
-            )
+            return
+
+        if SESSION_ID:
+            sid = (body.get("sessionId") or "").strip()
+            if sid and sid != SESSION_ID:
+                self._json(
+                    401,
+                    {
+                        "success": False,
+                        "output": "",
+                        "syntaxError": "",
+                        "runtimeError": "sessionId mismatch",
+                    },
+                )
+                return
+
+        if parsed.path == "/api/save":
+            result = _save_file(body)
+            self._json(200, result)
+            return
+
+        result = _execute(body)
+        normalized = {
+            "success": result.get("success", False),
+            "output": result.get("output", ""),
+            "error": result.get("runtimeError") or result.get("syntaxError") or "",
+            "syntaxError": result.get("syntaxError", ""),
+            "runtimeError": result.get("runtimeError", ""),
+        }
+        self._json(200 if normalized.get("success") else 400, normalized)
 
 
-def main():
-    port = int(os.environ.get("LAB_SERVER_PORT", "8080") or "8080")
-    host = os.environ.get("LAB_SERVER_HOST", "0.0.0.0")
-    httpd = ThreadingHTTPServer((host, port), Handler)
-    httpd.serve_forever()
+def main() -> None:
+    server = HTTPServer(("0.0.0.0", PORT), Handler)
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        server.server_close()
 
 
 if __name__ == "__main__":
     main()
-
