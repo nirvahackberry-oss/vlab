@@ -26,6 +26,27 @@ resource "aws_iam_role" "ecs_task" {
   tags               = local.common_tags
 }
 
+# Required for ECS Exec (SSM data channel inside the task).
+data "aws_iam_policy_document" "ecs_task_execute_command" {
+  statement {
+    sid    = "EcsExecSSMMessages"
+    effect = "Allow"
+    actions = [
+      "ssmmessages:CreateControlChannel",
+      "ssmmessages:CreateDataChannel",
+      "ssmmessages:OpenControlChannel",
+      "ssmmessages:OpenDataChannel",
+    ]
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_role_policy" "ecs_task_execute_command" {
+  name   = "${local.name_prefix}-ecs-task-exec-policy"
+  role   = aws_iam_role.ecs_task.id
+  policy = data.aws_iam_policy_document.ecs_task_execute_command.json
+}
+
 data "aws_iam_policy_document" "scheduler_assume_role" {
   statement {
     effect = "Allow"
