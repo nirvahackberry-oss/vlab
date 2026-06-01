@@ -54,7 +54,53 @@ export const saveToContainer = async (session, { path, content }) => {
 export const executeInContainer = async (session, payload) => {
   const baseUrl = getSessionApiBaseUrl(session);
 
-  if (!baseUrl) return null;
+  if (!baseUrl) {
+    console.log("[Container] No base URL available");
+    return null;
+  }
+
+  console.log("=================================");
+  console.log("CONTAINER HEALTH CHECK");
+  console.log("BASE URL:", baseUrl);
+  console.log("=================================");
+
+  try {
+    const healthController = new AbortController();
+    const healthTimer = setTimeout(
+      () => healthController.abort(),
+      10000
+    );
+
+    const healthResponse = await fetch(
+      `${baseUrl}/health`,
+      {
+        method: "GET",
+        signal: healthController.signal,
+      }
+    );
+
+    clearTimeout(healthTimer);
+
+    console.log(
+      `[Health Check] Status: ${healthResponse.status}`
+    );
+
+    if (
+      !healthResponse.ok &&
+      healthResponse.status !== 404
+    ) {
+      throw new Error(
+        `Container unhealthy (${healthResponse.status})`
+      );
+    }
+  } catch (err) {
+    console.log(
+      `[Health Check Failed] ${err.message}`
+    );
+    throw new Error(
+      `Container not reachable: ${err.message}`
+    );
+  }
 
   const labType = resolveLabType({
     labId: session.labId,
@@ -73,26 +119,43 @@ export const executeInContainer = async (session, payload) => {
     sessionId: session.sessionId,
   };
 
-  for (const path of ["/api/run", "/execute"]) {
+  const endpoints = ["/api/run", "/execute"];
+
+  for (const endpoint of endpoints) {
     try {
       console.log("=================================");
       console.log("CONTAINER EXECUTION REQUEST");
-      console.log("URL:", `${baseUrl}${path}`);
+      console.log("URL:", `${baseUrl}${endpoint}`);
       console.log("LANGUAGE:", payload.language);
       console.log(
         "TIMEOUT:",
-        payload.language === "java" ? 60000 : 15000
+        payload.language === "java"
+          ? 60000
+          : 15000
       );
       console.log("=================================");
 
-      const response = await containerFetch(`${baseUrl}${path}`, {
-        method: "POST",
-        headers: buildHeaders(session),
-        body: JSON.stringify(body),
+      const response = await containerFetch(
+        `${baseUrl}${endpoint}`,
+        {
+          method: "POST",
+          headers: buildHeaders(session),
+          body: JSON.stringify(body),
+          timeout:
+            payload.language === "java"
+              ? 60000
+              : 15000,
+        }
+      );
 
-        // Java needs longer compile time
-        timeout: payload.language === "java" ? 60000 : 15000,
-      });
+      if (!response.ok) {
+        const errorText =
+          await response.text();
+
+        throw new Error(
+          `HTTP ${response.status}: ${errorText}`
+        );
+      }
 
       const rawText = await response.text();
 
@@ -100,13 +163,15 @@ export const executeInContainer = async (session, payload) => {
       console.log("RAW CONTAINER RESPONSE");
       console.log("=================================");
       console.log(rawText);
-      
+
       let data;
-      
+
       try {
         data = JSON.parse(rawText);
       } catch (err) {
-        throw new Error(`Invalid JSON response from container: ${rawText}`);
+        throw new Error(
+          `Invalid JSON response: ${rawText}`
+        );
       }
 
       return {
@@ -117,20 +182,23 @@ export const executeInContainer = async (session, payload) => {
           data.runtimeError ||
           data.syntaxError ||
           null,
-        syntaxError: data.syntaxError || "",
-        runtimeError: data.runtimeError || "",
+        syntaxError:
+          data.syntaxError || "",
+        runtimeError:
+          data.runtimeError || "",
       };
     } catch (err) {
       console.log(
-        `[Container Error] ${path}:`,
-        err.message
+        `[Container Error] ${endpoint}: ${err.message}`
       );
 
-      if (path === "/execute") {
+      if (endpoint === "/execute") {
         throw err;
       }
     }
   }
 
-  return null;
+  throw new Error(
+    "Container execution endpoints not available"
+  );
 };

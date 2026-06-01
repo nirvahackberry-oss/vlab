@@ -60,46 +60,62 @@ export const runsCreateHandler = async ({ body, auth }) => {
   console.log(`Code length: ${code.length} chars`);
 
   let result;
-  const host = session.publicIp || session.taskPrivateIp;
-  const port = session.containerPort || 8080;
-  const baseUrl = host ? `http://${host}:${port}` : null;
 
- let isReachable = false;
+const host = session.publicIp || session.taskPrivateIp;
+const port = session.containerPort || 8080;
+const baseUrl = host ? `http://${host}:${port}` : null;
+
+console.log("\n========== SESSION DEBUG ==========");
+console.log(JSON.stringify(session, null, 2));
+console.log("Host:", host);
+console.log("Port:", port);
+console.log("Base URL:", baseUrl);
+console.log("===================================\n");
+
+let isReachable = false;
 
 if (session.status === "running" && baseUrl) {
+  if (process.env.FORCE_CONTAINER_EXECUTION === "true") {
+    console.log(
+      "[Reachability Check] FORCE_CONTAINER_EXECUTION=true"
+    );
+    isReachable = true;
+  } else {
+    console.log(
+      `[Reachability Check] Checking ${baseUrl}/health`
+    );
 
-  console.log(
-    `[Reachability Check] AUTO-BYPASS FOR ECS TASK`
-  );
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 5000);
 
-  isReachable = true;
-}
-  if (session.status === "running" && baseUrl) {
-    if (process.env.FORCE_CONTAINER_EXECUTION === "true") {
-      console.log(`[Reachability Check] BYPASSED because FORCE_CONTAINER_EXECUTION=true is set in your .env file.`);
-      isReachable = true;
-    } else {
-      console.log(`[Reachability Check] Checking container at ${baseUrl}...`);
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 5000);
-      try {
-        const healthResponse = await fetch(`${baseUrl}/health`, {
+    try {
+      const response = await fetch(
+        `${baseUrl}/health`,
+        {
           method: "GET",
           signal: controller.signal,
-        });
-        
-        if (!healthResponse.ok && healthResponse.status !== 404) {
-          throw new Error(`Health check failed: ${healthResponse.status}`);
         }
+      );
+
+      console.log(
+        `[Reachability Check] Status ${response.status}`
+      );
+
+      if (
+        response.ok ||
+        response.status === 404
+      ) {
         isReachable = true;
-        console.log(`[Reachability Check] Container is alive and reachable.`);
-      } catch (err) {
-        console.log(`[Reachability Check] Container check failed (unreachable/blocked): ${err.message}`);
-      } finally {
-        clearTimeout(timer);
       }
+    } catch (err) {
+      console.log(
+        `[Reachability Check] Failed: ${err.message}`
+      );
+    } finally {
+      clearTimeout(timer);
     }
   }
+}
 
   let didContainerFail = false;
   if (session.status === "running" && host && isReachable) {
@@ -111,10 +127,10 @@ if (session.status === "running" && baseUrl) {
       console.log(`[Container Run] Sending execution request to container...`);
       console.log("EXECUTING INSIDE ECS CONTAINER");
       result = await executeInContainer(session, payload);
-      
+
       console.log(`[Container Run] Raw Result:`);
       console.log(JSON.stringify(result, null, 2));
-      
+
       if (!result) {
         throw new Error("No response received from container execution server.");
       }
