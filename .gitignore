@@ -6,6 +6,8 @@ __pycache__/
 # C extensions
 *.so
 
+
+terraform.rc
 # Distribution / packaging
 .Python
 build/
@@ -81,6 +83,39 @@ target/
 # IPython
 profile_default/
 ipython_config.py
+
+
+
+# --- Secrets / environment files ---
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Commonly used folder-specific env files
+backend/.env
+frontend/.env
+
+# --- Dependencies ---
+node_modules/
+
+# --- Build outputs ---
+dist/
+build/
+coverage/
+
+# --- Logs ---
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# --- OS / editor artifacts ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
 
 # pyenv
 #   For a library or package, you might want to ignore these files since the code is
