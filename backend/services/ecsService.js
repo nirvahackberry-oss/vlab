@@ -102,13 +102,18 @@ export const logFargateTaskMetadata = (task) => {
 
 export const resolveTaskNetworking = async (taskArn, labId) => {
   const task = await describeTask(taskArn);
-  if (!task) return { status: "starting" };
 
-  // Log Fargate task details on every poll request
+  if (!task) {
+    return { status: "starting" };
+  }
+
   logFargateTaskMetadata(task);
 
   if (task.lastStatus === "STOPPED") {
-    return { status: "failed", message: task.stoppedReason || "Container stopped" };
+    return {
+      status: "failed",
+      message: task.stoppedReason || "Container stopped",
+    };
   }
 
   if (task.lastStatus !== "RUNNING") {
@@ -119,14 +124,40 @@ export const resolveTaskNetworking = async (taskArn, labId) => {
   const publicIp = await getTaskPublicIp(taskArn);
   const port = getContainerPort(labId);
 
-  return {
-    status: "running",
-    taskPrivateIp,
-    publicIp,
-    taskPort: port,
-    startedAt: new Date().toISOString(),
-    message: "Lab environment is ready",
-  };
+  if (!publicIp) {
+    return { status: "starting" };
+  }
+
+  const baseUrl = `http://${publicIp}:${port}`;
+
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 5000);
+
+    await fetch(baseUrl, {
+      method: "GET",
+      signal: controller.signal,
+    });
+
+    clearTimeout(timer);
+
+    return {
+      status: "running",
+      taskPrivateIp,
+      publicIp,
+      taskPort: port,
+      startedAt: new Date().toISOString(),
+      message: "Lab environment is ready",
+    };
+  } catch {
+    return {
+      status: "starting",
+      taskPrivateIp,
+      publicIp,
+      taskPort: port,
+      message: "Container booting...",
+    };
+  }
 };
 
 export const startEcsTask = async ({ labId, sessionId, sessionToken }) => {

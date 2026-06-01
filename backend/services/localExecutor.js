@@ -159,7 +159,7 @@ export const executeLocally = async ({ language, content, path: filePath }) => {
   if (ext === "js" || ext === "javascript" || ext === "jsx") return runJavascript(content);
   if (ext === "html") return runHtml(content);
   if (ext === "ipynb") return runIpynb(content);
-  
+
   if (["md", "css", "json", "txt", "doc", "docx", "pdf", "csv"].includes(ext)) {
     return {
       success: true,
