@@ -15,6 +15,12 @@ resource "aws_ecs_cluster" "lab" {
     value = "enabled"
   }
 
+  configuration {
+    execute_command_configuration {
+      logging = "DEFAULT"
+    }
+  }
+
   tags = merge(local.common_tags, {
     Name = "${local.name_prefix}-cluster"
   })
@@ -32,6 +38,7 @@ resource "aws_ecs_task_definition" "lab" {
   family                   = "${local.name_prefix}-${each.key}-task"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
+  # ECS Exec is enabled per task at launch (enableExecuteCommand in lambda/start_lab.py).
   cpu                      = tostring(lookup(var.lab_cpu_by_type, each.key, var.lab_cpu))
   memory                   = tostring(lookup(var.lab_memory_by_type, each.key, var.lab_memory))
   execution_role_arn       = aws_iam_role.ecs_task_execution.arn
