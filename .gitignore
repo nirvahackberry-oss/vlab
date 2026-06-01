@@ -89,6 +89,7 @@ ipython_config.py
 # --- Secrets / environment files ---
 .env
 .env.*
+admin/backend/data/platform.json
 !.env.example
 !.env.*.example
 
