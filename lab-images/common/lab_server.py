@@ -16,13 +16,18 @@ SESSION_TOKEN = (os.environ.get("SESSION_TOKEN") or "").strip()
 SESSION_ID = (os.environ.get("SESSION_ID") or "").strip()
 LAB_TYPE_ENV = (os.environ.get("LAB_TYPE") or "").strip().lower()
 
-SUPPORTED_LABS = frozenset({"python", "java", "linux", "dbms"})
+SUPPORTED_LABS = frozenset({"python", "java", "linux", "dbms", "agilemethodology", "agile", "bigdata", "big-data", "javascript"})
 
 DEFAULT_FILES = {
     "python": "main.py",
+    "bigdata": "main.py",
+    "big-data": "main.py",
     "java": "Main.java",
     "linux": "script.sh",
     "dbms": "query.sql",
+    "javascript": "script.js",
+    "agile": "document.js",
+    "agilemethodology": "document.js",
 }
 
 
@@ -180,7 +185,25 @@ def _run_dbms(path: str, code: str) -> tuple[bool, str, str, str]:
         return False, "", "", "psql not found"
     except subprocess.TimeoutExpired:
         return False, "", "", "Execution timed out"
-
+def _run_javascript(path: str, code: str) -> tuple[bool, str, str, str]:
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(code)
+    try:
+        proc = subprocess.run(
+            ["node", path],
+            cwd=_workspace_real(),
+            capture_output=True,
+            text=True,
+            timeout=25,
+        )
+        out = (proc.stdout or "") + (proc.stderr or "")
+        if proc.returncode == 0:
+            return True, out, "", ""
+        return False, out, "", f"exit code {proc.returncode}"
+    except FileNotFoundError:
+        return False, "", "", "Node.js interpreter not found"
+    except subprocess.TimeoutExpired:
+        return False, "", "", "Execution timed out"
 
 def _normalize_lab_type(body: dict) -> str:
     raw = (
@@ -222,12 +245,14 @@ def _execute(body: dict) -> dict:
 
     path = _resolve_path(body, lab_type)
 
-    if lab_type == "python":
+    if lab_type in ("python", "bigdata", "big-data"):
         ok, out, se, re = _run_python(path, code)
     elif lab_type == "java":
         ok, out, se, re = _run_java(path, code)
     elif lab_type == "linux":
         ok, out, se, re = _run_linux(path, code)
+    elif lab_type in ("javascript", "agile", "agilemethodology"):
+        ok, out, se, re = _run_javascript(path, code)
     else:
         ok, out, se, re = _run_dbms(path, code)
 
