@@ -1,15 +1,13 @@
 terraform {
   required_version = ">= 1.6.0"
 
-  /*
   backend "s3" {
-    bucket         = "vlab-terraform-state-wrslgizb"
+    bucket         = "vlab-terraform-state-2p00gk6q"
     key            = "dev/terraform.tfstate"
     region         = "ap-south-1"
     dynamodb_table = "vlab-terraform-locks"
     encrypt        = true
   }
-  */
 
   required_providers {
     aws = {
@@ -48,6 +46,15 @@ locals {
 
   # Job model: no inbound to tasks is required (tasks are short-lived and write results to DynamoDB).
   effective_lab_task_ingress_cidr_blocks = []
+
+  effective_jwt_secret = var.jwt_secret != "" ? var.jwt_secret : try(random_password.jwt_secret[0].result, "local-dev-change-me")
+
+  dynamodb_table_arns = {
+    sessions    = "arn:aws:dynamodb:${var.region}:${data.aws_caller_identity.current.account_id}:table/${var.dynamodb_table_name}"
+    runs        = "arn:aws:dynamodb:${var.region}:${data.aws_caller_identity.current.account_id}:table/${var.runs_table_name}"
+    submissions = "arn:aws:dynamodb:${var.region}:${data.aws_caller_identity.current.account_id}:table/${var.submissions_table_name}"
+    results     = "arn:aws:dynamodb:${var.region}:${data.aws_caller_identity.current.account_id}:table/${var.results_table_name}"
+  }
 }
 
 data "aws_caller_identity" "current" {}

@@ -17,4 +17,14 @@ COPY lab-images/datascience/jupyter_server_config.py /etc/jupyter/jupyter_server
 WORKDIR /workspace
 
 EXPOSE 8888
-CMD ["jupyter", "lab", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--allow-root"]
+CMD [
+  "jupyter", "lab",
+  "--ip=0.0.0.0",
+  "--port=8888",
+  "--no-browser",
+  "--allow-root",
+  "--ServerApp.token=",
+  "--ServerApp.password=",
+  "--ServerApp.allow_origin=*",
+  "--ServerApp.disable_check_xsrf=True"
+]

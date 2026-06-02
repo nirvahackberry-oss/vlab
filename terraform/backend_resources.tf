@@ -10,9 +10,8 @@ resource "random_string" "backend_suffix" {
 resource "aws_s3_bucket" "terraform_state" {
   bucket = "vlab-terraform-state-${random_string.backend_suffix.result}"
 
-  # Prevent accidental deletion of the state bucket
   lifecycle {
-    prevent_destroy = false
+    prevent_destroy = true
   }
 
   tags = local.common_tags
@@ -39,6 +38,10 @@ resource "aws_dynamodb_table" "terraform_locks" {
   name         = "vlab-terraform-locks"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "LockID"
+
+  lifecycle {
+    prevent_destroy = true
+  }
 
   attribute {
     name = "LockID"

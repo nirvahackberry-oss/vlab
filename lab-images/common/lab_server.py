@@ -16,13 +16,18 @@ SESSION_TOKEN = (os.environ.get("SESSION_TOKEN") or "").strip()
 SESSION_ID = (os.environ.get("SESSION_ID") or "").strip()
 LAB_TYPE_ENV = (os.environ.get("LAB_TYPE") or "").strip().lower()
 
-SUPPORTED_LABS = frozenset({"python", "java", "linux", "dbms"})
+SUPPORTED_LABS = frozenset({"python", "java", "linux", "dbms", "agilemethodology", "agile", "bigdata", "big-data", "javascript"})
 
 DEFAULT_FILES = {
     "python": "main.py",
+    "bigdata": "main.py",
+    "big-data": "main.py",
     "java": "Main.java",
     "linux": "script.sh",
     "dbms": "query.sql",
+    "javascript": "script.js",
+    "agile": "document.js",
+    "agilemethodology": "document.js",
 }
 
 
@@ -82,13 +87,23 @@ def _run_python(path: str, code: str) -> tuple[bool, str, str, str]:
 
 
 def _run_java(path: str, code: str) -> tuple[bool, str, str, str]:
-    with open(path, "w", encoding="utf-8") as f:
-        f.write(code)
+    import re
+    # Extract the main class name from the Java code to determine the correct filename and execution target
+    class_match = re.search(r'\bpublic\s+class\s+([a-zA-Z0-9_]+)', code)
+    if not class_match:
+        class_match = re.search(r'\bclass\s+([a-zA-Z0-9_]+)', code)
+    
+    class_name = class_match.group(1) if class_match else "Main"
+    
     src_dir = os.path.dirname(path) or _workspace_real()
-    base_name = os.path.splitext(os.path.basename(path))[0]
+    actual_path = os.path.join(src_dir, f"{class_name}.java")
+    
+    with open(actual_path, "w", encoding="utf-8") as f:
+        f.write(code)
+        
     try:
         jc = subprocess.run(
-            ["javac", path],
+            ["javac", actual_path],
             cwd=src_dir,
             capture_output=True,
             text=True,
@@ -98,7 +113,7 @@ def _run_java(path: str, code: str) -> tuple[bool, str, str, str]:
             err = (jc.stderr or jc.stdout or "").strip()
             return False, "", err, "javac failed"
         jr = subprocess.run(
-            ["java", "-cp", src_dir, base_name],
+            ["java", "-cp", src_dir, class_name],
             cwd=src_dir,
             capture_output=True,
             text=True,
@@ -170,10 +185,52 @@ def _run_dbms(path: str, code: str) -> tuple[bool, str, str, str]:
         return False, "", "", "psql not found"
     except subprocess.TimeoutExpired:
         return False, "", "", "Execution timed out"
+def _run_javascript(path: str, code: str) -> tuple[bool, str, str, str]:
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(code)
+    try:
+        proc = subprocess.run(
+            ["node", path],
+            cwd=_workspace_real(),
+            capture_output=True,
+            text=True,
+            timeout=25,
+        )
+        out = (proc.stdout or "") + (proc.stderr or "")
+        if proc.returncode == 0:
+            return True, out, "", ""
+        return False, out, "", f"exit code {proc.returncode}"
+    except FileNotFoundError:
+        return False, "", "", "Node.js interpreter not found"
+    except subprocess.TimeoutExpired:
+        return False, "", "", "Execution timed out"
+
+def _normalize_lab_type(body: dict) -> str:
+    raw = (
+        body.get("labType")
+        or body.get("language")
+        or body.get("labId")
+        or LAB_TYPE_ENV
+        or ""
+    )
+    lab_type = str(raw).strip().lower()
+    if lab_type.endswith("-lab"):
+        lab_type = lab_type.replace("-lab", "")
+    return lab_type
+
+
+def _save_file(body: dict) -> dict:
+    path = _resolve_path(body, _normalize_lab_type(body) or "python")
+    content = body.get("content", body.get("code", ""))
+    if not isinstance(content, str):
+        content = str(content)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(content)
+    return {"success": True, "path": path, "message": "File saved"}
 
 
 def _execute(body: dict) -> dict:
-    lab_type = (body.get("labType") or body.get("labId") or LAB_TYPE_ENV or "").strip().lower()
+    lab_type = _normalize_lab_type(body)
     code = body.get("content", body.get("code", ""))
     if not isinstance(code, str):
         code = str(code)
@@ -188,12 +245,14 @@ def _execute(body: dict) -> dict:
 
     path = _resolve_path(body, lab_type)
 
-    if lab_type == "python":
+    if lab_type in ("python", "bigdata", "big-data"):
         ok, out, se, re = _run_python(path, code)
     elif lab_type == "java":
         ok, out, se, re = _run_java(path, code)
     elif lab_type == "linux":
         ok, out, se, re = _run_linux(path, code)
+    elif lab_type in ("javascript", "agile", "agilemethodology"):
+        ok, out, se, re = _run_javascript(path, code)
     else:
         ok, out, se, re = _run_dbms(path, code)
 
@@ -226,7 +285,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         parsed = urlparse(self.path)
-        if parsed.path != "/execute":
+        if parsed.path not in ("/execute", "/api/run", "/api/save"):
             self.send_error(404)
             return
 
@@ -274,8 +333,20 @@ class Handler(BaseHTTPRequestHandler):
                 )
                 return
 
+        if parsed.path == "/api/save":
+            result = _save_file(body)
+            self._json(200, result)
+            return
+
         result = _execute(body)
-        self._json(200 if result.get("success") else 400, result)
+        normalized = {
+            "success": result.get("success", False),
+            "output": result.get("output", ""),
+            "error": result.get("runtimeError") or result.get("syntaxError") or "",
+            "syntaxError": result.get("syntaxError", ""),
+            "runtimeError": result.get("runtimeError", ""),
+        }
+        self._json(200 if normalized.get("success") else 400, normalized)
 
 
 def main() -> None:

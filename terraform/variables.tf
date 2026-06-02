@@ -75,6 +75,12 @@ variable "enable_nat_gateway" {
   default     = false
 }
 
+variable "lab_browser_ingress_cidr_blocks" {
+  description = "CIDR blocks allowed to reach lab containers on 8080/8888 (browser iframe). Use 0.0.0.0/0 for student browsers."
+  type        = list(string)
+  default     = ["0.0.0.0/0"]
+}
+
 variable "enable_temp_data_bucket" {
   description = "Enable optional S3 bucket for temporary lab data."
   type        = bool
@@ -141,4 +147,23 @@ variable "tags" {
   description = "Additional tags to apply to all resources."
   type        = map(string)
   default     = {}
+}
+
+variable "jwt_secret" {
+  description = "JWT signing secret for API auth. Leave empty to auto-generate."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "jwt_expires_in" {
+  description = "JWT expiry (jsonwebtoken expiresIn format)."
+  type        = string
+  default     = "24h"
+}
+
+variable "use_node_api_gateway" {
+  description = "Route HTTP API through Node.js Lambda + JWT authorizer (recommended)."
+  type        = bool
+  default     = true
 }

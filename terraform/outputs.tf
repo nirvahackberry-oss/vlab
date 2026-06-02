@@ -34,16 +34,16 @@ output "ecs_task_security_group_id" {
 
 output "dynamodb_table_name" {
   description = "DynamoDB table storing active sessions."
-  value       = aws_dynamodb_table.sessions.name
+  value       = var.dynamodb_table_name
 }
 
 output "dynamodb_tables" {
   description = "DynamoDB tables used by the platform."
   value = {
-    sessions    = aws_dynamodb_table.sessions.name
-    submissions = aws_dynamodb_table.submissions.name
-    results     = aws_dynamodb_table.results.name
-    runs        = aws_dynamodb_table.runs.name
+    sessions    = var.dynamodb_table_name
+    submissions = var.submissions_table_name
+    results     = var.results_table_name
+    runs        = var.runs_table_name
   }
 }
 
@@ -57,7 +57,14 @@ output "lambda_arns" {
     grade_lab       = aws_lambda_function.grade_lab.arn
     cleanup_expired = aws_lambda_function.cleanup_expired.arn
     get_result      = aws_lambda_function.get_result.arn
+    node_api        = var.use_node_api_gateway ? aws_lambda_function.node_api[0].arn : null
+    jwt_authorizer  = var.use_node_api_gateway ? aws_lambda_function.jwt_authorizer[0].arn : null
   }
+}
+
+output "api_auth_login_url" {
+  description = "Public login endpoint (no JWT required)."
+  value       = "${aws_apigatewayv2_api.lab.api_endpoint}/auth/login"
 }
 
 output "test_cases_bucket" {
