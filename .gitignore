@@ -89,6 +89,7 @@ ipython_config.py
 # --- Secrets / environment files ---
 .env
 .env.*
+admin/backend/data/platform.json
 !.env.example
 !.env.*.example
 
@@ -203,6 +204,8 @@ dmypy.json
 # Cython debug symbols
 cython_debug/
 
+.vite/
+**/.vite/
 # PyCharm
 #  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
 #  be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
