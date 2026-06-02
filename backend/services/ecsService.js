@@ -128,36 +128,26 @@ export const resolveTaskNetworking = async (taskArn, labId) => {
     return { status: "starting" };
   }
 
-  const baseUrl = `http://${publicIp}:${port}`;
-
-  try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 5000);
-
-    await fetch(baseUrl, {
-      method: "GET",
-      signal: controller.signal,
-    });
-
-    clearTimeout(timer);
-
-    return {
-      status: "running",
-      taskPrivateIp,
-      publicIp,
-      taskPort: port,
-      startedAt: new Date().toISOString(),
-      message: "Lab environment is ready",
-    };
-  } catch {
-    return {
-      status: "starting",
-      taskPrivateIp,
-      publicIp,
-      taskPort: port,
-      message: "Container booting...",
-    };
-  }
+  /**
+   * Important: do not "probe" http://publicIp:port from this backend process.
+   *
+   * In many deployments the ECS task security group only allows 8080/8888
+   * from trusted sources (e.g. a Lambda SG inside the VPC), so a local dev
+   * backend (or API Gateway/Lambda in a different network path) cannot reach it.
+   * If we gate readiness on a direct TCP/HTTP probe here, sessions can get stuck
+   * in "starting" forever even though the task is RUNNING and has a public IP.
+   *
+   * The frontend already handles tool load timing/retries, so we consider the
+   * lab "running" once the task is RUNNING and a public IP exists.
+   */
+  return {
+    status: "running",
+    taskPrivateIp,
+    publicIp,
+    taskPort: port,
+    startedAt: new Date().toISOString(),
+    message: "Lab environment is ready",
+  };
 };
 
 export const startEcsTask = async ({ labId, sessionId, sessionToken }) => {

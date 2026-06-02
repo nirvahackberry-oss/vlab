@@ -24,8 +24,9 @@ resource "aws_apigatewayv2_integration" "node_api" {
 
 locals {
   node_route_auth = {
-    authorization_type = "CUSTOM"
-    authorizer_id      = aws_apigatewayv2_authorizer.jwt[0].id
+    # Keep locals safe to evaluate even when use_node_api_gateway = false
+    authorization_type = var.use_node_api_gateway ? "CUSTOM" : "NONE"
+    authorizer_id      = var.use_node_api_gateway ? aws_apigatewayv2_authorizer.jwt[0].id : null
   }
   node_route_public = {
     authorization_type = "NONE"

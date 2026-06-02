@@ -188,7 +188,7 @@ data "aws_iam_policy_document" "start_lab_lambda" {
       "dynamodb:DeleteItem",
       "dynamodb:UpdateItem"
     ]
-    resources = [aws_dynamodb_table.sessions.arn]
+    resources = [local.dynamodb_table_arns.sessions]
   }
 }
 
@@ -259,7 +259,7 @@ data "aws_iam_policy_document" "stop_lab_lambda" {
       "dynamodb:DeleteItem",
       "dynamodb:UpdateItem"
     ]
-    resources = [aws_dynamodb_table.sessions.arn]
+    resources = [local.dynamodb_table_arns.sessions]
   }
 }
 
@@ -345,10 +345,10 @@ data "aws_iam_policy_document" "lab_ops_lambda" {
       "dynamodb:Query"
     ]
     resources = [
-      aws_dynamodb_table.sessions.arn,
-      aws_dynamodb_table.runs.arn,
-      aws_dynamodb_table.submissions.arn,
-      aws_dynamodb_table.results.arn
+      local.dynamodb_table_arns.sessions,
+      local.dynamodb_table_arns.runs,
+      local.dynamodb_table_arns.submissions,
+      local.dynamodb_table_arns.results
     ]
   }
 

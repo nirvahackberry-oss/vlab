@@ -34,16 +34,16 @@ output "ecs_task_security_group_id" {
 
 output "dynamodb_table_name" {
   description = "DynamoDB table storing active sessions."
-  value       = aws_dynamodb_table.sessions.name
+  value       = var.dynamodb_table_name
 }
 
 output "dynamodb_tables" {
   description = "DynamoDB tables used by the platform."
   value = {
-    sessions    = aws_dynamodb_table.sessions.name
-    submissions = aws_dynamodb_table.submissions.name
-    results     = aws_dynamodb_table.results.name
-    runs        = aws_dynamodb_table.runs.name
+    sessions    = var.dynamodb_table_name
+    submissions = var.submissions_table_name
+    results     = var.results_table_name
+    runs        = var.runs_table_name
   }
 }
 

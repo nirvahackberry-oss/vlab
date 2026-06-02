@@ -11,11 +11,11 @@ locals {
     NODE_ENV                = "production"
     JWT_SECRET              = local.effective_jwt_secret
     JWT_EXPIRES_IN          = var.jwt_expires_in
-    SESSIONS_TABLE_NAME     = aws_dynamodb_table.sessions.name
-    RUNS_TABLE_NAME         = aws_dynamodb_table.runs.name
-    SUBMISSIONS_TABLE_NAME  = aws_dynamodb_table.submissions.name
-    RESULTS_TABLE_NAME      = aws_dynamodb_table.results.name
-    DYNAMODB_TABLE_NAME     = aws_dynamodb_table.sessions.name
+    SESSIONS_TABLE_NAME     = var.dynamodb_table_name
+    RUNS_TABLE_NAME         = var.runs_table_name
+    SUBMISSIONS_TABLE_NAME  = var.submissions_table_name
+    RESULTS_TABLE_NAME      = var.results_table_name
+    DYNAMODB_TABLE_NAME     = var.dynamodb_table_name
     ECS_CLUSTER             = aws_ecs_cluster.lab.name
     ECS_SUBNETS             = join(",", aws_subnet.private[*].id)
     ECS_SECURITY_GROUPS     = aws_security_group.ecs_tasks.id
@@ -29,9 +29,9 @@ resource "null_resource" "node_lambdas_package" {
   count = var.use_node_api_gateway ? 1 : 0
 
   triggers = {
-    package_json = filesha256("${path.module}/../../backend/package.json")
-    lambda_js    = filesha256("${path.module}/../../backend/lambda.js")
-    authorizer   = filesha256("${path.module}/../../backend/authorizer.js")
+    package_json = filesha256("${path.module}/../backend/package.json")
+    lambda_js    = filesha256("${path.module}/../backend/lambda.js")
+    authorizer   = filesha256("${path.module}/../backend/authorizer.js")
   }
 
   provisioner "local-exec" {
@@ -157,12 +157,12 @@ data "aws_iam_policy_document" "node_api_lambda" {
       "dynamodb:Query"
     ]
     resources = [
-      aws_dynamodb_table.sessions.arn,
-      "${aws_dynamodb_table.sessions.arn}/index/*",
-      aws_dynamodb_table.runs.arn,
-      "${aws_dynamodb_table.runs.arn}/index/*",
-      aws_dynamodb_table.submissions.arn,
-      aws_dynamodb_table.results.arn
+      local.dynamodb_table_arns.sessions,
+      "${local.dynamodb_table_arns.sessions}/index/*",
+      local.dynamodb_table_arns.runs,
+      "${local.dynamodb_table_arns.runs}/index/*",
+      local.dynamodb_table_arns.submissions,
+      local.dynamodb_table_arns.results
     ]
   }
 }

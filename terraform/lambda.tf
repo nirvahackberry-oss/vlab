@@ -144,7 +144,7 @@ resource "aws_lambda_function" "start_lab" {
 
   environment {
     variables = {
-      DYNAMODB_TABLE_NAME     = aws_dynamodb_table.sessions.name
+      DYNAMODB_TABLE_NAME     = var.dynamodb_table_name
       DEFAULT_SESSION_TIMEOUT = tostring(var.session_timeout_minutes)
       ALLOWED_LAB_TYPES       = join(",", var.lab_types)
       ECS_CLUSTER_ARN         = aws_ecs_cluster.lab.arn
@@ -176,7 +176,7 @@ resource "aws_lambda_function" "stop_lab" {
 
   environment {
     variables = {
-      DYNAMODB_TABLE_NAME  = aws_dynamodb_table.sessions.name
+      DYNAMODB_TABLE_NAME  = var.dynamodb_table_name
       GRADE_LAB_LAMBDA_ARN = aws_lambda_function.grade_lab.arn
       ECS_CLUSTER_ARN      = aws_ecs_cluster.lab.arn
     }
@@ -206,8 +206,8 @@ resource "aws_lambda_function" "execute_code" {
       LAB_TASK_DEFINITION_MAP = jsonencode({ for lab_type, td in aws_ecs_task_definition.lab : lab_type => td.arn })
       ECS_SUBNET_IDS          = join(",", aws_subnet.private[*].id)
       ECS_SECURITY_GROUP_ID   = aws_security_group.ecs_tasks.id
-      SESSIONS_TABLE_NAME     = aws_dynamodb_table.sessions.name
-      RUNS_TABLE_NAME         = aws_dynamodb_table.runs.name
+      SESSIONS_TABLE_NAME     = var.dynamodb_table_name
+      RUNS_TABLE_NAME         = var.runs_table_name
       LAB_LOG_GROUP_NAME      = aws_cloudwatch_log_group.ecs.name
       CONTAINER_HOST_MODE     = "private"
       JWT_SECRET              = local.effective_jwt_secret
@@ -234,8 +234,8 @@ resource "aws_lambda_function" "submit_code" {
 
   environment {
     variables = {
-      SESSIONS_TABLE_NAME    = aws_dynamodb_table.sessions.name
-      SUBMISSIONS_TABLE_NAME = aws_dynamodb_table.submissions.name
+      SESSIONS_TABLE_NAME    = var.dynamodb_table_name
+      SUBMISSIONS_TABLE_NAME = var.submissions_table_name
       GRADE_LAB_LAMBDA_ARN   = aws_lambda_function.grade_lab.arn
     }
   }
@@ -264,11 +264,11 @@ resource "aws_lambda_function" "grade_lab" {
       LAB_TASK_DEFINITION_MAP = jsonencode({ for lab_type, td in aws_ecs_task_definition.lab : lab_type => td.arn })
       ECS_SUBNET_IDS          = join(",", aws_subnet.private[*].id)
       ECS_SECURITY_GROUP_ID   = aws_security_group.ecs_tasks.id
-      SUBMISSIONS_TABLE_NAME  = aws_dynamodb_table.submissions.name
-      RESULTS_TABLE_NAME      = aws_dynamodb_table.results.name
-      SESSIONS_TABLE_NAME     = aws_dynamodb_table.sessions.name
+      SUBMISSIONS_TABLE_NAME  = var.submissions_table_name
+      RESULTS_TABLE_NAME      = var.results_table_name
+      SESSIONS_TABLE_NAME     = var.dynamodb_table_name
       TEST_CASES_BUCKET       = aws_s3_bucket.test_cases.bucket
-      RUNS_TABLE_NAME         = aws_dynamodb_table.runs.name
+      RUNS_TABLE_NAME         = var.runs_table_name
       LAB_LOG_GROUP_NAME      = aws_cloudwatch_log_group.ecs.name
     }
   }
@@ -293,7 +293,7 @@ resource "aws_lambda_function" "cleanup_expired" {
 
   environment {
     variables = {
-      SESSIONS_TABLE_NAME = aws_dynamodb_table.sessions.name
+      SESSIONS_TABLE_NAME = var.dynamodb_table_name
       STOP_LAB_LAMBDA_ARN = aws_lambda_function.stop_lab.arn
     }
   }
@@ -318,7 +318,7 @@ resource "aws_lambda_function" "get_result" {
 
   environment {
     variables = {
-      RESULTS_TABLE_NAME = aws_dynamodb_table.results.name
+      RESULTS_TABLE_NAME = var.results_table_name
     }
   }
 
@@ -342,7 +342,7 @@ resource "aws_lambda_function" "get_run" {
 
   environment {
     variables = {
-      RUNS_TABLE_NAME = aws_dynamodb_table.runs.name
+      RUNS_TABLE_NAME = var.runs_table_name
     }
   }
 
@@ -384,7 +384,7 @@ resource "aws_lambda_function" "get_session" {
 
   environment {
     variables = {
-      DYNAMODB_TABLE_NAME = aws_dynamodb_table.sessions.name
+      DYNAMODB_TABLE_NAME = var.dynamodb_table_name
       ECS_CLUSTER_ARN     = aws_ecs_cluster.lab.arn
       AWS_ACCOUNT_ID      = data.aws_caller_identity.current.account_id
       CONTAINER_HOST_MODE = "private"
@@ -412,7 +412,7 @@ resource "aws_lambda_function" "process_task_result" {
 
   environment {
     variables = {
-      RUNS_TABLE_NAME    = aws_dynamodb_table.runs.name
+      RUNS_TABLE_NAME    = var.runs_table_name
       LAB_LOG_GROUP_NAME = aws_cloudwatch_log_group.ecs.name
     }
   }
