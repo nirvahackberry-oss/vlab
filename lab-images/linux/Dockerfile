@@ -15,7 +15,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gawk \
     procps \
     psmisc \
-    pstree \
     findutils \
     iproute2 \
     build-essential \
