@@ -23,11 +23,17 @@ export const setupTerminal = (io) => {
 
     const cluster = process.env.ECS_CLUSTER || session?.cluster;
     
-    console.log('[Terminal Debug]', {
-      sessionId,
+    // 1. Detailed logging for debugging
+    console.log('[Terminal Debug - Detailed Flow Trace]', {
+      event: 'START_LAB_TERMINAL_CONNECTION',
+      sessionId: sessionId,
       sessionExists: !!session,
-      taskArn: session?.taskArn,
+      taskArn: session?.taskArn || null,
+      taskId: session?.taskArn ? session.taskArn.split('/').pop() : null,
       cluster: cluster,
+      labId: session?.labId || null,
+      containerName: 'lab-runtime', // Currently hardcoded
+      fullSessionObject: session
     });
 
     let ptyProcess = null;
@@ -39,8 +45,9 @@ export const setupTerminal = (io) => {
     if (session && session.taskArn && cluster) {
       try {
         const taskId = session.taskArn.split('/').pop();
+        
         const containerName = 'lab-runtime';
-        const interactiveShell = '/bin/sh';
+        const interactiveShell = '/bin/bash';
 
         console.log('Connecting terminal to ECS container via /bin/sh...');
 
@@ -68,6 +75,50 @@ export const setupTerminal = (io) => {
         }
 
         // =====================================
+        // EXECUTE-COMMAND READINESS CHECK
+        // =====================================
+        let actualContainerName = containerName;
+        let agentReady = false;
+
+        socket.emit('terminal-output', '\r\n\x1b[36m[Checking ECS Container Readiness...]\x1b[0m\r\n');
+        console.log('[Terminal] Polling ExecuteCommandAgent readiness...');
+
+        try {
+          const { describeTask } = await import('./services/ecsService.js');
+          
+          // Poll for up to 60 seconds (30 iterations * 2s)
+          for (let i = 0; i < 30; i++) {
+            const taskDetails = await describeTask(session.taskArn);
+            
+            if (taskDetails) {
+              const container = taskDetails.containers?.find(c => c.name === 'lab-runtime') || taskDetails.containers?.[0];
+              if (container && container.name) {
+                actualContainerName = container.name;
+              }
+              
+              const execAgent = container?.managedAgents?.find(a => a.name === 'ExecuteCommandAgent');
+              
+              // ECS tasks may be RUNNING but ExecuteCommandAgent takes extra time
+              if (execAgent?.lastStatus === 'RUNNING' && taskDetails.lastStatus === 'RUNNING') {
+                agentReady = true;
+                break;
+              }
+            }
+            
+            // Wait 2 seconds before next poll
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          }
+        } catch (err) {
+          console.warn('[Readiness Check Error]', err.message);
+        }
+
+        if (!agentReady) {
+          console.warn('[ExecuteCommandAgent NOT READY] Proceeding anyway, but it may fail with exit code 254.');
+        } else {
+          console.log('[ExecuteCommandAgent READY] Container:', actualContainerName);
+        }
+
+        // =====================================
         // SESSION MANAGER PLUGIN VERIFICATION
         // =====================================
         const standardSsmPath = 'C:\\Program Files\\Amazon\\SessionManagerPlugin\\bin\\session-manager-plugin.exe';
@@ -86,7 +137,7 @@ export const setupTerminal = (io) => {
           'ecs', 'execute-command',
           '--cluster', cluster,
           '--task', taskId,
-          '--container', containerName,
+          '--container', actualContainerName,
           '--interactive',
           '--command', interactiveShell,
           '--region', region,
@@ -111,27 +162,10 @@ export const setupTerminal = (io) => {
         console.log('[AWS Execute-Command Config]', {
           taskId,
           cluster,
-          containerName,
+          containerName: actualContainerName,
           awsExePath,
           ptyArgs,
         });
-
-        // Calculate if we need to wait based on how long ago the container was launched
-        let waitTime = 15000;
-        if (session.Timestamp) {
-           const timeSinceLaunch = Date.now() - session.Timestamp;
-           waitTime = Math.max(0, 20000 - timeSinceLaunch); // Give it up to 20s from launch
-        } else if (session.createdAt) {
-           const timeSinceLaunch = Date.now() - new Date(session.createdAt).getTime();
-           waitTime = Math.max(0, 20000 - timeSinceLaunch);
-        }
-
-        if (waitTime > 0) {
-          socket.emit('terminal-output', `\r\n\x1b[36m[Connecting to AWS ECS Container. Please wait ${Math.ceil(waitTime / 1000)} seconds...]\x1b[0m\r\n`);
-          console.log(`Waiting ${Math.ceil(waitTime / 1000)} seconds for ExecuteCommandAgent...`);
-          // Prevent race conditions before launching ExecuteCommand on new tasks
-          await new Promise((resolve) => setTimeout(resolve, waitTime));
-        }
 
         ptyProcess = pty.spawn(awsExePath, ptyArgs, {
           name: 'xterm-color',
@@ -197,7 +231,7 @@ export const setupTerminal = (io) => {
           data = data.replace(/Starting session with SessionId:\s*[a-zA-Z0-9-]+[\r\n]*/g, '');
           
           // Avoid sending empty chunks if they were completely replaced
-          if (!data || !data.trim() && !data.includes('\x1b') && !data.includes('\n')) {
+          if (!data) {
             return;
           }
         }
@@ -216,6 +250,7 @@ export const setupTerminal = (io) => {
     // TERMINAL INPUT
     // =====================================
     socket.on('terminal-input', (data) => {
+      console.log('[INPUT]', JSON.stringify(data));
       if (ptyProcess) {
         try {
           ptyProcess.write(data);
