@@ -11,7 +11,8 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions
+  DialogActions,
+  CircularProgress,
 } from '@mui/material';
 import {
   MdClose,
@@ -25,7 +26,8 @@ import {
   MdWifi,
   MdVolumeUp,
   MdSearch,
-  MdWarning
+  MdWarning,
+  MdArrowBack,
 } from 'react-icons/md';
 import { VscCode } from 'react-icons/vsc';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -70,7 +72,6 @@ const getLabToolUrl = (session) => {
   if (isJupyter) {
     if (session.tools?.jupyter?.url) return resolveToolUrl(session.tools.jupyter.url);
     if (session.tools?.main?.url) return resolveToolUrl(session.tools.main.url);
-    if (session.publicIp) return `http://${session.publicIp}:8888/lab`;
     return null;
   }
 
@@ -113,15 +114,95 @@ const shouldUseBuiltInEditor = (session, labId) => {
 };
 
 const usesIframeEmbed = (session, labId) => {
+  if (isDataScienceLab(labId, session)) return false;
   const url = getLabToolUrl(session);
   if (!url?.startsWith('http')) return false;
-  if (isDataScienceLab(labId, session) || session?.tools?.main?.type === 'jupyter') {
-    return true;
-  }
   return !shouldUseBuiltInEditor(session, labId);
 };
 
-// Component to embed code-server (8080) or Jupyter (8888 / API proxy) in an iframe
+/** Data Science: full-page notebook iframe with lab controls only. */
+const JupyterEmbed = ({ url, sessionId, onStopLab, onBack }) => {
+  const [isLoading, setIsLoading] = useState(true);
+  const [iframeSrc, setIframeSrc] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    setIsLoading(true);
+    setIframeSrc('');
+
+    const run = async () => {
+      if (sessionId) {
+        for (let i = 0; i < 45; i++) {
+          if (cancelled) return;
+          try {
+            const health = await fetchJupyterHealth(sessionId);
+            if (health.reachable) break;
+          } catch {
+            /* keep polling */
+          }
+          await new Promise((r) => setTimeout(r, 2000));
+        }
+      }
+      if (!cancelled) setIframeSrc(url);
+    };
+
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [url, sessionId]);
+
+  return (
+    <Box className="h-screen w-screen flex flex-col overflow-hidden bg-[#0c0c0c]">
+      <Box className="bg-[#1e1e1e] border-b border-white/10 px-4 py-2 flex items-center justify-between shrink-0">
+        <Typography className="text-white text-sm font-black uppercase tracking-wide">
+          Data Science Lab
+        </Typography>
+        <Box className="flex items-center gap-3">
+          <Button
+            onClick={onBack}
+            variant="contained"
+            size="small"
+            startIcon={<MdArrowBack size={14} />}
+            className="!text-[9px] !font-black h-7 px-4 !bg-red-600 !text-white uppercase tracking-widest shrink-0"
+          >
+            Back to Dashboard
+          </Button>
+          <Button
+            onClick={onStopLab}
+            variant="contained"
+            size="small"
+            startIcon={<MdPowerSettingsNew size={14} />}
+            className="!text-[9px] !font-black h-7 px-4 !bg-red-600 !text-white uppercase tracking-widest shrink-0"
+          >
+            Stop Lab
+          </Button>
+        </Box>
+      </Box>
+      <Box className="relative flex-1 min-h-0 bg-white">
+        {isLoading && (
+          <Box className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-[#1e1e1e]">
+            <CircularProgress size={40} sx={{ color: '#f97316' }} />
+            <Typography className="text-white text-sm font-bold uppercase tracking-widest">
+              Starting notebook...
+            </Typography>
+          </Box>
+        )}
+        {iframeSrc ? (
+          <iframe
+            src={iframeSrc}
+            title="JupyterLab"
+            className="absolute inset-0 h-full w-full border-0"
+            allow="clipboard-read; clipboard-write; fullscreen"
+            onLoad={() => setIsLoading(false)}
+          />
+        ) : null}
+      </Box>
+    </Box>
+  );
+};
+
+// Component to embed code-server (8080) in an iframe
 const IframeTool = ({ url, title, onStopLab, onBack, isJupyter, sessionId }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -548,7 +629,9 @@ const RemoteDesktop = () => {
 
     const toolUrl = getLabToolUrl(session);
     if (toolUrl?.startsWith('http') && usesIframeEmbed(session, labId)) {
-      openDynamicTool(toolUrl);
+      if (!isDataScienceLab(labId, session)) {
+        openDynamicTool(toolUrl);
+      }
       hasAutoOpenedRef.current = true;
       return;
     }
@@ -686,13 +769,27 @@ const RemoteDesktop = () => {
 
 
 
+  if (!connecting && isJupyterSession && labToolUrl?.startsWith('http')) {
+    return (
+      <>
+        <JupyterEmbed
+          url={labToolUrl}
+          sessionId={session?.sessionId}
+          onStopLab={() => setShowStopModal(true)}
+          onBack={() => navigate('/')}
+        />
+        {stopLabDialog}
+      </>
+    );
+  }
+
   if (!connecting && labToolUrl?.startsWith('http') && usesIframeEmbed(session, labId)) {
     return (
       <>
         <IframeTool
           url={labToolUrl}
           title={iframeTitle}
-          isJupyter={isJupyterSession}
+          isJupyter={false}
           sessionId={session?.sessionId}
           onStopLab={() => setShowStopModal(true)}
           onBack={() => navigate('/')}

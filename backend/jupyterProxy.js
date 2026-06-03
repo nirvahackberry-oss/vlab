@@ -24,7 +24,9 @@ const resolveAuth = (req) => {
     if (!token) return null;
     try {
       const claims = verifyJupyterEmbedToken(token);
-      return { userId: claims.sub, sessionId: claims.sessionId, token };
+      const userId = claims.userId || claims.sub;
+      if (!userId || !claims.sessionId) return null;
+      return { userId, sessionId: claims.sessionId, token };
     } catch {
       return null;
     }
@@ -56,10 +58,15 @@ const stripJupyterPrefix = (req, apiPrefix) => {
     `/lab-sessions/${sessionId}/jupyter`,
   ];
   let path = req.originalUrl?.split("?")[0] || req.url?.split("?")[0] || "/";
-  for (const prefix of prefixes) {
-    if (path.startsWith(prefix)) {
-      path = path.slice(prefix.length) || "/";
-      break;
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const prefix of prefixes) {
+      if (path.startsWith(prefix)) {
+        path = path.slice(prefix.length) || "/";
+        changed = true;
+        break;
+      }
     }
   }
   return path.startsWith("/") ? path : `/${path}`;
