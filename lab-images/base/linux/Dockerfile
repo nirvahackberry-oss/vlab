@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     bash \
     dash \
+    nano \
     && rm -rf /var/lib/apt/lists/* \
     && test -x /bin/sh && test -x /bin/bash
 

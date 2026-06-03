@@ -9,26 +9,19 @@ ENV LAB_NAME="linux-lab" \
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 \
+    coreutils \
     grep \
     sed \
     gawk \
     procps \
     psmisc \
-    coreutils \
+    pstree \
     findutils \
-    net-tools \
-    iputils-ping \
-    dnsutils \
-    lsof \
-    gcc \
-    g++ \
-    make \
-    build-essential \
-    netcat-openbsd \
-    socat \
-    inetutils-telnet \
-    tcpdump \
     iproute2 \
+    build-essential \
+    gcc \
+    net-tools \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Make it obvious the user is inside the lab container:
