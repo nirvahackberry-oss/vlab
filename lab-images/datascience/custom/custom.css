@@ -1,0 +1,23 @@
+/* Notebook-focused view: hide JupyterLab chrome students do not need. */
+.jp-SideBar.jp-mod-left,
+.jp-Sidebar,
+[data-id="jp-left-stack"] {
+  display: none !important;
+  width: 0 !important;
+  min-width: 0 !important;
+}
+
+.jp-MenuBar {
+  display: none !important;
+}
+
+/* Hide Simple / interface switcher in status bar */
+.jp-InterfaceSwitcher,
+.jp-switchPanel {
+  display: none !important;
+}
+
+/* Hide launcher when a workspace tab exists */
+.jp-Launcher {
+  display: none !important;
+}
