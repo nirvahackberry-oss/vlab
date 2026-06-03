@@ -4,6 +4,7 @@ import fs from 'fs';
 import { getSession } from './services/sessionRepository.js';
 
 const LOCAL_SHELL = os.platform() === 'win32' ? 'cmd.exe' : 'bash';
+const activePtys = new Map(); // Store PTYs strictly by socket.id
 
 export const setupTerminal = (io) => {
   io.on('connection', async (socket) => {
@@ -80,7 +81,7 @@ export const setupTerminal = (io) => {
         let actualContainerName = containerName;
         let agentReady = false;
 
-        socket.emit('terminal-output', '\r\n\x1b[36m[Checking ECS Container Readiness...]\x1b[0m\r\n');
+        socket.emit('terminal-status', { status: 'polling', message: 'Checking ECS Container Readiness...' });
         console.log('[Terminal] Polling ExecuteCommandAgent readiness...');
 
         try {
@@ -113,9 +114,12 @@ export const setupTerminal = (io) => {
         }
 
         if (!agentReady) {
-          console.warn('[ExecuteCommandAgent NOT READY] Proceeding anyway, but it may fail with exit code 254.');
+          console.warn('[ExecuteCommandAgent NOT READY] Timeout reached.');
+          socket.emit('terminal-status', { status: 'timeout', message: 'Lab is taking longer than expected' });
+          return; // Stop execution, don't spawn pty
         } else {
           console.log('[ExecuteCommandAgent READY] Container:', actualContainerName);
+          socket.emit('terminal-status', { status: 'ready', message: 'Terminal Connected' });
         }
 
         // =====================================
@@ -172,12 +176,15 @@ export const setupTerminal = (io) => {
           cols: 120,
           rows: 30,
           cwd: process.cwd(),
+          useConpty: false, // Force WinPTY to prevent ConPTY from intercepting/translating VT sequences (arrow keys)
           env: {
             ...ptyEnv,
             TERM: 'xterm-256color',
             AWS_PAGER: '',
           },
         });
+
+        activePtys.set(socket.id, ptyProcess);
 
         isContainer = true;
         console.log('[SUCCESS] ECS terminal connected');
@@ -199,11 +206,14 @@ export const setupTerminal = (io) => {
           cols: 120,
           rows: 30,
           cwd: process.env.HOME || process.env.USERPROFILE || process.cwd(),
+          useConpty: false,
           env: {
             ...process.env,
             TERM: 'xterm-256color',
           },
         });
+        
+        activePtys.set(socket.id, ptyProcess);
       } catch (err) {
         console.error('[LOCAL TERMINAL FAILED]', err.message);
         socket.emit('terminal-output', `\r\n\x1b[31m[Failed to launch local terminal: ${err.message}]\x1b[0m\r\n`);
@@ -215,9 +225,9 @@ export const setupTerminal = (io) => {
     // CONNECTION BANNER
     // =====================================
     if (isContainer) {
-      socket.emit('terminal-output', '\r\n\x1b[32m[CONNECTED TO AWS ECS CONTAINER]\x1b[0m\r\n\r\n');
+      socket.emit('terminal-status', { status: 'ready', message: 'Terminal Connected' });
     } else {
-      socket.emit('terminal-output', '\r\n\x1b[33m[LOCAL TERMINAL FALLBACK]\x1b[0m\r\n\r\n');
+      socket.emit('terminal-status', { status: 'ready', message: 'Local Terminal Connected' });
     }
 
     // =====================================
@@ -250,7 +260,7 @@ export const setupTerminal = (io) => {
     // TERMINAL INPUT
     // =====================================
     socket.on('terminal-input', (data) => {
-      console.log('[INPUT]', JSON.stringify(data));
+      console.log('[INPUT RAW]', JSON.stringify(data));
       if (ptyProcess) {
         try {
           ptyProcess.write(data);
@@ -287,6 +297,7 @@ export const setupTerminal = (io) => {
             console.log('[KILLING PTY AFTER DISCONNECT]');
             ptyProcess.kill();
             ptyProcess = null;
+            activePtys.delete(socket.id);
           }
         } catch (err) {
           console.warn('PTY kill failed:', err.message);
