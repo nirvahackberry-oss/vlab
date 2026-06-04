@@ -6,6 +6,13 @@ import { getSession } from './services/sessionRepository.js';
 const LOCAL_SHELL = os.platform() === 'win32' ? 'cmd.exe' : 'bash';
 const activePtys = new Map(); // Store PTYs strictly by socket.id
 
+const stripStartupNoise = (data) => {
+  return data
+    .replace(/The Session Manager plugin was installed successfully\.\s*Use the AWS CLI to start a session\.[\r\n]*/g, '')
+    .replace(/Starting session with SessionId:\s*[a-zA-Z0-9-]+[\r\n]*/g, '')
+    .replace(/^(?:\x1b(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])|[\s\r\n])+/g, '');
+};
+
 export const setupTerminal = (io) => {
   io.on('connection', async (socket) => {
     console.log('Terminal Connected:', socket.id);
@@ -39,6 +46,7 @@ export const setupTerminal = (io) => {
 
     let ptyProcess = null;
     let isContainer = false;
+    let hasSentContainerOutput = false;
 
     // =====================================
     // TRY ECS TERMINAL
@@ -236,14 +244,19 @@ export const setupTerminal = (io) => {
     if (ptyProcess) {
       ptyProcess.onData((data) => {
         if (isContainer) {
-          // Suppress AWS Session Manager boilerplate text and trailing newlines
-          data = data.replace(/The Session Manager plugin was installed successfully\.\s*Use the AWS CLI to start a session\.[\r\n]*/g, '');
-          data = data.replace(/Starting session with SessionId:\s*[a-zA-Z0-9-]+[\r\n]*/g, '');
+          if (!hasSentContainerOutput) {
+            data = stripStartupNoise(data);
+          } else {
+            data = data
+              .replace(/The Session Manager plugin was installed successfully\.\s*Use the AWS CLI to start a session\.[\r\n]*/g, '')
+              .replace(/Starting session with SessionId:\s*[a-zA-Z0-9-]+[\r\n]*/g, '');
+          }
           
           // Avoid sending empty chunks if they were completely replaced
           if (!data) {
             return;
           }
+          hasSentContainerOutput = true;
         }
         
         socket.emit('terminal-output', data);

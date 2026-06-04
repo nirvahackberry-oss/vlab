@@ -81,7 +81,12 @@ const rewriteJupyterHtml = (body, proxyBase) => {
     .replace(/url\(\//g, `url(${baseSlash}`)
     .replace(/"baseUrl":\s*"\/"/g, `"baseUrl": "${baseSlash}"`)
     .replace(/"baseUrl":\s*""/g, `"baseUrl": "${baseSlash}"`)
-    .replace(/"appUrl":\s*"\/lab"/g, `"appUrl": "${baseSlash}lab"`);
+    .replace(/"appUrl":\s*"\/lab"/g, `"appUrl": "${baseSlash}lab"`)
+    .replace(/"appUrl":\s*"lab"/g, `"appUrl": "${baseSlash}lab"`)
+    .replace(/"fullStaticUrl":\s*"\/static\//g, `"fullStaticUrl": "${baseSlash}static/`)
+    .replace(/"staticUrl":\s*"\/static\//g, `"staticUrl": "${baseSlash}static/`)
+    .replace(/"wsUrl":\s*"\/"/g, `"wsUrl": "${baseSlash}"`)
+    .replace(/"wsUrl":\s*""/g, `"wsUrl": "${baseSlash}"`);
 
   if (!out.includes("<base ")) {
     out = out.replace(/<head([^>]*)>/i, `<head$1><base href="${baseSlash}">`);

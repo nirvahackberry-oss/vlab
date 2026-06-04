@@ -31,7 +31,13 @@ export const saveToContainer = async (session, { path, content }) => {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 6000);
   try {
-    await fetch(baseUrl, { method: "HEAD", signal: controller.signal });
+    const response = await fetch(`${baseUrl}/health`, {
+      method: "GET",
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      throw new Error(`health check failed (${response.status})`);
+    }
   } catch (err) {
     console.warn("[saveToContainer] Container unreachable, skipping proxy:", err.message);
     return { proxied: false };

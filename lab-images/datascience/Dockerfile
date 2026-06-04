@@ -8,8 +8,7 @@ RUN pip install --no-cache-dir \
     scikit-learn \
     requests \
     beautifulsoup4 \
-    jupyter \
-    jupyterlab
+    notebook
 
 ENV JUPYTER_CONFIG_DIR=/etc/jupyter
 COPY lab-images/datascience/jupyter_server_config.py /etc/jupyter/jupyter_server_config.py
@@ -19,4 +18,4 @@ WORKDIR /workspace
 COPY lab-images/datascience/lab.ipynb /workspace/lab.ipynb
 
 EXPOSE 8888
-CMD ["jupyter", "lab", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--allow-root", "--ServerApp.token=", "--ServerApp.password=", "--ServerApp.allow_origin=*", "--ServerApp.disable_check_xsrf=True"]
+CMD ["jupyter", "notebook", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--allow-root", "--NotebookApp.token=", "--NotebookApp.password=", "--NotebookApp.allow_origin=*", "--NotebookApp.disable_check_xsrf=True", "--NotebookApp.default_url=/notebooks/lab.ipynb"]

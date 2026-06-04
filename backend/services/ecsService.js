@@ -169,8 +169,12 @@ export const startEcsTask = async ({ labId, sessionId, sessionToken }) => {
     { name: "LAB_WORKSPACE", value: "/workspace" },
   ];
 
-  // Do not set JUPYTER_BASE_URL — the API proxy rewrites paths; a container base_url
-  // doubles prefixes and breaks /api/* calls (blank iframe).
+  if (labType === "datascience") {
+    environment.push({
+      name: "JUPYTER_BASE_URL",
+      value: `${apiPrefix}/lab-sessions/${sessionId}/jupyter`,
+    });
+  }
 
   const response = await ecsClient.send(
     new RunTaskCommand({
