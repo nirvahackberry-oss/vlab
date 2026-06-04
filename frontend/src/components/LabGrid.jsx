@@ -29,6 +29,7 @@ import {
 } from '../services/labService';
 
 import PaymentGateway from './PaymentGateway';
+import SessionTimeoutModal from './SessionTimeoutModal.jsx';
 
 const LabGrid = ({ onLabClick, labs: labsProp, readOnly = false }) => {
 
@@ -606,6 +607,8 @@ const LabGrid = ({ onLabClick, labs: labsProp, readOnly = false }) => {
           );
         }}
       />
+
+      <SessionTimeoutModal session={Object.values(activeSessions)[0] || null} />
     </>
   );
 };

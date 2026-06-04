@@ -42,6 +42,7 @@ import {
 } from '../../services/labService';
 import CloudEditor from './Editor';
 import Terminal from './Terminal';
+import SessionTimeoutModal from '../../components/SessionTimeoutModal.jsx';
 import { APP_ENV } from '../../config/env';
 
 
@@ -243,7 +244,7 @@ const IframeTool = ({ url, title, onStopLab, onBack, isJupyter, sessionId }) => 
         if (!reachable) {
           setLoadError(
             lastErrorMsg ||
-              'Cannot reach Jupyter on port 8888. Your AWS engineer must open inbound TCP 8888 on the ECS security group (terraform apply).'
+            'Cannot reach Jupyter on port 8888. Your AWS engineer must open inbound TCP 8888 on the ECS security group (terraform apply).'
           );
           setIsLoading(false);
           return;
@@ -336,17 +337,17 @@ const IframeTool = ({ url, title, onStopLab, onBack, isJupyter, sessionId }) => 
           </Box>
         )}
         {iframeSrc ? (
-        <iframe
-          src={iframeSrc}
-          title="Lab Tool"
-          className="absolute inset-0 h-full w-full border-none bg-white"
-          allow="clipboard-read; clipboard-write; fullscreen; autoplay; microphone; camera"
-          allowFullScreen
-          onLoad={() => {
-            setIsLoading(false);
-            setLoadError('');
-          }}
-        />
+          <iframe
+            src={iframeSrc}
+            title="Lab Tool"
+            className="absolute inset-0 h-full w-full border-none bg-white"
+            allow="clipboard-read; clipboard-write; fullscreen; autoplay; microphone; camera"
+            allowFullScreen
+            onLoad={() => {
+              setIsLoading(false);
+              setLoadError('');
+            }}
+          />
         ) : null}
       </Box>
     </Box>
@@ -381,7 +382,7 @@ const CodeServerLauncher = ({ url, onStopLab, onBack, labTitle }) => {
       <Box className="flex-1 flex flex-col items-center justify-center gap-6 px-8">
         <Box className="w-24 h-24 rounded-2xl bg-[#1e1e1e] border border-blue-500/40 flex items-center justify-center shadow-2xl">
           <svg viewBox="0 0 100 100" className="w-14 h-14">
-            <path fill="#2196F3" d="M74.9 7.3L52.5 30.6 32.4 13.5l-9.7 4.4v64.5l9.7 4.4 20.1-17.1 22.5 23.3L90 82.5V17.5L74.9 7.3zm-3 64.4L50.4 51l21.5-20.7v41.4z"/>
+            <path fill="#2196F3" d="M74.9 7.3L52.5 30.6 32.4 13.5l-9.7 4.4v64.5l9.7 4.4 20.1-17.1 22.5 23.3L90 82.5V17.5L74.9 7.3zm-3 64.4L50.4 51l21.5-20.7v41.4z" />
           </svg>
         </Box>
         <Box className="text-center max-w-lg">
@@ -602,6 +603,20 @@ const RemoteDesktop = () => {
     }
   };
 
+  const handleRestartLab = async () => {
+    setIsStopping(true);
+    try {
+      if (session?.sessionId) {
+        await stopLabSession(session.sessionId);
+        localStorage.removeItem(`lastGrade_${session.sessionId}`);
+      }
+      window.location.reload();
+    } catch (err) {
+      console.error('Failed to restart lab:', err);
+      window.location.reload();
+    }
+  };
+
   const closeWindow = (id) => {
     setOpenWindows(openWindows.filter(w => w.id !== id));
     setMaximizedWindows(maximizedWindows.filter(winId => winId !== id));
@@ -732,6 +747,7 @@ const RemoteDesktop = () => {
           onStopLab={handleStopLab}
           onBack={() => navigate('/')}
         />
+        <SessionTimeoutModal session={session} onRestart={handleRestartLab} />
       </Box>
     );
   }
@@ -744,8 +760,9 @@ const RemoteDesktop = () => {
           hideHeader={false}
           onStopLab={handleStopLab}
           onBack={() => navigate('/')}
-          onMenuClick={() => {}}
+          onMenuClick={() => { }}
         />
+        <SessionTimeoutModal session={session} onRestart={handleRestartLab} />
       </Box>
     );
   }
@@ -763,6 +780,7 @@ const RemoteDesktop = () => {
           onBack={() => navigate('/')}
         />
         {stopLabDialog}
+        <SessionTimeoutModal session={session} onRestart={handleRestartLab} />
       </>
     );
   }
@@ -779,6 +797,7 @@ const RemoteDesktop = () => {
           onBack={() => navigate('/')}
         />
         {stopLabDialog}
+        <SessionTimeoutModal session={session} onRestart={handleRestartLab} />
       </>
     );
   }
@@ -795,6 +814,7 @@ const RemoteDesktop = () => {
           onBack={() => navigate('/')}
         />
         {stopLabDialog}
+        <SessionTimeoutModal session={session} onRestart={handleRestartLab} />
       </>
     );
   }
@@ -909,7 +929,7 @@ const RemoteDesktop = () => {
               </Box>
               <Box className="flex-1 overflow-hidden">
                 <win.component
-                  onMenuClick={() => {}}
+                  onMenuClick={() => { }}
                   session={session}
                   onStopLab={() => setShowStopModal(true)}
                   onBack={() => navigate('/')}
@@ -944,7 +964,7 @@ const RemoteDesktop = () => {
       )}
 
       {/* Taskbar */}
-    
+
 
       {/* Stop Lab Modal */}
       <Dialog
@@ -982,6 +1002,7 @@ const RemoteDesktop = () => {
           </Box>
         </Box>
       </Dialog>
+      <SessionTimeoutModal session={session} onRestart={handleRestartLab} />
     </Box>
   );
 };
