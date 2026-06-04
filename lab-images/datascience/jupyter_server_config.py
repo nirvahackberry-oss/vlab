@@ -1,20 +1,23 @@
 import os
+from urllib.parse import urlparse
 
-# Allow embedding Jupyter in a parent web app (e.g. React iframe via API proxy).
-_proxy_base = os.environ.get("JUPYTER_BASE_URL", "").strip()
-if _proxy_base:
-    c.ServerApp.base_url = _proxy_base if _proxy_base.endswith("/") else f"{_proxy_base}/"
-c.ServerApp.allow_origin = "*"
-c.ServerApp.allow_origin_pat = ".*"
-c.ServerApp.allow_credentials = True
-c.ServerApp.disable_check_xsrf = True
-c.ServerApp.allow_remote_access = True
-c.ServerApp.trust_xheaders = True
-c.ServerApp.token = ""
-c.ServerApp.password = ""
-c.ServerApp.open_browser = False
-c.ServerApp.root_dir = "/workspace"
-c.ServerApp.tornado_settings = {
+_raw = os.environ.get("JUPYTER_BASE_URL", "").strip()
+if _raw:
+    if _raw.startswith("http://") or _raw.startswith("https://"):
+        _raw = urlparse(_raw).path or _raw
+    c.NotebookApp.base_url = _raw if _raw.endswith("/") else f"{_raw}/"
+
+c.NotebookApp.allow_origin = "*"
+c.NotebookApp.allow_credentials = True
+c.NotebookApp.disable_check_xsrf = True
+c.NotebookApp.allow_remote_access = True
+c.NotebookApp.trust_xheaders = True
+c.NotebookApp.token = ""
+c.NotebookApp.password = ""
+c.NotebookApp.open_browser = False
+c.NotebookApp.notebook_dir = "/workspace"
+c.NotebookApp.default_url = "/notebooks/lab.ipynb"
+c.NotebookApp.tornado_settings = {
     "headers": {
         "Content-Security-Policy": "frame-ancestors *",
         "X-Frame-Options": "",

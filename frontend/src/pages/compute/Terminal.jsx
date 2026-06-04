@@ -67,6 +67,7 @@ const TerminalInstance = ({ session, isActive }) => {
       if (payload.status === 'timeout') {
         setTerminalState('timeout');
       } else if (payload.status === 'ready') {
+        term.reset();
         setTerminalState('ready');
       } else {
         setTerminalState(payload.status);
@@ -186,7 +187,7 @@ const TerminalInstance = ({ session, isActive }) => {
       )}
 
       <Box
-        className="h-full w-full p-2 absolute inset-0"
+        className="h-full w-full p-0 absolute inset-0"
         sx={{
           opacity: terminalState === 'ready' ? 1 : 0,
           visibility: terminalState === 'ready' ? 'visible' : 'hidden',

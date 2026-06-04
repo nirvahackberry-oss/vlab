@@ -24,7 +24,9 @@ const resolveAuth = (req) => {
     if (!token) return null;
     try {
       const claims = verifyJupyterEmbedToken(token);
-      return { userId: claims.sub, sessionId: claims.sessionId, token };
+      const userId = claims.userId || claims.sub;
+      if (!userId || !claims.sessionId) return null;
+      return { userId, sessionId: claims.sessionId, token };
     } catch {
       return null;
     }
@@ -56,10 +58,15 @@ const stripJupyterPrefix = (req, apiPrefix) => {
     `/lab-sessions/${sessionId}/jupyter`,
   ];
   let path = req.originalUrl?.split("?")[0] || req.url?.split("?")[0] || "/";
-  for (const prefix of prefixes) {
-    if (path.startsWith(prefix)) {
-      path = path.slice(prefix.length) || "/";
-      break;
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const prefix of prefixes) {
+      if (path.startsWith(prefix)) {
+        path = path.slice(prefix.length) || "/";
+        changed = true;
+        break;
+      }
     }
   }
   return path.startsWith("/") ? path : `/${path}`;
@@ -74,7 +81,12 @@ const rewriteJupyterHtml = (body, proxyBase) => {
     .replace(/url\(\//g, `url(${baseSlash}`)
     .replace(/"baseUrl":\s*"\/"/g, `"baseUrl": "${baseSlash}"`)
     .replace(/"baseUrl":\s*""/g, `"baseUrl": "${baseSlash}"`)
-    .replace(/"appUrl":\s*"\/lab"/g, `"appUrl": "${baseSlash}lab"`);
+    .replace(/"appUrl":\s*"\/lab"/g, `"appUrl": "${baseSlash}lab"`)
+    .replace(/"appUrl":\s*"lab"/g, `"appUrl": "${baseSlash}lab"`)
+    .replace(/"fullStaticUrl":\s*"\/static\//g, `"fullStaticUrl": "${baseSlash}static/`)
+    .replace(/"staticUrl":\s*"\/static\//g, `"staticUrl": "${baseSlash}static/`)
+    .replace(/"wsUrl":\s*"\/"/g, `"wsUrl": "${baseSlash}"`)
+    .replace(/"wsUrl":\s*""/g, `"wsUrl": "${baseSlash}"`);
 
   if (!out.includes("<base ")) {
     out = out.replace(/<head([^>]*)>/i, `<head$1><base href="${baseSlash}">`);

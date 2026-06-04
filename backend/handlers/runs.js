@@ -6,6 +6,7 @@ import { getFile, upsertFile } from "../services/fileRepository.js";
 import { executeInContainer, saveToContainer } from "../services/containerClient.js";
 import { executeLocally } from "../services/localExecutor.js";
 import { resolveLabType } from "../lib/labTypeMapper.js";
+import { getContainerHost, getContainerPort } from "../services/labTools.js";
 
 export const runsCreateHandler = async ({ body, auth }) => {
   const sessionId = body?.sessionId || body?.session_id;
@@ -61,8 +62,8 @@ export const runsCreateHandler = async ({ body, auth }) => {
 
   let result;
 
-const host = session.publicIp || session.taskPrivateIp;
-const port = session.containerPort || 8080;
+const host = getContainerHost(session);
+const port = getContainerPort(session.labId) || session.containerPort || 8080;
 const baseUrl = host ? `http://${host}:${port}` : null;
 
 console.log("\n========== SESSION DEBUG ==========");

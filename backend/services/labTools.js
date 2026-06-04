@@ -1,4 +1,5 @@
 import { LAB_PORTS, getLabById } from "../config/labs.js";
+import { ENV } from "../config/env.js";
 
 const joinUrl = (base, path = "/") => {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
@@ -73,14 +74,28 @@ export const buildSessionTools = (session) => {
   };
 };
 
+export const getContainerHost = (session) => {
+  if (!session) return null;
+  if (ENV.containerHostMode === "private") {
+    return session.taskPrivateIp || session.publicIp || null;
+  }
+  return session.publicIp || null;
+};
+
+export const getContainerPort = (labId) => {
+  const runtime = getLabRuntime(labId);
+  return runtime.containerApi?.port || runtime.port;
+};
+
 export const getSessionApiBaseUrl = (session) => {
-  if (!session?.publicIp) return null;
+  const host = getContainerHost(session);
+  if (!host || session.status !== "running") return null;
+
   const runtime = getLabRuntime(session.labId);
   const containerApi = runtime.containerApi;
 
   if (containerApi?.enabled === false) return null;
   if (runtime.type === "jupyter" && !containerApi?.enabled) return null;
 
-  const apiPort = containerApi?.port || runtime.port;
-  return `http://${session.publicIp}:${apiPort}`;
+  return `http://${host}:${getContainerPort(session.labId)}`;
 };

@@ -113,7 +113,7 @@ export const LABS = [
     runtime: {
       type: "jupyter",
       port: LAB_PORTS.JUPYTER,
-      path: "/lab",
+      path: "/lab/tree/lab.ipynb",
       containerApi: { enabled: true, port: LAB_PORTS.JUPYTER },
     },
   },
