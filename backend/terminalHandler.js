@@ -6,8 +6,16 @@ import { getSession } from './services/sessionRepository.js';
 const LOCAL_SHELL = os.platform() === 'win32' ? 'cmd.exe' : 'bash';
 const activePtys = new Map(); // Store PTYs strictly by socket.id
 
+// OSC window-title sequences (\x1b]0;…\x07) and orphaned "0;…" when ESC is dropped (SSM/ECS).
+const OSC_TITLE_SEQUENCE = /\x1b\](?:\d+;)?[^\x07\x1b]*(?:\x07|\x1b\\)/g;
+const ORPHAN_TITLE_PREFIX = /^0;[^\x07\r\n]{0,200}?(?=[A-Za-z0-9_"'])/;
+
+const stripOscTitleSequences = (data) => data.replace(OSC_TITLE_SEQUENCE, '');
+
+const stripOrphanWindowTitle = (data) => data.replace(ORPHAN_TITLE_PREFIX, '');
+
 const stripStartupNoise = (data) => {
-  return data
+  return stripOrphanWindowTitle(stripOscTitleSequences(data))
     .replace(/The Session Manager plugin was installed successfully\.\s*Use the AWS CLI to start a session\.[\r\n]*/g, '')
     .replace(/Starting session with SessionId:\s*[a-zA-Z0-9-]+[\r\n]*/g, '')
     .replace(/^(?:\x1b(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])|[\s\r\n])+/g, '');
@@ -247,7 +255,7 @@ export const setupTerminal = (io) => {
           if (!hasSentContainerOutput) {
             data = stripStartupNoise(data);
           } else {
-            data = data
+            data = stripOscTitleSequences(data)
               .replace(/The Session Manager plugin was installed successfully\.\s*Use the AWS CLI to start a session\.[\r\n]*/g, '')
               .replace(/Starting session with SessionId:\s*[a-zA-Z0-9-]+[\r\n]*/g, '');
           }
