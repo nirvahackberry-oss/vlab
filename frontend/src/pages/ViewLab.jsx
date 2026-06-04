@@ -27,6 +27,7 @@ import { motion } from 'motion/react';
 import Header from '../components/Header';
 import { fetchLabDetails, fetchLabSessionStatus, fetchUserActiveSession, startLabSession, stopLabSession } from '../services/labService';
 import { useAuthStore } from '../store/authStore';
+import SessionTimeoutModal from '../components/SessionTimeoutModal.jsx';
 
 const ViewLab = ({ onMenuClick }) => {
   const navigate = useNavigate();
@@ -119,7 +120,7 @@ const ViewLab = ({ onMenuClick }) => {
 
       const statusResponse = await fetchLabSessionStatus(startResponse.sessionId);
       setSession(statusResponse);
-      
+
       // If it starts successfully, go directly to RDP
       if (statusResponse.status === 'running' || statusResponse.status === 'starting') {
         navigate(`/admin/compute/rdp?labId=${id}&app=vscode`);
@@ -137,6 +138,21 @@ const ViewLab = ({ onMenuClick }) => {
     await stopLabSession(session.sessionId);
     setSession(null);
     setSecondsLeft(120 * 60);
+  };
+
+  const handleRestartLab = async () => {
+    if (!session?.sessionId) return;
+    try {
+      setIsStarting(true);
+      await stopLabSession(session.sessionId);
+      const startResponse = await startLabSession({ labId: id });
+      const statusResponse = await fetchLabSessionStatus(startResponse.sessionId);
+      setSession(statusResponse);
+    } catch (err) {
+      setError(err.message || 'Unable to restart lab');
+    } finally {
+      setIsStarting(false);
+    }
   };
 
   const formatTime = (secs) => {
@@ -289,6 +305,7 @@ const ViewLab = ({ onMenuClick }) => {
           </Paper>
         </Box>
       </main>
+      <SessionTimeoutModal session={session} onRestart={handleRestartLab} />
     </Box>
   );
 };
