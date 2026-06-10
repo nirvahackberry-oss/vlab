@@ -54,13 +54,18 @@ variable "lab_memory" {
 variable "lab_cpu_by_type" {
   description = "Optional CPU overrides by lab type."
   type        = map(number)
-  default     = {}
+  default = {
+    dbms = 1024
+  }
 }
 
 variable "lab_memory_by_type" {
   description = "Optional memory overrides by lab type."
   type        = map(number)
-  default     = {}
+  default = {
+    dbms = 6144
+    java = 2048
+  }
 }
 
 variable "session_timeout_minutes" {

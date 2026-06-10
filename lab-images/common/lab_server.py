@@ -163,10 +163,51 @@ def _run_linux(path: str, code: str) -> tuple[bool, str, str, str]:
         return False, "", "", "Execution timed out"
 
 
-def _run_dbms(path: str, code: str) -> tuple[bool, str, str, str]:
-    with open(path, "w", encoding="utf-8") as f:
-        f.write(code)
-    env = {**os.environ, "PGPASSWORD": os.environ.get("PGPASSWORD", "student")}
+def _dbms_engine(code: str) -> str:
+    for line in code.splitlines()[:5]:
+        stripped = line.strip().lower()
+        if stripped.startswith("-- engine:"):
+            return stripped.split(":", 1)[1].strip()
+    return os.environ.get("DBMS_ENGINE", "mysql").strip().lower()
+
+
+def _run_mysql(path: str) -> tuple[bool, str, str, str]:
+    user = os.environ.get("MYSQL_USER", "student")
+    password = os.environ.get("MYSQL_PASSWORD", "student")
+    database = os.environ.get("MYSQL_DATABASE", "labdb")
+    try:
+        with open(path, encoding="utf-8") as sql_file:
+            proc = subprocess.run(
+                [
+                    "mysql",
+                    "-h",
+                    "localhost",
+                    "-u",
+                    user,
+                    f"-p{password}",
+                    database,
+                ],
+                stdin=sql_file,
+                cwd=_workspace_real(),
+                capture_output=True,
+                text=True,
+                timeout=25,
+            )
+        out = (proc.stdout or "") + (proc.stderr or "")
+        if proc.returncode == 0:
+            return True, out, "", ""
+        return False, out, "", f"mysql exit {proc.returncode}"
+    except FileNotFoundError:
+        return False, "", "", "mysql client not found"
+    except subprocess.TimeoutExpired:
+        return False, "", "", "Execution timed out"
+
+
+def _run_postgres(path: str) -> tuple[bool, str, str, str]:
+    user = os.environ.get("POSTGRES_USER", "student")
+    password = os.environ.get("POSTGRES_PASSWORD", "student")
+    database = os.environ.get("POSTGRES_DB", "labdb")
+    env = {**os.environ, "PGPASSWORD": password}
     try:
         proc = subprocess.run(
             [
@@ -174,9 +215,9 @@ def _run_dbms(path: str, code: str) -> tuple[bool, str, str, str]:
                 "-h",
                 "localhost",
                 "-U",
-                os.environ.get("PGUSER", "student"),
+                user,
                 "-d",
-                os.environ.get("PGDATABASE", "labdb"),
+                database,
                 "-f",
                 path,
                 "-v",
@@ -196,6 +237,42 @@ def _run_dbms(path: str, code: str) -> tuple[bool, str, str, str]:
         return False, "", "", "psql not found"
     except subprocess.TimeoutExpired:
         return False, "", "", "Execution timed out"
+
+
+def _run_oracle(path: str) -> tuple[bool, str, str, str]:
+    password = os.environ.get("ORACLE_PASSWORD", "student")
+    user = os.environ.get("APP_USER", "student")
+    service = os.environ.get("ORACLE_SERVICE", "XEPDB1")
+    connect = f"{user}/{password}@//localhost:1521/{service}"
+    try:
+        with open(path, encoding="utf-8") as sql_file:
+            proc = subprocess.run(
+                ["sqlplus", "-S", connect],
+                stdin=sql_file,
+                cwd=_workspace_real(),
+                capture_output=True,
+                text=True,
+                timeout=60,
+            )
+        out = (proc.stdout or "") + (proc.stderr or "")
+        if proc.returncode == 0:
+            return True, out, "", ""
+        return False, out, "", f"sqlplus exit {proc.returncode}"
+    except FileNotFoundError:
+        return False, "", "", "sqlplus not found"
+    except subprocess.TimeoutExpired:
+        return False, "", "", "Execution timed out"
+
+
+def _run_dbms(path: str, code: str) -> tuple[bool, str, str, str]:
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(code)
+    engine = _dbms_engine(code)
+    if engine == "oracle":
+        return _run_oracle(path)
+    if engine in {"postgres", "postgresql"}:
+        return _run_postgres(path)
+    return _run_mysql(path)
 def _run_javascript(path: str, code: str) -> tuple[bool, str, str, str]:
     with open(path, "w", encoding="utf-8") as f:
         f.write(code)
