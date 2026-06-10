@@ -208,3 +208,19 @@ export const executeInContainer = async (session, payload) => {
     "Container execution endpoints not available"
   );
 };
+
+export const deleteFromContainer = async (session, filePath) => {
+  if (!filePath || !filePath.startsWith('/workspace/')) return;
+  
+  const payload = {
+    path: "/workspace/.delete_script.py",
+    language: "python",
+    content: `import os\ntarget = "${filePath}"\nif os.path.exists(target):\n    if os.path.isdir(target):\n        import shutil\n        shutil.rmtree(target)\n    else:\n        os.remove(target)\n    print("Deleted")\nelse:\n    print("Not found")\nif os.path.exists(__file__):\n    os.remove(__file__)`
+  };
+  
+  try {
+    await executeInContainer(session, payload);
+  } catch (err) {
+    console.warn("[deleteFromContainer] Failed to delete from container:", err.message);
+  }
+};

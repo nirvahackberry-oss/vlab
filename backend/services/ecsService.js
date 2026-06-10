@@ -65,15 +65,15 @@ export const logFargateTaskMetadata = (task) => {
     const taskDefinitionRevision = taskDefParts[1] || "";
     const clusterArn = task.clusterArn || "";
     const clusterName = clusterArn.split("/").pop() || ENV.ecsCluster || "";
-    
+
     // Find lab runtime container details
     const container = task.containers?.find(c => c.name === "lab-runtime") || task.containers?.[0] || {};
     const image = container.image || "";
     const containerKnownStatus = container.lastStatus || task.lastStatus || "PENDING";
     const timestamp = task.createdAt ? new Date(task.createdAt).getTime() : Date.now();
-    
+
     const cpuReserved = Number(task.cpu) || 512;
-    
+
     // Generate realistic/simulated Fargate task container stats
     const seed = parseInt(taskId.slice(0, 4), 16) || 42;
     const cpuUtilized = (5.2 + ((seed % 100) / 30) + (Math.sin(Date.now() / 10000) * 1.5));
@@ -131,7 +131,7 @@ export const resolveTaskNetworking = async (taskArn, labId) => {
   /**
    * Important: do not "probe" http://publicIp:port from this backend process.
    *
-   * In many deployments the ECS task security group only allows 8080/8888
+   * In many deployments the ECS task security group only allows 8080/8080
    * from trusted sources (e.g. a Lambda SG inside the VPC), so a local dev
    * backend (or API Gateway/Lambda in a different network path) cannot reach it.
    * If we gate readiness on a direct TCP/HTTP probe here, sessions can get stuck

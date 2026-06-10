@@ -49,5 +49,5 @@ httpServer.listen(ENV.port, () => {
   console.log(`VLab API server: http://localhost:${ENV.port}${ENV.apiPrefix}`);
   console.log(`Storage: ${ENV.sessionsTable ? `DynamoDB (${ENV.sessionsTable})` : "in-memory"}`);
   console.log(`ECS: ${ENV.ecsCluster || "disabled (mock sessions)"}`);
-  console.log(`Container access: ${ENV.containerHostMode} (8080=IDE, 8888=Jupyter)`);
+  console.log(`Container access: ${ENV.containerHostMode} (8080=IDE, 8080=Jupyter)`);
 });

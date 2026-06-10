@@ -269,7 +269,7 @@ const IframeTool = ({ url, title, onStopLab, onBack, isJupyter, sessionId }) => 
           return false;
         });
       }
-    }, 45000);
+    }, 15000);
 
     return () => {
       cancelled = true;

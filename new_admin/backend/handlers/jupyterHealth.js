@@ -12,7 +12,7 @@ export const jupyterHealthHandler = async ({ pathParameters, auth }) => {
   }
 
   const host = getContainerHost(session);
-  const port = getLabRuntime(session.labId).port || 8888;
+  const port = getLabRuntime(session.labId).port || 8080;
   if (!host || session.status !== "running") {
     return ok({
       ready: false,
@@ -38,7 +38,7 @@ export const jupyterHealthHandler = async ({ pathParameters, auth }) => {
     return ok({
       ready: false,
       message:
-        "Cannot reach Jupyter on port 8888. AWS engineer must allow inbound TCP 8888 on the ECS security group.",
+        "Cannot reach Jupyter on port 8080. AWS engineer must allow inbound TCP 8080 on the ECS security group.",
       host,
       port,
       error: err.message,

@@ -225,7 +225,7 @@ const CloudEditor = ({ session: propSession, hideHeader, onStopLab, onBack }: an
       return;
     }
 
-    const defaultName = isJavaLab() ? 'Main.java' : (isPythonLab() ? 'script.py' : (isBigDataLab() ? 'script.py' : (isAgileLab() ? 'document.md' : 'script.txt')));
+    const defaultName = isJavaLab() ? 'Main.java' : (isPythonLab() ? 'script.py' : (isBigDataLab() ? 'script.py' : (isAgileLab() ? 'File.java' : 'script.txt')));
     const fileName = window.prompt(`Enter file name (e.g. ${defaultName}):`, defaultName);
     if (!fileName) return;
 
@@ -242,7 +242,7 @@ const CloudEditor = ({ session: propSession, hideHeader, onStopLab, onBack }: an
       return;
     }
     if (isAgileLab()) {
-      const allowed = ['txt', 'md', 'doc', 'docx', 'pdf', 'js', 'jsx', 'html', 'css', 'json'];
+      const allowed = ['java'];
       if (!allowed.includes(ext as string)) {
         setRestrictionMsg(`This is an Agile Methodology lab. You can only create or add these extensions: ${allowed.join(', ')}`);
         setShowRestrictionModal(true);
@@ -250,7 +250,7 @@ const CloudEditor = ({ session: propSession, hideHeader, onStopLab, onBack }: an
       }
     }
     if (isBigDataLab()) {
-      const allowed = ['py', 'ipynb', 'csv', 'json', 'txt'];
+      const allowed = ['py', 'java'];
       if (!allowed.includes(ext as string)) {
         setRestrictionMsg(`This is a Big Data Analytics lab. You can only create or add these extensions: ${allowed.join(', ')}`);
         setShowRestrictionModal(true);
@@ -443,6 +443,44 @@ const CloudEditor = ({ session: propSession, hideHeader, onStopLab, onBack }: an
                 <span className={`text-[12px] truncate flex-1 ${activeFileIndex === i ? 'text-white font-medium' : 'text-slate-400'}`}>
                   {file.name}
                 </span>
+                <button
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    if (!window.confirm(`Are you sure you want to delete ${file.name}?`)) return;
+                    if (!sessionId) return;
+                    try {
+                      await deleteFile(file.path, sessionId);
+                      
+                      const newFiles = [...files];
+                      newFiles.splice(i, 1);
+                      setFiles(newFiles);
+                      
+                      setOpenFilePaths(prev => {
+                        const next = prev.filter(p => p !== file.path);
+                        if (activeFileIndex === i) {
+                          if (next.length > 0) {
+                            const newActivePath = next[next.length - 1];
+                            const newActiveIdx = newFiles.findIndex(f => f.path === newActivePath);
+                            setActiveFileIndex(newActiveIdx);
+                          } else {
+                            setActiveFileIndex(-1);
+                          }
+                        } else if (activeFileIndex > i) {
+                          setActiveFileIndex(activeFileIndex - 1);
+                        }
+                        return next;
+                      });
+                    } catch (err: any) {
+                      console.error('Delete error:', err);
+                      setRestrictionMsg(`Failed to delete file: ${err.message || 'Unknown error'}`);
+                      setShowRestrictionModal(true);
+                    }
+                  }}
+                  className="opacity-0 group-hover:opacity-100 text-slate-500 hover:text-red-500 transition-colors p-1 rounded hover:bg-white/10"
+                  title="Delete file"
+                >
+                  <Trash2 size={12} />
+                </button>
               </div>
             ))}
           </div>

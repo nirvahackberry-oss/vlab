@@ -3,8 +3,8 @@
 ## Problem
 Students open **Data Science-I** lab but Jupyter stays blank in the iframe because:
 
-1. **Security group** blocks browser traffic to port **8888** (and often **8080**) on ECS task public IPs.
-2. **Big Data Analytics** lab is **not** Jupyter — only **Data Science-I** (`data-science-lab`) runs Jupyter on **8888**.
+1. **Security group** blocks browser traffic to port **8080** (and often **8080**) on ECS task public IPs.
+2. **Big Data Analytics** lab is **not** Jupyter — only **Data Science-I** (`data-science-lab`) runs Jupyter on **8080**.
 
 ## Required AWS changes (Terraform)
 
@@ -22,7 +22,7 @@ This adds:
 
 | Port | Purpose | Source |
 |------|---------|--------|
-| **8888** | JupyterLab | `0.0.0.0/0` (browsers) + Lambda SG |
+| **8080** | JupyterLab | `0.0.0.0/0` (browsers) + Lambda SG |
 | **8080** | code-server / lab API | `0.0.0.0/0` (browsers) + Lambda SG (existing) |
 
 Variable: `lab_browser_ingress_cidr_blocks` (default `["0.0.0.0/0"]`). Restrict in production if needed.
@@ -53,7 +53,7 @@ Restart API after deploy: `npm start` in `backend/`.
 
 | Lab card | Jupyter? | Port |
 |----------|----------|------|
-| **Data Science-I** | Yes | 8888 |
+| **Data Science-I** | Yes | 8080 |
 | Big Data Analytics | No | — |
 | Python / Java | Built-in editor in app | 8080 API only |
 
@@ -63,7 +63,7 @@ Restart API after deploy: `npm start` in `backend/`.
 2. Network tab: iframe URL should be like  
    `http://localhost:8082/api/lab-sessions/sess_xxx/jupyter/lab?access_token=...`
 3. From your PC (optional):  
-   `curl -I "http://<TASK_PUBLIC_IP>:8888/lab"`  
+   `curl -I "http://<TASK_PUBLIC_IP>:8080/lab"`  
    Should return HTTP 200/302, not timeout.
 
 If `curl` times out → security group not applied yet.

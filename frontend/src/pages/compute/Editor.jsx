@@ -397,7 +397,7 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
       return;
     }
 
-    const defaultName = isJavaLab() ? 'Main.java' : (isPythonLab() ? 'script.py' : (isBigDataLab() ? 'script.py' : (isAgileLab() ? 'document.md' : 'script.txt')));
+    const defaultName = isJavaLab() ? 'Main.java' : (isPythonLab() ? 'script.py' : (isBigDataLab() ? 'script.py' : (isAgileLab() ? 'File1.java' : 'script.txt')));
     const fileName = window.prompt(`Enter file name (e.g. ${defaultName}):`, defaultName);
     if (!fileName) return;
     const ext = fileName.split('.').pop().toLowerCase();
@@ -413,7 +413,7 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
       return;
     }
     if (isAgileLab()) {
-      const allowed = ['txt', 'md', 'doc', 'docx', 'pdf', 'js', 'jsx', 'html', 'css', 'json'];
+      const allowed = ['java'];
       if (!allowed.includes(ext)) {
         setRestrictionMsg(`This is an Agile Methodology lab. You can only create or add these extensions: ${allowed.join(', ')}`);
         setShowRestrictionModal(true);
@@ -421,7 +421,7 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
       }
     }
     if (isBigDataLab()) {
-      const allowed = ['py', 'ipynb', 'csv', 'json', 'txt'];
+      const allowed = ['java','py'];
       if (!allowed.includes(ext)) {
         setRestrictionMsg(`This is a Big Data Analytics lab. You can only create or add these extensions: ${allowed.join(', ')}`);
         setShowRestrictionModal(true);

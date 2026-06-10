@@ -5,7 +5,8 @@ import { getSession } from "./services/sessionRepository.js";
 import { getLabRuntime, getContainerHost } from "./lib/labTools.js";
 import { ENV } from "./config/env.js";
 
-const PROXY_TIMEOUT_MS = 90000;
+// Proxy timeout configured to 5s to fail fast during local dev if AWS SG blocks traffic
+const PROXY_TIMEOUT_MS = 5000;
 
 const getCookieToken = (req, sessionId) => {
   const cookieHeader = req.headers?.cookie || "";
@@ -221,7 +222,7 @@ export const setupJupyterProxy = (app, apiPrefix) => {
         });
 
         res.write = () => true;
-        res.end = () => {};
+        res.end = () => { };
       },
     },
   });
