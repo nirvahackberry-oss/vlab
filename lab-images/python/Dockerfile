@@ -4,6 +4,8 @@ FROM ${LAB_BASE_IMAGE}
 USER root
 
 RUN pip install --no-cache-dir \
+    matplotlib \
+    plotly \
     paramiko \
     pytest
 
