@@ -50,6 +50,12 @@ const getFileIcon = (fileName) => {
     case 'json': return <SiJavascript className="text-amber-500 shrink-0" />;
     case 'md': return <MdInsertDriveFile className="text-sky-500 shrink-0" />;
     case 'pdf': return <MdInsertDriveFile className="text-red-500 shrink-0" />;
+    case 'xml': return <MdInsertDriveFile className="text-orange-400 shrink-0" />;
+    case 'log': return <MdInsertDriveFile className="text-gray-400 shrink-0" />;
+    case 'parquet': return <MdInsertDriveFile className="text-emerald-700 shrink-0" />;
+    case 'avro': return <MdInsertDriveFile className="text-sky-700 shrink-0" />;
+    case 'orc': return <MdInsertDriveFile className="text-violet-600 shrink-0" />;
+    case 'txt': return <MdInsertDriveFile className="text-slate-300 shrink-0" />;
     default: return <MdInsertDriveFile className="text-slate-400 shrink-0" />;
   }
 };
@@ -160,7 +166,7 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
             if (isPythonLab()) return ext === 'py';
             if (isJavaLab()) return ext === 'java';
             if (isAgileLab()) return ['txt', 'md', 'doc', 'docx', 'pdf', 'js', 'jsx', 'html', 'css', 'json'].includes(ext);
-            if (isBigDataLab()) return ['py', 'ipynb', 'csv', 'json', 'txt'].includes(ext);
+            if (isBigDataLab()) return ['py', 'java', 'ipynb', 'csv', 'json', 'txt', 'xml', 'log', 'parquet', 'avro', 'orc'].includes(ext);
             return true;
           });
           setFiles(filteredFiles);
@@ -214,6 +220,32 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
 
     return () => clearTimeout(timeout);
   }, [files, activeFileIndex, labId]);
+
+  // Hadoop Verification
+  useEffect(() => {
+    let isMounted = true;
+    if (isBigDataLab() && sessionId) {
+      const verifyHadoop = async () => {
+        try {
+          const payload = {
+            path: '/workspace/.verify_hadoop.py',
+            language: 'python',
+            content: "import os, subprocess\ntry:\n    subprocess.check_output(['hadoop', 'version'], stderr=subprocess.STDOUT)\n    subprocess.check_output(['hdfs', 'dfs', '-ls', '/'], stderr=subprocess.STDOUT)\nexcept Exception as e:\n    print('HADOOP_ERROR: ' + str(e))"
+          };
+          const res = await runFile(payload, sessionId);
+          if (isMounted && res && res.output && res.output.includes("HADOOP_ERROR")) {
+            setRestrictionMsg("Hadoop Environment Verification Failed: " + res.output);
+            setShowRestrictionModal(true);
+          }
+        } catch (err) {
+          console.error("Hadoop verification error:", err);
+        }
+      };
+      // Delay slightly to ensure lab initialization finishes
+      setTimeout(verifyHadoop, 2000);
+    }
+    return () => { isMounted = false; };
+  }, [sessionId, labId]);
 
   const activeFile = files[activeFileIndex];
 
@@ -421,7 +453,7 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
       }
     }
     if (isBigDataLab()) {
-      const allowed = ['java','py'];
+      const allowed = ['java','py','csv','json','xml','log','txt','parquet','avro','orc'];
       if (!allowed.includes(ext)) {
         setRestrictionMsg(`This is a Big Data Analytics lab. You can only create or add these extensions: ${allowed.join(', ')}`);
         setShowRestrictionModal(true);
@@ -470,7 +502,7 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
             if (isPythonLab()) return ext === 'py';
             if (isJavaLab()) return ext === 'java';
             if (isAgileLab()) return ['txt', 'md', 'doc', 'docx', 'pdf', 'js', 'jsx', 'html', 'css', 'json'].includes(ext);
-            if (isBigDataLab()) return ['py', 'ipynb', 'csv', 'json', 'txt'].includes(ext);
+            if (isBigDataLab()) return ['py', 'java', 'ipynb', 'csv', 'json', 'txt', 'xml', 'log', 'parquet', 'avro', 'orc'].includes(ext);
             return true;
           });
 
@@ -541,7 +573,7 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
       }
     }
     if (isBigDataLab()) {
-      const allowed = ['py', 'ipynb', 'csv', 'json', 'txt'];
+      const allowed = ['py', 'java', 'ipynb', 'csv', 'json', 'txt', 'xml', 'log', 'parquet', 'avro', 'orc'];
       if (!allowed.includes(ext)) {
         setRestrictionMsg(`This is a Big Data Analytics lab. You can only upload these extensions: ${allowed.join(', ')}`);
         setShowRestrictionModal(true);
@@ -595,7 +627,7 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
               if (isPythonLab()) return ext === 'py';
               if (isJavaLab()) return ext === 'java';
               if (isAgileLab()) return ['txt', 'md', 'doc', 'docx', 'pdf', 'js', 'jsx', 'html', 'css', 'json'].includes(ext);
-              if (isBigDataLab()) return ['py', 'ipynb', 'csv', 'json', 'txt'].includes(ext);
+              if (isBigDataLab()) return ['py', 'java', 'ipynb', 'csv', 'json', 'txt', 'xml', 'log', 'parquet', 'avro', 'orc'].includes(ext);
               return true;
             });
 

@@ -4,7 +4,7 @@ import { useLocation } from '@tanstack/react-router';
 import { fetchFileContent, fetchFiles, runFile, saveFile, deleteFile } from '../../services/ideService';
 import { 
   File, Code2, Plus, Upload, Play, Save, AlignLeft, 
-  Trash2, X, FileJson, FileText, ChevronRight, Menu, Download, ArrowLeft, Power, MonitorPlay
+  Trash2, X, FileJson, FileText, ChevronRight, Menu, Download, ArrowLeft, Power, MonitorPlay, Database
 } from 'lucide-react';
 
 const getFileIcon = (fileName: string) => {
@@ -16,7 +16,9 @@ const getFileIcon = (fileName: string) => {
     case 'css': return <Code2 className="text-blue-300 w-4 h-4 shrink-0" />;
     case 'java': return <Code2 className="text-[#007396] w-4 h-4 shrink-0" />;
     case 'json': return <FileJson className="text-amber-500 w-4 h-4 shrink-0" />;
-    case 'md': case 'csv': case 'txt': return <FileText className="text-emerald-500 w-4 h-4 shrink-0" />;
+    case 'md': case 'csv': case 'txt': case 'log': return <FileText className="text-emerald-500 w-4 h-4 shrink-0" />;
+    case 'xml': return <Code2 className="text-orange-400 w-4 h-4 shrink-0" />;
+    case 'parquet': case 'avro': case 'orc': return <Database className="text-emerald-700 w-4 h-4 shrink-0" />;
     default: return <File className="text-slate-400 w-4 h-4 shrink-0" />;
   }
 };
@@ -129,6 +131,31 @@ const CloudEditor = ({ session: propSession, hideHeader, onStopLab, onBack }: an
     const timeout = setTimeout(() => handleSave(false), 1500);
     return () => clearTimeout(timeout);
   }, [files, activeFileIndex, labId]);
+
+  // Hadoop Verification
+  useEffect(() => {
+    let isMounted = true;
+    if (isBigDataLab() && sessionId) {
+      const verifyHadoop = async () => {
+        try {
+          const payload = {
+            path: '/workspace/.verify_hadoop.py',
+            language: 'python',
+            content: "import os, subprocess\ntry:\n    subprocess.check_output(['hadoop', 'version'], stderr=subprocess.STDOUT)\n    subprocess.check_output(['hdfs', 'dfs', '-ls', '/'], stderr=subprocess.STDOUT)\nexcept Exception as e:\n    print('HADOOP_ERROR: ' + str(e))"
+          };
+          const res = await runFile(payload, sessionId);
+          if (isMounted && res && res.output && res.output.includes("HADOOP_ERROR")) {
+            setRestrictionMsg("Hadoop Environment Verification Failed: " + res.output);
+            setShowRestrictionModal(true);
+          }
+        } catch (err) {
+          console.error("Hadoop verification error:", err);
+        }
+      };
+      setTimeout(verifyHadoop, 2000);
+    }
+    return () => { isMounted = false; };
+  }, [sessionId, labId]);
 
   const activeFile = files[activeFileIndex];
 
@@ -250,7 +277,7 @@ const CloudEditor = ({ session: propSession, hideHeader, onStopLab, onBack }: an
       }
     }
     if (isBigDataLab()) {
-      const allowed = ['py', 'java'];
+      const allowed = ['java','py','csv','json','xml','log','txt','parquet','avro','orc'];
       if (!allowed.includes(ext as string)) {
         setRestrictionMsg(`This is a Big Data Analytics lab. You can only create or add these extensions: ${allowed.join(', ')}`);
         setShowRestrictionModal(true);
@@ -314,7 +341,7 @@ const CloudEditor = ({ session: propSession, hideHeader, onStopLab, onBack }: an
       }
     }
     if (isBigDataLab()) {
-      const allowed = ['py', 'ipynb', 'csv', 'json', 'txt'];
+      const allowed = ['py', 'java', 'ipynb', 'csv', 'json', 'txt', 'xml', 'log', 'parquet', 'avro', 'orc'];
       if (!allowed.includes(ext as string)) {
         setRestrictionMsg(`This is a Big Data Analytics lab. You can only upload these extensions: ${allowed.join(', ')}`);
         setShowRestrictionModal(true);

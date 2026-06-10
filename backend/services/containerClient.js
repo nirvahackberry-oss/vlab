@@ -135,7 +135,9 @@ export const executeInContainer = async (session, payload) => {
       console.log("LANGUAGE:", payload.language);
       console.log(
         "TIMEOUT:",
-        payload.language === "java"
+        payload.labType === "big-data"
+          ? 120000
+          : payload.language === "java"
           ? 60000
           : 15000
       );
@@ -148,7 +150,9 @@ export const executeInContainer = async (session, payload) => {
           headers: buildHeaders(session),
           body: JSON.stringify(body),
           timeout:
-            payload.language === "java"
+            payload.labType === "big-data"
+              ? 120000
+              : payload.language === "java"
               ? 60000
               : 15000,
         }
