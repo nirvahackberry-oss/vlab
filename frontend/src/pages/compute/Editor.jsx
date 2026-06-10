@@ -160,7 +160,7 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
             if (isPythonLab()) return ext === 'py';
             if (isJavaLab()) return ext === 'java';
             if (isAgileLab()) return ['txt', 'md', 'doc', 'docx', 'pdf', 'js', 'jsx', 'html', 'css', 'json'].includes(ext);
-            if (isBigDataLab()) return ['py', 'ipynb', 'csv', 'json', 'txt'].includes(ext);
+            if (isBigDataLab()) return ['java', 'csv', 'json', 'txt'].includes(ext);
             return true;
           });
           setFiles(filteredFiles);
@@ -397,7 +397,7 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
       return;
     }
 
-    const defaultName = isJavaLab() ? 'Main.java' : (isPythonLab() ? 'script.py' : (isBigDataLab() ? 'script.py' : (isAgileLab() ? 'document.md' : 'script.txt')));
+    const defaultName = (isJavaLab() || isBigDataLab()) ? 'Main.java' : (isPythonLab() ? 'script.py' : (isAgileLab() ? 'document.md' : 'script.txt'));
     const fileName = window.prompt(`Enter file name (e.g. ${defaultName}):`, defaultName);
     if (!fileName) return;
     const ext = fileName.split('.').pop().toLowerCase();
@@ -421,7 +421,7 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
       }
     }
     if (isBigDataLab()) {
-      const allowed = ['py', 'ipynb', 'csv', 'json', 'txt'];
+      const allowed = ['java', 'csv', 'json', 'txt'];
       if (!allowed.includes(ext)) {
         setRestrictionMsg(`This is a Big Data Analytics lab. You can only create or add these extensions: ${allowed.join(', ')}`);
         setShowRestrictionModal(true);
@@ -470,7 +470,7 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
             if (isPythonLab()) return ext === 'py';
             if (isJavaLab()) return ext === 'java';
             if (isAgileLab()) return ['txt', 'md', 'doc', 'docx', 'pdf', 'js', 'jsx', 'html', 'css', 'json'].includes(ext);
-            if (isBigDataLab()) return ['py', 'ipynb', 'csv', 'json', 'txt'].includes(ext);
+            if (isBigDataLab()) return ['java', 'csv', 'json', 'txt'].includes(ext);
             return true;
           });
 
@@ -541,7 +541,7 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
       }
     }
     if (isBigDataLab()) {
-      const allowed = ['py', 'ipynb', 'csv', 'json', 'txt'];
+      const allowed = ['java', 'csv', 'json', 'txt'];
       if (!allowed.includes(ext)) {
         setRestrictionMsg(`This is a Big Data Analytics lab. You can only upload these extensions: ${allowed.join(', ')}`);
         setShowRestrictionModal(true);
@@ -595,7 +595,7 @@ const CloudEditor = ({ onMenuClick, session: propSession, hideHeader, onStopLab,
               if (isPythonLab()) return ext === 'py';
               if (isJavaLab()) return ext === 'java';
               if (isAgileLab()) return ['txt', 'md', 'doc', 'docx', 'pdf', 'js', 'jsx', 'html', 'css', 'json'].includes(ext);
-              if (isBigDataLab()) return ['py', 'ipynb', 'csv', 'json', 'txt'].includes(ext);
+              if (isBigDataLab()) return ['java', 'csv', 'json', 'txt'].includes(ext);
               return true;
             });
 

@@ -16,12 +16,11 @@ SESSION_TOKEN = (os.environ.get("SESSION_TOKEN") or "").strip()
 SESSION_ID = (os.environ.get("SESSION_ID") or "").strip()
 LAB_TYPE_ENV = (os.environ.get("LAB_TYPE") or "").strip().lower()
 
-SUPPORTED_LABS = frozenset({"python", "java", "linux", "dbms", "agilemethodology", "agile", "bigdata", "big-data", "javascript"})
+SUPPORTED_LABS = frozenset({"python", "java", "linux", "dbms", "agilemethodology", "agile", "bigdata", "javascript"})
 
 DEFAULT_FILES = {
     "python": "main.py",
-    "bigdata": "main.py",
-    "big-data": "main.py",
+    "bigdata": "Main.java",
     "java": "Main.java",
     "linux": "script.sh",
     "dbms": "query.sql",
@@ -86,7 +85,18 @@ def _run_python(path: str, code: str) -> tuple[bool, str, str, str]:
     return False, "", "", "Python interpreter not found"
 
 
-def _run_java(path: str, code: str) -> tuple[bool, str, str, str]:
+def _java_classpath(src_dir: str, lab_type: str) -> str:
+    paths = [src_dir]
+    if lab_type == "bigdata":
+        libs_dir = (os.environ.get("BIGDATA_LIBS") or "/opt/bigdata-libs").strip()
+        if os.path.isdir(libs_dir):
+            for name in sorted(os.listdir(libs_dir)):
+                if name.endswith(".jar"):
+                    paths.append(os.path.join(libs_dir, name))
+    return os.pathsep.join(paths)
+
+
+def _run_java(path: str, code: str, lab_type: str = "java") -> tuple[bool, str, str, str]:
     import re
     # Extract the main class name from the Java code to determine the correct filename and execution target
     class_match = re.search(r'\bpublic\s+class\s+([a-zA-Z0-9_]+)', code)
@@ -97,13 +107,14 @@ def _run_java(path: str, code: str) -> tuple[bool, str, str, str]:
     
     src_dir = os.path.dirname(path) or _workspace_real()
     actual_path = os.path.join(src_dir, f"{class_name}.java")
+    classpath = _java_classpath(src_dir, lab_type)
     
     with open(actual_path, "w", encoding="utf-8") as f:
         f.write(code)
         
     try:
         jc = subprocess.run(
-            ["javac", actual_path],
+            ["javac", "-cp", classpath, actual_path],
             cwd=src_dir,
             capture_output=True,
             text=True,
@@ -113,7 +124,7 @@ def _run_java(path: str, code: str) -> tuple[bool, str, str, str]:
             err = (jc.stderr or jc.stdout or "").strip()
             return False, "", err, "javac failed"
         jr = subprocess.run(
-            ["java", "-cp", src_dir, class_name],
+            ["java", "-cp", classpath, class_name],
             cwd=src_dir,
             capture_output=True,
             text=True,
@@ -216,6 +227,8 @@ def _normalize_lab_type(body: dict) -> str:
     lab_type = str(raw).strip().lower()
     if lab_type.endswith("-lab"):
         lab_type = lab_type.replace("-lab", "")
+    if lab_type == "big-data":
+        lab_type = "bigdata"
     return lab_type
 
 
@@ -245,10 +258,10 @@ def _execute(body: dict) -> dict:
 
     path = _resolve_path(body, lab_type)
 
-    if lab_type in ("python", "bigdata", "big-data"):
+    if lab_type in ("python",):
         ok, out, se, re = _run_python(path, code)
-    elif lab_type == "java":
-        ok, out, se, re = _run_java(path, code)
+    elif lab_type in ("java", "bigdata"):
+        ok, out, se, re = _run_java(path, code, lab_type)
     elif lab_type == "linux":
         ok, out, se, re = _run_linux(path, code)
     elif lab_type in ("javascript", "agile", "agilemethodology"):

@@ -86,9 +86,9 @@ jobs:
             case "${lab}" in
               python|datascience)
                 base_uri="${base_python}" ;;
-              java|softwareengeering)
+              java|softwareengeering|bigdata)
                 base_uri="${base_java}" ;;
-              linux|bigdata|agilemethodology|android|testing)
+              linux|agilemethodology|android|testing)
                 base_uri="${base_linux}" ;;
               *)
                 base_uri="" ;;
