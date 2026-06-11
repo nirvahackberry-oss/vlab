@@ -1,5 +1,5 @@
 export const LAB_PORTS = {
-  JUPYTER: 8888,
+  JUPYTER: 8080,
   WEB_LAB: 8080,
 };
 

@@ -141,11 +141,11 @@ export const setupJupyterProxy = (app, apiPrefix) => {
         });
       }
 
-      req.jupyterTarget = `http://${host}:${runtime.port || 8888}`;
+      req.jupyterTarget = `http://${host}:${runtime.port || 8080}`;
       req.jupyterProxyBase = `${apiPrefix}/lab-sessions/${sessionId}/jupyter`;
-      
+
       console.log(`[jupyterProxy] REQ url=${req.url} auth=${!!auth} cookie=${!!req.headers?.cookie}`);
-      
+
       if (auth.token && req.query?.access_token) {
         setJupyterCookie(res, sessionId, auth.token);
       }
@@ -181,8 +181,8 @@ export const setupJupyterProxy = (app, apiPrefix) => {
           res.writeHead(502, { "Content-Type": "text/html; charset=utf-8" });
           res.end(`<!DOCTYPE html><html><body style="font-family:sans-serif;padding:2rem">
             <h2>Jupyter could not be reached</h2>
-            <p>The API server cannot connect to the lab container on port <b>8888</b>.</p>
-            <p><b>AWS fix:</b> Open inbound TCP <b>8888</b> on the ECS task security group (see docs/JUPYTER_AWS_FIX.md).</p>
+            <p>The API server cannot connect to the lab container on port <b>8080</b>.</p>
+            <p><b>AWS fix:</b> Open inbound TCP <b>8080</b> on the ECS task security group (see docs/JUPYTER_AWS_FIX.md).</p>
             <p style="color:#666;font-size:12px">Target: ${req.jupyterTarget || "unknown"} — ${err.message}</p>
           </body></html>`);
         }
@@ -195,13 +195,13 @@ export const setupJupyterProxy = (app, apiPrefix) => {
         if (proxyRes.headers.location && req.jupyterProxyBase) {
           const loc = proxyRes.headers.location;
           const base = req.jupyterProxyBase.endsWith("/") ? req.jupyterProxyBase.slice(0, -1) : req.jupyterProxyBase;
-          
+
           if (loc.startsWith("http")) {
             try {
               const u = new URL(loc);
               proxyRes.headers.location = `${base}${u.pathname}${u.search}`;
               console.log(`[jupyterProxy] REWRITTEN ABS LOCATION: ${loc} -> ${proxyRes.headers.location}`);
-            } catch (e) {}
+            } catch (e) { }
           } else if (loc.startsWith("/")) {
             proxyRes.headers.location = `${base}${loc}`;
             console.log(`[jupyterProxy] REWRITTEN REL LOCATION: ${loc} -> ${proxyRes.headers.location}`);
@@ -213,7 +213,7 @@ export const setupJupyterProxy = (app, apiPrefix) => {
 
         const contentType = proxyRes.headers["content-type"] || "";
         console.log(`[jupyterProxy] RES url=${req.url} status=${proxyRes.statusCode} type=${contentType}`);
-        
+
         if (!contentType.includes("text/html") || !req.jupyterProxyBase) {
           return;
         }
@@ -251,7 +251,7 @@ export const setupJupyterProxy = (app, apiPrefix) => {
         });
 
         res.write = () => true;
-        res.end = () => {};
+        res.end = () => { };
       },
     },
   });
@@ -280,7 +280,7 @@ export const attachJupyterProxyUpgrade = (httpServer, apiPrefix) => {
         return;
       }
       const host = getContainerHost(session);
-      const port = getLabRuntime(session.labId).port || 8888;
+      const port = getLabRuntime(session.labId).port || 8080;
       req.jupyterTarget = `http://${host}:${port}`;
 
       const proxy = createProxyMiddleware({

@@ -35,7 +35,7 @@ Legacy frontend routes also work under `/api` prefix locally: `POST /api/run`, `
 2. `jwt_authorizer` Lambda validates `Authorization: Bearer <token>`
 3. `POST /auth/login` — public route (no authorizer)
 4. Lambda env: `CONTAINER_HOST_MODE=private`, DynamoDB tables, `JWT_SECRET`
-5. ECS: port **8080** (IDE labs), **8888** (datascience/Jupyter)
+5. ECS: port **8080** (IDE labs), **8080** (datascience/Jupyter)
 
 ### Apply Terraform
 
@@ -79,7 +79,7 @@ export const handler = createHandler(sessionsStartHandler, { auth: true });
 | Runtime | Port | Usage |
 |---------|------|--------|
 | IDE (python, java, linux, dbms) | **8080** | `lab_server.py` — run/save code |
-| Jupyter (data-science-lab) | **8888** | JupyterLab UI + notebook |
+| Jupyter (data-science-lab) | **8080** | JupyterLab UI + notebook |
 
 ## JWT flow
 

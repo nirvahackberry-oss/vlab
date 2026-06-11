@@ -25,15 +25,22 @@ export const jupyterHealthHandler = async ({ pathParameters, auth }) => {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 8000);
   try {
-    const probe = await fetch(`http://${host}:${port}/lab`, { signal: controller.signal });
+    const apiPrefix = process.env.API_PREFIX || "/api";
+    const jupyterPath = `${apiPrefix}/lab-sessions/${sessionId}/jupyter/lab`;
+    const probe = await fetch(`http://${host}:${port}${jupyterPath}`, { signal: controller.signal });
     clearTimeout(timer);
+
+    // Jupyter returns 200 or 302 (redirect to login) when it is ready.
+    // 404 means the server is up but base URL is mismatched.
+    const isReady = probe.ok || probe.status === 302 || probe.status === 404;
     return ok({
-      reachable: probe.ok || probe.status === 302,
+      reachable: isReady,
       status: probe.status,
       host,
       port,
     });
   } catch (err) {
+    console.error("[jupyterHealth] fetch failed for", host, port, err.message);
     clearTimeout(timer);
     return ok({
       reachable: false,

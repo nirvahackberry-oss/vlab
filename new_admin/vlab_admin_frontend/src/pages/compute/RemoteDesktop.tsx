@@ -1,4 +1,4 @@
-import  { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from '@tanstack/react-router';
 import { useAuthStore } from '@/stores/auth-store';
 import { useLabSessionStore } from '@/stores/labSessionStore';
@@ -183,7 +183,7 @@ const IframeTool = ({ url, title, onStopLab, onBack, isJupyter, sessionId }: Ifr
         }
         if (cancelled) return;
         if (!reachable) {
-          setLoadError(lastErrorMsg || 'Cannot reach Jupyter. Open inbound TCP 8888 on the ECS security group.');
+          setLoadError(lastErrorMsg || 'Cannot reach Jupyter. Open inbound TCP 8080 on the ECS security group.');
           setIsLoading(false);
           return;
         }

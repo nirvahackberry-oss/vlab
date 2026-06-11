@@ -6,7 +6,7 @@ locals {
     }
   ]
   lab_container_port = {
-    for lab_type in var.lab_types : lab_type => lab_type == "datascience" ? 8888 : 8080
+    for lab_type in var.lab_types : lab_type => lab_type == "datascience" ? 8080 : 8080
   }
 }
 

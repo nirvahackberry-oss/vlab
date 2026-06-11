@@ -17,5 +17,5 @@ COPY lab-images/datascience/custom/custom.css /etc/jupyter/custom/custom.css
 WORKDIR /workspace
 COPY lab-images/datascience/lab.ipynb /workspace/lab.ipynb
 
-EXPOSE 8888
-CMD ["jupyter", "notebook", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--allow-root", "--NotebookApp.token=", "--NotebookApp.password=", "--NotebookApp.allow_origin=*", "--NotebookApp.disable_check_xsrf=True", "--NotebookApp.default_url=/notebooks/lab.ipynb"]
+EXPOSE 8080
+CMD ["jupyter", "notebook", "--ip=0.0.0.0", "--port=8080", "--no-browser", "--allow-root", "--NotebookApp.token=", "--NotebookApp.password=", "--NotebookApp.allow_origin=*", "--NotebookApp.disable_check_xsrf=True", "--NotebookApp.default_url=/notebooks/lab.ipynb"]

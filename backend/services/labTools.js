@@ -13,7 +13,7 @@ export const getLabRuntime = (labId) => {
 
 export const buildMainToolUrl = ({ labId, publicIp, sessionId }) => {
   const runtime = getLabRuntime(labId);
-  
+
   console.log("========== TOOL URL DEBUG ==========");
   console.log("Lab ID:", labId);
   console.log("Runtime Type:", runtime.type);
@@ -31,7 +31,7 @@ export const buildMainToolUrl = ({ labId, publicIp, sessionId }) => {
     console.log("No Public IP Found");
 
     return runtime.type === "jupyter"
-      ? "http://13.235.48.30:8888/lab"
+      ? "http://13.235.48.30:8080/lab"
       : `/admin/compute/ide?sessionId=${sessionId}`;
   }
 

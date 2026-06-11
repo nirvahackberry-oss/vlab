@@ -76,7 +76,7 @@ variable "enable_nat_gateway" {
 }
 
 variable "lab_browser_ingress_cidr_blocks" {
-  description = "CIDR blocks allowed to reach lab containers on 8080/8888 (browser iframe). Use 0.0.0.0/0 for student browsers."
+  description = "CIDR blocks allowed to reach lab containers on 8080/8080 (browser iframe). Use 0.0.0.0/0 for student browsers."
   type        = list(string)
   default     = ["0.0.0.0/0"]
 }

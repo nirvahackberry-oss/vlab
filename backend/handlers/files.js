@@ -7,7 +7,7 @@ import {
   upsertFile,
   deleteFile,
 } from "../services/fileRepository.js";
-import { saveToContainer } from "../services/containerClient.js";
+import { saveToContainer, deleteFromContainer } from "../services/containerClient.js";
 
 const getSessionId = (event) =>
   event.headers?.["x-session-id"] ||
@@ -68,10 +68,24 @@ export const filesSaveHandler = async (event) => {
 };
 
 export const filesDeleteHandler = async (event) => {
-  const { sessionId } = await assertSessionAccess(event);
+  const { sessionId, session } = await assertSessionAccess(event);
   const filePath = event.queryStringParameters?.path;
-  const file = await getFile(sessionId, filePath);
-  if (!file) throw notFound("File not found");
-  await deleteFile(sessionId, filePath);
+  
+  console.log(`[filesDeleteHandler] Deleting file: sessionId=${sessionId}, filePath=${filePath}`);
+  
+  try {
+    await deleteFile(sessionId, filePath);
+  } catch (e) {
+    console.warn("deleteFile error (ignoring):", e.message);
+  }
+  
+  if (session?.status === "running") {
+    try {
+      await deleteFromContainer(session, filePath);
+    } catch (err) {
+      console.warn("[filesDelete] container proxy skipped:", err.message);
+    }
+  }
+  
   return ok({ message: "File deleted successfully" });
 };

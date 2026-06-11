@@ -31,8 +31,8 @@ resource "aws_security_group" "ecs_tasks" {
 
   ingress {
     description     = "Allow Lambdas to reach Jupyter on datascience tasks"
-    from_port       = 8888
-    to_port         = 8888
+    from_port       = 8080
+    to_port         = 8080
     protocol        = "tcp"
     security_groups = [aws_security_group.lambda.id]
   }
@@ -51,9 +51,9 @@ resource "aws_security_group" "ecs_tasks" {
   dynamic "ingress" {
     for_each = length(var.lab_browser_ingress_cidr_blocks) > 0 ? [1] : []
     content {
-      description = "Browser access to JupyterLab (8888) on lab public IPs"
-      from_port   = 8888
-      to_port     = 8888
+      description = "Browser access to JupyterLab (8080) on lab public IPs"
+      from_port   = 8080
+      to_port     = 8080
       protocol    = "tcp"
       cidr_blocks = var.lab_browser_ingress_cidr_blocks
     }
