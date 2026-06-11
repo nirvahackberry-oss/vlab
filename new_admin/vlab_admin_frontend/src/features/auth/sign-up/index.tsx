@@ -81,12 +81,12 @@ export function SignUp() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {[
-                "Secure Virtual Labs",
-                "Cloud-Based Learning",
-                "Docker-Powered Environments",
-                "Real-Time Lab Monitoring",
-                "Credit-Based Lab Access",
-                "Multi-Course Support"
+                "Access Virtual Labs",
+                "Complete Practical Assignments",
+                "Track Academic Progress",
+                "Earn Certificates",
+                "Manage Lab Credits",
+                "Monitor Semester Progress"
               ].map((feature, idx) => (
                 <div key={idx} className="flex items-center gap-3 text-slate-800">
                   <div className="p-1 rounded-full bg-red-50 border border-red-100 flex items-center justify-center">
@@ -114,9 +114,9 @@ export function SignUp() {
             </div>
 
             <div className="flex flex-col space-y-1.5 text-center lg:text-left mb-6">
-              <h2 className="text-2xl font-bold tracking-tight text-slate-900">Create Your Account</h2>
+              <h2 className="text-2xl font-bold tracking-tight text-slate-900">Create Your Student Account</h2>
               <p className="text-sm text-slate-500 font-medium">
-                Join Ignit Experia Virtual Labs Platform
+                Join Ignito Experia Virtual Labs Platform
               </p>
             </div>
             

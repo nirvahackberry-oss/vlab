@@ -27,7 +27,6 @@ import {
 import { Checkbox } from '@/components/ui/checkbox'
 
 const formSchema = z.object({
-  role: z.enum(['student', 'faculty', 'tenant_user', 'tenant_admin'], { required_error: 'Please select an account type' }),
   fullName: z.string().min(1, 'Full Name is required'),
   email: z.string().email('Invalid email address'),
   mobileNumber: z.string().min(10, 'Mobile Number must be at least 10 digits'),
@@ -39,65 +38,13 @@ const formSchema = z.object({
     .regex(/[^A-Za-z0-9]/, 'Must contain special character'),
   confirmPassword: z.string(),
   
-  // Student fields
-  program: z.string().optional(),
-  semester: z.string().optional(),
-  enrollmentNumber: z.string().optional(),
-  studentCollege: z.string().optional(),
-  
-  // Faculty fields
-  department: z.string().optional(),
-  facultyDesignation: z.string().optional(),
-  facultyCollege: z.string().optional(),
-  facultyId: z.string().optional(),
-  
-  // Tenant User fields
-  userOrgName: z.string().optional(),
-  userDepartment: z.string().optional(),
-  employeeId: z.string().optional(),
-  
-  // Tenant Admin fields
-  adminOrgName: z.string().optional(),
-  adminOrgEmail: z.string().optional(),
-  adminOrgContact: z.string().optional(),
-  adminDesignation: z.string().optional(),
-  
   // Terms
   agreeTerms: z.boolean().refine(val => val === true, 'You must agree to the Terms & Conditions and Privacy Policy'),
   receiveUpdates: z.boolean().optional().default(false),
 }).refine(data => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ['confirmPassword']
-}).superRefine((data, ctx) => {
-  if (data.role === 'student') {
-    if (!data.program) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Program is required", path: ['program'] });
-    if (!data.semester) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Semester is required", path: ['semester'] });
-    if (!data.enrollmentNumber) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Enrollment Number is required", path: ['enrollmentNumber'] });
-    if (!data.studentCollege) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "College Name is required", path: ['studentCollege'] });
-  }
-  if (data.role === 'faculty') {
-    if (!data.department) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Department is required", path: ['department'] });
-    if (!data.facultyDesignation) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Designation is required", path: ['facultyDesignation'] });
-    if (!data.facultyCollege) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "College Name is required", path: ['facultyCollege'] });
-    if (!data.facultyId) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Faculty ID is required", path: ['facultyId'] });
-  }
-  if (data.role === 'tenant_user') {
-    if (!data.userOrgName) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Organization Name is required", path: ['userOrgName'] });
-  }
-  if (data.role === 'tenant_admin') {
-    if (!data.adminOrgName) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Organization Name is required", path: ['adminOrgName'] });
-    if (!data.adminOrgEmail) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Organization Email is required", path: ['adminOrgEmail'] });
-    if (!data.adminOrgContact) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Organization Contact is required", path: ['adminOrgContact'] });
-    if (!data.adminDesignation) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Designation is required", path: ['adminDesignation'] });
-  }
 });
-
-const ROLE_DESCRIPTIONS: Record<string, string> = {
-  student: "Access assigned labs and track learning progress.",
-  faculty: "Create and manage virtual labs for students.",
-  tenant_user: "Manage assigned labs and credits.",
-  tenant_admin: "Manage users, credits, courses and reports."
-}
 
 export function SignUpForm({
   className,
@@ -122,7 +69,6 @@ export function SignUpForm({
     },
   })
 
-  const watchRole = form.watch('role')
   const watchPassword = form.watch('password') || ''
 
   const passwordReqs = [
@@ -136,6 +82,12 @@ export function SignUpForm({
   async function onSubmit(data: z.infer<typeof formSchema>) {
     setIsLoading(true)
     
+    // Auto-assign student role
+    const payload = {
+      ...data,
+      role: 'student'
+    }
+
     // Simulate API call
     await sleep(1500)
     
@@ -204,282 +156,19 @@ export function SignUpForm({
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <FormField
-            control={form.control}
-            name="mobileNumber"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Mobile Number <span className="text-red-500">*</span></FormLabel>
-                <FormControl>
-                  <Input placeholder="+1 (555) 000-0000" type="tel" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <FormField
-            control={form.control}
-            name="role"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Account Type <span className="text-red-500">*</span></FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select account type" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="student">Student</SelectItem>
-                    <SelectItem value="faculty">Faculty</SelectItem>
-                    <SelectItem value="tenant_user">Tenant User</SelectItem>
-                    <SelectItem value="tenant_admin">Tenant Admin</SelectItem>
-                  </SelectContent>
-                </Select>
-                {watchRole && (
-                  <FormDescription className="text-[11px] text-slate-500 mt-0.5 leading-tight">
-                    {ROLE_DESCRIPTIONS[watchRole]}
-                  </FormDescription>
-                )}
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        {/* Profile Photo */}
-        <div className="space-y-1.5">
-          <FormLabel>Profile Photo Upload</FormLabel>
-          <Input type="file" accept="image/*" className="cursor-pointer file:cursor-pointer file:bg-slate-100 file:border-0 file:rounded-sm file:px-2 file:py-0.5 file:mr-2 file:text-xs text-xs h-8 hover:file:bg-slate-200" />
-        </div>
-
-        {/* ROLE SPECIFIC FIELDS */}
-        {watchRole && (
-          <div className="space-y-3 p-3 bg-white border border-slate-200 shadow-sm rounded-md animate-in fade-in zoom-in-95 duration-200">
-            <h4 className="font-semibold text-xs text-slate-800 uppercase tracking-wider">{watchRole.replace('_', ' ')} Details</h4>
-            
-            {watchRole === 'student' && (
-              <>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <FormField
-                    control={form.control}
-                    name="program"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Program <span className="text-red-500">*</span></FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl><SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger></FormControl>
-                          <SelectContent>
-                            <SelectItem value="MCA">MCA</SelectItem>
-                            <SelectItem value="BCA">BCA</SelectItem>
-                            <SelectItem value="B.Tech">B.Tech</SelectItem>
-                            <SelectItem value="M.Tech">M.Tech</SelectItem>
-                            <SelectItem value="B.Sc IT">B.Sc IT</SelectItem>
-                            <SelectItem value="Other">Other</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="semester"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Semester <span className="text-red-500">*</span></FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl><SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger></FormControl>
-                          <SelectContent>
-                            <SelectItem value="Semester 1">Semester 1</SelectItem>
-                            <SelectItem value="Semester 2">Semester 2</SelectItem>
-                            <SelectItem value="Semester 3">Semester 3</SelectItem>
-                            <SelectItem value="Semester 4">Semester 4</SelectItem>
-                            <SelectItem value="Semester 5">Semester 5</SelectItem>
-                            <SelectItem value="Semester 6">Semester 6</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <FormField
-                    control={form.control}
-                    name="enrollmentNumber"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Enrollment Number <span className="text-red-500">*</span></FormLabel>
-                        <FormControl><Input placeholder="E.g. EN123456" {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="studentCollege"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>College Name <span className="text-red-500">*</span></FormLabel>
-                        <FormControl><Input placeholder="University Name" {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </>
-            )}
-
-            {watchRole === 'faculty' && (
-              <>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <FormField
-                    control={form.control}
-                    name="department"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Department <span className="text-red-500">*</span></FormLabel>
-                        <FormControl><Input placeholder="E.g. CS" {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="facultyDesignation"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Designation <span className="text-red-500">*</span></FormLabel>
-                        <FormControl><Input placeholder="E.g. Professor" {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <FormField
-                    control={form.control}
-                    name="facultyCollege"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>College Name <span className="text-red-500">*</span></FormLabel>
-                        <FormControl><Input placeholder="University Name" {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="facultyId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Faculty ID <span className="text-red-500">*</span></FormLabel>
-                        <FormControl><Input placeholder="E.g. FAC9876" {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </>
-            )}
-
-            {watchRole === 'tenant_user' && (
-              <>
-                <FormField
-                  control={form.control}
-                  name="userOrgName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Organization Name <span className="text-red-500">*</span></FormLabel>
-                      <FormControl><Input placeholder="Company Name" {...field} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <FormField
-                    control={form.control}
-                    name="userDepartment"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Department</FormLabel>
-                        <FormControl><Input placeholder="E.g. Engineering" {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="employeeId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Employee ID</FormLabel>
-                        <FormControl><Input placeholder="E.g. EMP123" {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </>
-            )}
-
-            {watchRole === 'tenant_admin' && (
-              <>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <FormField
-                    control={form.control}
-                    name="adminOrgName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Organization Name <span className="text-red-500">*</span></FormLabel>
-                        <FormControl><Input placeholder="Company Name" {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="adminDesignation"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Designation <span className="text-red-500">*</span></FormLabel>
-                        <FormControl><Input placeholder="E.g. IT Director" {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <FormField
-                    control={form.control}
-                    name="adminOrgEmail"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Organization Email <span className="text-red-500">*</span></FormLabel>
-                        <FormControl><Input placeholder="admin@company.com" type="email" {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="adminOrgContact"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Organization Contact <span className="text-red-500">*</span></FormLabel>
-                        <FormControl><Input placeholder="+1 (555) 000-0000" {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </>
-            )}
-          </div>
-        )}
+        <FormField
+          control={form.control}
+          name="mobileNumber"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Mobile Number <span className="text-red-500">*</span></FormLabel>
+              <FormControl>
+                <Input placeholder="+1 (555) 000-0000" type="tel" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <FormField
