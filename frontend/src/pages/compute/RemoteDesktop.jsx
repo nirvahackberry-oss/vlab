@@ -89,12 +89,7 @@ const isDataScienceLab = (labId, session) =>
 /** Labs that explicitly need code-server (VS Code iframe) — full file tree, import-aware IDE. */
 const shouldUseCodeServer = (session, labId) => {
   const lid = (session?.labId || labId || '').toLowerCase();
-  return (
-    lid === 'testing-lab' ||
-    lid === 'mobile-app-lab' ||
-    lid === 'dotnet-lab' ||
-    lid === 'software-eng-lab'
-  );
+  return lid === 'dotnet-lab' || lid === 'software-eng-lab';
 };
 
 /** Python/Java/Linux/BigData/Agile labs expose an API on :8080, use built-in editor. */
@@ -104,7 +99,7 @@ const shouldUseBuiltInEditor = (session, labId) => {
   if (shouldUseCodeServer(session, labId)) return false;
   return (
     session?.tools?.main?.type === 'ide' ||
-    ['python-lab', 'java-lab'].includes(lid) ||
+    ['python-lab', 'java-lab', 'testing-lab', 'mobile-app-lab'].includes(lid) ||
     lid.includes('big-data') ||
     lid.includes('bigdata') ||
     lid.includes('big data') ||

@@ -3,6 +3,13 @@ const LAB_ID_TO_TYPE = {
   "java-lab": "java",
   "linux-lab": "linux",
   "dbms-lab": "dbms",
+  "testing-lab": "testing",
+  "mobile-app-lab": "android",
+  "agile-lab": "agilemethodology",
+  "big-data-lab": "bigdata",
+  "data-science-lab": "datascience",
+  "dotnet-lab": "dotnet",
+  "software-eng-lab": "softwareengeering",
 };
 
 const LANGUAGE_TO_TYPE = {

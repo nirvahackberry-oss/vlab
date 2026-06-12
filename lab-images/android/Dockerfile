@@ -36,4 +36,11 @@ RUN sdkmanager \
 RUN apt-get update && apt-get install -y --no-install-recommends gradle \
     && rm -rf /var/lib/apt/lists/*
 
+WORKDIR /app
+COPY --chown=labuser:labuser lab-images/common/lab_server.py /app/lab_server.py
+
+USER labuser
 WORKDIR /workspace
+
+EXPOSE 8080
+CMD ["python3", "/app/lab_server.py"]

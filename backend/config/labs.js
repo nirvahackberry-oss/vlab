@@ -16,7 +16,7 @@ export const LABS = [
     credits: 30,
     complexity: "Beginner",
     category: "Programming",
-    description: "Hands-on Python environment for learning syntax, data structures, and algorithms.",
+    description: "Browser-based IDE with Python 3.11 — syntax, data structures, and algorithms without local PyCharm install.",
     status: "ready",
     taskDefinition: "vlab-dev-python-task",
     runtime: {
@@ -41,7 +41,7 @@ export const LABS = [
     credits: 40,
     complexity: "Intermediate",
     category: "Programming",
-    description: "Build and compile Java applications in a pre-configured JDK environment.",
+    description: "Browser IDE with JDK 21 — write, compile, and run Java without Eclipse or local install.",
     status: "ready",
     taskDefinition: "vlab-dev-java-task",
     runtime: {
@@ -63,7 +63,7 @@ export const LABS = [
     credits: 25,
     complexity: "Beginner",
     category: "SysAdmin",
-    description: "Practice Linux commands, file systems, and shell scripting in a secure Ubuntu environment.",
+    description: "Ubuntu shell with gcc, gdb, and make — commands, scripting, and C debugging in the browser.",
     status: "ready",
     taskDefinition: "vlab-dev-linux-task",
     runtime: {
@@ -85,7 +85,7 @@ export const LABS = [
     credits: 35,
     complexity: "Intermediate",
     category: "Databases",
-    description: "Learn SQL queries and database design with MySQL/PostgreSQL pre-installed.",
+    description: "Oracle XE 21c, MySQL, and PostgreSQL — SQL queries and database design in one container.",
     status: "ready",
     taskDefinition: "vlab-dev-dbms-task",
     runtime: {
@@ -107,7 +107,7 @@ export const LABS = [
     credits: 50,
     complexity: "Advanced",
     category: "Programming",
-    description: "Explore data analysis, statistical modeling, and visualization with Python and Jupyter.",
+    description: "Jupyter Notebook with Python 3.11 (pandas, scikit-learn, seaborn). RStudio/Anaconda available if syllabus mandates R.",
     status: "ready",
     taskDefinition: "vlab-dev-datascience-task",
     runtime: {
@@ -129,7 +129,7 @@ export const LABS = [
     credits: 60,
     complexity: "Advanced",
     category: "Databases",
-    description: "Hands-on experience with Hadoop, Spark, and big data ecosystems.",
+    description: "Hadoop 3.3, Maven, and JDK 21 — MapReduce and HDFS labs via browser IDE (Hadoop 2.7 on request).",
     status: "ready",
     taskDefinition: "vlab-dev-bigdata-task",
     runtime: {
@@ -151,7 +151,7 @@ export const LABS = [
     credits: 35,
     complexity: "Intermediate",
     category: "Programming",
-    description: "Automate web testing using Selenium, JUnit, and modern QA frameworks.",
+    description: "Selenium WebDriver with Chrome, ChromeDriver, Python, and JDK 17 — programmatic test automation (not Selenium IDE extension).",
     status: "ready",
     taskDefinition: "vlab-dev-testing-task",
     runtime: {
@@ -173,7 +173,7 @@ export const LABS = [
     credits: 20,
     complexity: "Beginner",
     category: "SysAdmin",
-    description: "Learn Agile frameworks, Sprint planning, and team collaboration tools.",
+    description: "Agile frameworks and sprint planning with Draw.io (app.diagrams.net) and browser IDE.",
     status: "ready",
     taskDefinition: "vlab-dev-agilemethodology-task",
     runtime: {
@@ -186,7 +186,7 @@ export const LABS = [
   {
     id: "mobile-app-lab",
     title: "Fundamental of Mobile Application",
-    subtitle: "Android & iOS Development",
+    subtitle: "Android SDK & Gradle",
     semester: "Semester 4",
     logo: "https://images.icon-icons.com/2108/PNG/512/flutter_icon_130936.png",
     rating: 4.6,
@@ -195,7 +195,7 @@ export const LABS = [
     credits: 45,
     complexity: "Intermediate",
     category: "Programming",
-    description: "Build mobile interfaces and applications using React Native or Flutter.",
+    description: "Android command-line SDK, Gradle, and JDK 17 — build Android projects in the browser (CLI workflow; no Android Studio GUI/emulator on cloud).",
     status: "ready",
     taskDefinition: "vlab-dev-android-task",
     runtime: {
@@ -217,7 +217,7 @@ export const LABS = [
     credits: 40,
     complexity: "Intermediate",
     category: "Programming",
-    description: "Develop enterprise-grade web applications with C# and .NET Core.",
+    description: "code-server (VS Code in browser) with .NET SDK 8 — C# and ASP.NET Core without Visual Studio install.",
     status: "ready",
     taskDefinition: "vlab-dev-dotnet-task",
     runtime: {
@@ -239,7 +239,7 @@ export const LABS = [
     credits: 30,
     complexity: "Intermediate",
     category: "Programming",
-    description: "Design robust software systems using modern architecture and patterns.",
+    description: "code-server, PlantUML, and Draw.io — SDLC diagrams, UML, and architecture patterns in the browser.",
     status: "ready",
     taskDefinition: "vlab-dev-softwareengeering-task",
     runtime: {

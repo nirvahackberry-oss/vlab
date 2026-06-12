@@ -8,8 +8,6 @@ const PROXY_TIMEOUT_MS = 120000;
 
 /** Labs that serve code-server on port 8080 via the proxy */
 const CODE_SERVER_LAB_IDS = new Set([
-  "testing-lab",
-  "mobile-app-lab",
   "dotnet-lab",
   "software-eng-lab",
 ]);

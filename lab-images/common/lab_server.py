@@ -16,7 +16,10 @@ SESSION_TOKEN = (os.environ.get("SESSION_TOKEN") or "").strip()
 SESSION_ID = (os.environ.get("SESSION_ID") or "").strip()
 LAB_TYPE_ENV = (os.environ.get("LAB_TYPE") or "").strip().lower()
 
-SUPPORTED_LABS = frozenset({"python", "java", "linux", "dbms", "agilemethodology", "agile", "bigdata", "javascript"})
+SUPPORTED_LABS = frozenset({
+    "python", "java", "linux", "dbms", "agilemethodology", "agile", "bigdata",
+    "javascript", "testing", "android",
+})
 
 DEFAULT_FILES = {
     "python": "main.py",
@@ -27,6 +30,8 @@ DEFAULT_FILES = {
     "javascript": "script.js",
     "agile": "document.js",
     "agilemethodology": "document.js",
+    "testing": "test.py",
+    "android": "build.sh",
 }
 
 
@@ -306,6 +311,8 @@ def _normalize_lab_type(body: dict) -> str:
         lab_type = lab_type.replace("-lab", "")
     if lab_type == "big-data":
         lab_type = "bigdata"
+    if lab_type in ("mobile-app", "mobile"):
+        lab_type = "android"
     return lab_type
 
 
@@ -335,11 +342,11 @@ def _execute(body: dict) -> dict:
 
     path = _resolve_path(body, lab_type)
 
-    if lab_type in ("python",):
+    if lab_type in ("python", "testing"):
         ok, out, se, re = _run_python(path, code)
     elif lab_type in ("java", "bigdata"):
         ok, out, se, re = _run_java(path, code, lab_type)
-    elif lab_type == "linux":
+    elif lab_type in ("linux", "android"):
         ok, out, se, re = _run_linux(path, code)
     elif lab_type in ("javascript", "agile", "agilemethodology"):
         ok, out, se, re = _run_javascript(path, code)

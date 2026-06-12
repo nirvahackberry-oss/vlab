@@ -17,6 +17,8 @@ RUN mkdir -p /tools \
     && curl -fsSL -L https://github.com/plantuml/plantuml/releases/latest/download/plantuml.jar \
     -o "${PLANTUML_JAR}"
 
+COPY lab-images/common/drawio-landing.html /workspace/drawio.html
+
 WORKDIR /workspace
 
 EXPOSE 8080
