@@ -39,6 +39,14 @@ variable "lab_types" {
   }
 }
 
+variable "lab_image_aliases" {
+  description = "Lab types that reuse another lab type's ECR image in ECS task definitions."
+  type        = map(string)
+  default = {
+    agilemethodology = "java"
+  }
+}
+
 variable "lab_cpu" {
   description = "CPU units for ECS task (e.g. 256, 512, 1024)."
   type        = number

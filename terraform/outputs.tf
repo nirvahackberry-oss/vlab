@@ -9,8 +9,13 @@ output "api_gateway_url" {
 }
 
 output "ecr_repository_urls" {
-  description = "ECR repository URLs by lab type."
-  value       = { for lab_type, repo in aws_ecr_repository.lab_images : lab_type => repo.repository_url }
+  description = "ECR repository URLs by image key (lab types that share an image use the same repo)."
+  value       = { for image_key, repo in aws_ecr_repository.lab_images : image_key => repo.repository_url }
+}
+
+output "lab_ecr_image_keys" {
+  description = "ECS lab type to ECR image key (e.g. agilemethodology uses the java image)."
+  value       = local.lab_ecr_key
 }
 
 output "ecr_lab_base_repository_urls" {

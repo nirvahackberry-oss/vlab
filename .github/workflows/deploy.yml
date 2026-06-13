@@ -28,7 +28,7 @@ env:
   AWS_REGION: ap-south-1
   PROJECT_NAME: vlab
   ENVIRONMENT: dev
-  LAB_TYPES: "python java linux dbms agilemethodology android bigdata datascience dotnet softwareengeering testing"
+  LAB_TYPES: "python java linux dbms android bigdata datascience dotnet softwareengeering testing"
 
 jobs:
   ensure-ecr-repos:
@@ -103,7 +103,6 @@ jobs:
           - java
           - linux
           - dbms
-          - agilemethodology
           - android
           - bigdata
           - datascience
@@ -142,7 +141,7 @@ jobs:
               base_uri="${base_python}" ;;
             java|softwareengeering|bigdata)
               base_uri="${base_java}" ;;
-            linux|agilemethodology|android|testing)
+            linux|android|testing)
               base_uri="${base_linux}" ;;
             *)
               base_uri="" ;;

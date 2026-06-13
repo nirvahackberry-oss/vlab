@@ -28,8 +28,8 @@ DEFAULT_FILES = {
     "linux": "script.sh",
     "dbms": "query.sql",
     "javascript": "script.js",
-    "agile": "document.js",
-    "agilemethodology": "document.js",
+    "agile": "Main.java",
+    "agilemethodology": "Main.java",
     "testing": "test.py",
     "android": "build.sh",
 }
@@ -301,9 +301,9 @@ def _run_javascript(path: str, code: str) -> tuple[bool, str, str, str]:
 def _normalize_lab_type(body: dict) -> str:
     raw = (
         body.get("labType")
-        or body.get("language")
         or body.get("labId")
         or LAB_TYPE_ENV
+        or body.get("language")
         or ""
     )
     lab_type = str(raw).strip().lower()
@@ -344,11 +344,11 @@ def _execute(body: dict) -> dict:
 
     if lab_type in ("python", "testing"):
         ok, out, se, re = _run_python(path, code)
-    elif lab_type in ("java", "bigdata"):
+    elif lab_type in ("java", "bigdata", "agile", "agilemethodology"):
         ok, out, se, re = _run_java(path, code, lab_type)
     elif lab_type in ("linux", "android"):
         ok, out, se, re = _run_linux(path, code)
-    elif lab_type in ("javascript", "agile", "agilemethodology"):
+    elif lab_type == "javascript":
         ok, out, se, re = _run_javascript(path, code)
     else:
         ok, out, se, re = _run_dbms(path, code)

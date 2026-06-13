@@ -173,7 +173,7 @@ export const LABS = [
     credits: 20,
     complexity: "Beginner",
     category: "SysAdmin",
-    description: "Agile frameworks and sprint planning with Draw.io (app.diagrams.net) and browser IDE.",
+    description: "Agile frameworks with Java programming exercises.",
     status: "ready",
     taskDefinition: "vlab-dev-agilemethodology-task",
     runtime: {

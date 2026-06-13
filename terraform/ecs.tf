@@ -8,6 +8,9 @@ locals {
   lab_container_port = {
     for lab_type in var.lab_types : lab_type => lab_type == "datascience" ? 8888 : 8080
   }
+  lab_ecr_key = {
+    for lab_type in var.lab_types : lab_type => lookup(var.lab_image_aliases, lab_type, lab_type)
+  }
 }
 
 resource "aws_ecs_cluster" "lab" {
@@ -42,10 +45,10 @@ resource "aws_ecs_task_definition" "lab" {
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   # ECS Exec is enabled per task at launch (enableExecuteCommand in lambda/start_lab.py).
-  cpu                      = tostring(lookup(var.lab_cpu_by_type, each.key, var.lab_cpu))
-  memory                   = tostring(lookup(var.lab_memory_by_type, each.key, var.lab_memory))
-  execution_role_arn       = aws_iam_role.ecs_task_execution.arn
-  task_role_arn            = aws_iam_role.ecs_task.arn
+  cpu                = tostring(lookup(var.lab_cpu_by_type, each.key, var.lab_cpu))
+  memory             = tostring(lookup(var.lab_memory_by_type, each.key, var.lab_memory))
+  execution_role_arn = aws_iam_role.ecs_task_execution.arn
+  task_role_arn      = aws_iam_role.ecs_task.arn
 
   ephemeral_storage {
     size_in_gib = var.ephemeral_storage_gib
@@ -54,7 +57,7 @@ resource "aws_ecs_task_definition" "lab" {
   container_definitions = jsonencode([
     {
       name        = "lab-runtime"
-      image       = "${aws_ecr_repository.lab_images[each.key].repository_url}:latest"
+      image       = "${aws_ecr_repository.lab_images[local.lab_ecr_key[each.key]].repository_url}:latest"
       essential   = true
       environment = local.lab_environment_list
       portMappings = [

@@ -106,7 +106,7 @@ resource "aws_ecr_lifecycle_policy" "lab_base_java" {
 }
 
 resource "aws_ecr_repository" "lab_images" {
-  for_each             = toset(var.lab_types)
+  for_each             = toset(distinct(values(local.lab_ecr_key)))
   name                 = "${local.name_prefix}-${each.key}"
   image_tag_mutability = "MUTABLE"
   force_delete         = true
