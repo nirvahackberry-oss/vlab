@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Lifecycle Example</string>
+    <string name="lifecycle_hint">Android Lifecycle Lab — edit MainActivity.java, then Run build.sh to compile.</string>
+</resources>
