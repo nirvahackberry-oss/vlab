@@ -18,6 +18,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 ENV ANDROID_HOME=/opt/android-sdk \
+    ANDROID_SDK_ROOT=/opt/android-sdk \
     JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 ENV PATH="${JAVA_HOME}/bin:${PATH}:${ANDROID_HOME}/cmdline-tools/latest/bin:${ANDROID_HOME}/platform-tools:${ANDROID_HOME}/emulator"
 
@@ -52,14 +53,17 @@ RUN echo "sdk.dir=${ANDROID_HOME}" > /workspace/local.properties \
 WORKDIR /app
 COPY --chown=labuser:labuser lab-images/common/lab_server.py /app/lab_server.py
 COPY lab-images/android/entrypoint.sh /usr/local/bin/android-entrypoint.sh
-RUN chmod +x /usr/local/bin/android-entrypoint.sh \
-    && chown -R labuser:labuser /workspace
+RUN chmod +x /usr/local/bin/android-entrypoint.sh
+
+# Warmup as root (network + SDK write access), then hand caches to labuser.
+RUN cd /workspace \
+    && ./gradlew assembleDebug --no-daemon --stacktrace \
+    && mkdir -p /home/labuser/.android /home/labuser/.gradle \
+    && cp -a /root/.gradle/. /home/labuser/.gradle/ 2>/dev/null || true \
+    && chown -R labuser:labuser /workspace /home/labuser "${ANDROID_HOME}"
 
 USER labuser
 WORKDIR /workspace
-
-# Pre-download Gradle deps and verify the starter project builds inside the image.
-RUN ./gradlew assembleDebug --no-daemon --stacktrace
 
 EXPOSE 8080
 CMD ["/usr/local/bin/android-entrypoint.sh"]
