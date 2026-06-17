@@ -7,8 +7,19 @@ on:
     paths:
       - "terraform/**"
       - "lambda/**"
-      - "lab-images/**"
+      - "lab-images/base/**"
+      - "lab-images/common/**"
+      - "lab-images/python/**"
+      - "lab-images/java/**"
+      - "lab-images/linux/**"
+      - "lab-images/dbms/**"
+      - "lab-images/bigdata/**"
+      - "lab-images/datascience/**"
+      - "lab-images/dotnet/**"
+      - "lab-images/softwareengeering/**"
+      - "lab-images/testing/**"
       - ".github/workflows/deploy.yml"
+      # lab-images/android/** is built by .github/workflows/build-android.yml only
   workflow_dispatch:
     inputs:
       apply:

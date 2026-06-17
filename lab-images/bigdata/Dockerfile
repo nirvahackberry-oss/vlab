@@ -32,7 +32,6 @@ RUN mkdir -p "${BIGDATA_LIBS}" /var/hadoop/hdfs/namenode /var/hadoop/hdfs/datano
     && mvn -f /tmp/bigdata-pom.xml package -q \
     && rm -f /tmp/bigdata-pom.xml
 
-COPY lab-images/bigdata/sample-data/ /workspace/sample-data/
 COPY lab-images/bigdata/entrypoint.sh /usr/local/bin/bigdata-entrypoint.sh
 RUN chmod +x /usr/local/bin/bigdata-entrypoint.sh
 

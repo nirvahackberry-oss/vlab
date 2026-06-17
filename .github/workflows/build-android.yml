@@ -1,0 +1,59 @@
+name: Build Android Lab Image
+
+# Fast path: only rebuild/push the android image (skips full deploy matrix + terraform).
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "lab-images/android/**"
+      - ".github/workflows/build-android.yml"
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: ap-south-1
+  PROJECT_NAME: vlab
+  ENVIRONMENT: dev
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_GITHUB_ACTIONS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-duration-seconds: 3600
+
+      - name: Login to ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Ensure android ECR repository exists
+        run: |
+          set -euo pipefail
+          repo_name="${PROJECT_NAME}-${ENVIRONMENT}-android"
+          aws ecr describe-repositories --repository-names "${repo_name}" >/dev/null 2>&1 || \
+            aws ecr create-repository --repository-name "${repo_name}"
+
+      - name: Build and push android image
+        run: |
+          set -euo pipefail
+          registry="${{ steps.login-ecr.outputs.registry }}"
+          repo_name="${PROJECT_NAME}-${ENVIRONMENT}-android"
+          image_uri="${registry}/${repo_name}:latest"
+          base_linux="${registry}/${PROJECT_NAME}-${ENVIRONMENT}-lab-base-linux:latest"
+
+          docker build -f lab-images/android/Dockerfile \
+            --build-arg "LAB_BASE_IMAGE=${base_linux}" \
+            -t "${image_uri}" .
+          docker push "${image_uri}"
