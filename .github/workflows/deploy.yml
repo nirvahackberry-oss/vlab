@@ -17,8 +17,8 @@ on:
       - "lab-images/dotnet/**"
       - "lab-images/softwareengeering/**"
       - "lab-images/testing/**"
+      - "lab-images/android/**"
       - ".github/workflows/deploy.yml"
-      # lab-images/android/** is built by .github/workflows/build-android.yml only
   workflow_dispatch:
     inputs:
       apply:
@@ -41,8 +41,116 @@ env:
   LAB_TYPES: "python java linux dbms android bigdata datascience dotnet softwareengeering testing"
 
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      labs: ${{ steps.set.outputs.labs }}
+      base_linux: ${{ steps.set.outputs.base_linux }}
+      base_python: ${{ steps.set.outputs.base_python }}
+      base_java: ${{ steps.set.outputs.base_java }}
+      run_terraform: ${{ steps.set.outputs.run_terraform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            base-linux:
+              - 'lab-images/base/linux/**'
+            base-python:
+              - 'lab-images/base/python/**'
+            base-java:
+              - 'lab-images/base/java/**'
+            lab-python:
+              - 'lab-images/python/**'
+              - 'lab-images/base/python/**'
+              - 'lab-images/common/lab_server.py'
+            lab-java:
+              - 'lab-images/java/**'
+              - 'lab-images/base/java/**'
+              - 'lab-images/common/lab_server.py'
+            lab-linux:
+              - 'lab-images/linux/**'
+              - 'lab-images/base/linux/**'
+              - 'lab-images/common/lab_server.py'
+            lab-dbms:
+              - 'lab-images/dbms/**'
+              - 'lab-images/common/lab_server.py'
+            lab-bigdata:
+              - 'lab-images/bigdata/**'
+              - 'lab-images/base/java/**'
+              - 'lab-images/common/lab_server.py'
+            lab-datascience:
+              - 'lab-images/datascience/**'
+              - 'lab-images/base/python/**'
+              - 'lab-images/common/lab_server.py'
+            lab-dotnet:
+              - 'lab-images/dotnet/**'
+              - 'lab-images/common/install-code-server.sh'
+            lab-softwareengeering:
+              - 'lab-images/softwareengeering/**'
+              - 'lab-images/base/java/**'
+              - 'lab-images/common/install-code-server.sh'
+              - 'lab-images/common/drawio-landing.html'
+            lab-testing:
+              - 'lab-images/testing/**'
+              - 'lab-images/base/linux/**'
+              - 'lab-images/common/lab_server.py'
+            lab-android:
+              - 'lab-images/android/**'
+              - 'lab-images/base/linux/**'
+              - 'lab-images/common/lab_server.py'
+            terraform:
+              - 'terraform/**'
+            workflow:
+              - '.github/workflows/deploy.yml'
+
+      - id: set
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo 'labs=["python","java","linux","dbms","android","bigdata","datascience","dotnet","softwareengeering","testing"]' >> "$GITHUB_OUTPUT"
+            echo "base_linux=true" >> "$GITHUB_OUTPUT"
+            echo "base_python=true" >> "$GITHUB_OUTPUT"
+            echo "base_java=true" >> "$GITHUB_OUTPUT"
+            echo "run_terraform=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          labs=()
+          [ "${{ steps.filter.outputs.lab-python }}" = "true" ] && labs+=("python")
+          [ "${{ steps.filter.outputs.lab-java }}" = "true" ] && labs+=("java")
+          [ "${{ steps.filter.outputs.lab-linux }}" = "true" ] && labs+=("linux")
+          [ "${{ steps.filter.outputs.lab-dbms }}" = "true" ] && labs+=("dbms")
+          [ "${{ steps.filter.outputs.lab-bigdata }}" = "true" ] && labs+=("bigdata")
+          [ "${{ steps.filter.outputs.lab-datascience }}" = "true" ] && labs+=("datascience")
+          [ "${{ steps.filter.outputs.lab-dotnet }}" = "true" ] && labs+=("dotnet")
+          [ "${{ steps.filter.outputs.lab-softwareengeering }}" = "true" ] && labs+=("softwareengeering")
+          [ "${{ steps.filter.outputs.lab-testing }}" = "true" ] && labs+=("testing")
+          [ "${{ steps.filter.outputs.lab-android }}" = "true" ] && labs+=("android")
+
+          if [ "${#labs[@]}" -eq 0 ]; then
+            echo 'labs=[]' >> "$GITHUB_OUTPUT"
+          else
+            labs_json="$(printf '%s\n' "${labs[@]}" | jq -R . | jq -s -c .)"
+            echo "labs=${labs_json}" >> "$GITHUB_OUTPUT"
+          fi
+
+          echo "base_linux=${{ steps.filter.outputs.base-linux }}" >> "$GITHUB_OUTPUT"
+          echo "base_python=${{ steps.filter.outputs.base-python }}" >> "$GITHUB_OUTPUT"
+          echo "base_java=${{ steps.filter.outputs.base-java }}" >> "$GITHUB_OUTPUT"
+
+          if [ "${{ steps.filter.outputs.terraform }}" = "true" ] || [ "${{ steps.filter.outputs.workflow }}" = "true" ]; then
+            echo "run_terraform=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run_terraform=false" >> "$GITHUB_OUTPUT"
+          fi
+
   ensure-ecr-repos:
     runs-on: ubuntu-latest
+    needs: prepare
+    if: needs.prepare.outputs.labs != '[]' || needs.prepare.outputs.base_linux == 'true' || needs.prepare.outputs.base_python == 'true' || needs.prepare.outputs.base_java == 'true'
     environment: dev
     steps:
       - name: Configure AWS credentials
@@ -67,7 +175,8 @@ jobs:
 
   build-base-images:
     runs-on: ubuntu-latest
-    needs: ensure-ecr-repos
+    needs: [prepare, ensure-ecr-repos]
+    if: needs.prepare.outputs.base_linux == 'true' || needs.prepare.outputs.base_python == 'true' || needs.prepare.outputs.base_java == 'true'
     environment: dev
     steps:
       - name: Checkout
@@ -84,41 +193,47 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build and push base images
+      - name: Build and push linux base image
+        if: needs.prepare.outputs.base_linux == 'true'
         run: |
           set -euo pipefail
           registry="${{ steps.login-ecr.outputs.registry }}"
-
           docker build -f lab-images/base/linux/Dockerfile \
             -t "${registry}/${PROJECT_NAME}-${ENVIRONMENT}-lab-base-linux:latest" .
           docker push "${registry}/${PROJECT_NAME}-${ENVIRONMENT}-lab-base-linux:latest"
 
+      - name: Build and push python base image
+        if: needs.prepare.outputs.base_python == 'true'
+        run: |
+          set -euo pipefail
+          registry="${{ steps.login-ecr.outputs.registry }}"
           docker build -f lab-images/base/python/Dockerfile \
             -t "${registry}/${PROJECT_NAME}-${ENVIRONMENT}-lab-base-python:latest" .
           docker push "${registry}/${PROJECT_NAME}-${ENVIRONMENT}-lab-base-python:latest"
 
+      - name: Build and push java base image
+        if: needs.prepare.outputs.base_java == 'true'
+        run: |
+          set -euo pipefail
+          registry="${{ steps.login-ecr.outputs.registry }}"
           docker build -f lab-images/base/java/Dockerfile \
             -t "${registry}/${PROJECT_NAME}-${ENVIRONMENT}-lab-base-java:latest" .
           docker push "${registry}/${PROJECT_NAME}-${ENVIRONMENT}-lab-base-java:latest"
 
   build-lab-images:
     runs-on: ubuntu-latest
-    needs: build-base-images
+    needs: [prepare, ensure-ecr-repos, build-base-images]
+    if: >-
+      always() &&
+      needs.prepare.result == 'success' &&
+      needs.prepare.outputs.labs != '[]' &&
+      (needs.build-base-images.result == 'success' || needs.build-base-images.result == 'skipped') &&
+      (needs.ensure-ecr-repos.result == 'success' || needs.ensure-ecr-repos.result == 'skipped')
     environment: dev
     strategy:
       fail-fast: false
       matrix:
-        lab:
-          - python
-          - java
-          - linux
-          - dbms
-          - android
-          - bigdata
-          - datascience
-          - dotnet
-          - softwareengeering
-          - testing
+        lab: ${{ fromJson(needs.prepare.outputs.labs) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -168,7 +283,13 @@ jobs:
 
   terraform-plan:
     runs-on: ubuntu-latest
-    needs: build-lab-images
+    needs: [prepare, build-lab-images, build-base-images]
+    if: >-
+      always() &&
+      needs.prepare.result == 'success' &&
+      needs.prepare.outputs.run_terraform == 'true' &&
+      (needs.build-lab-images.result == 'success' || needs.build-lab-images.result == 'skipped') &&
+      (needs.build-base-images.result == 'success' || needs.build-base-images.result == 'skipped')
     environment: dev
     defaults:
       run:
