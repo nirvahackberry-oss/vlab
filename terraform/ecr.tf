@@ -126,7 +126,7 @@ resource "aws_ecr_repository" "lab_images" {
 }
 
 resource "aws_ecr_lifecycle_policy" "lab_images" {
-  for_each   = aws_ecr_repository.lab_images
-  repository = each.value.name
+  for_each   = toset(distinct(values(local.lab_ecr_key)))
+  repository = aws_ecr_repository.lab_images[each.key].name
   policy     = local.ecr_lab_lifecycle_policy
 }

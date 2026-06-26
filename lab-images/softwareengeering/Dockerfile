@@ -5,12 +5,18 @@ USER root
 
 ENV DEBIAN_FRONTEND=noninteractive
 
+ARG CODE_SERVER_VERSION=4.126.0
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
     curl \
     graphviz \
     && rm -rf /var/lib/apt/lists/*
 
-RUN curl -fsSL https://code-server.dev/install.sh | sh
+COPY lab-images/common/install-code-server.sh /tmp/install-code-server.sh
+RUN chmod +x /tmp/install-code-server.sh \
+    && CODE_SERVER_VERSION="${CODE_SERVER_VERSION}" /tmp/install-code-server.sh \
+    && rm /tmp/install-code-server.sh
 
 ENV PLANTUML_JAR=/tools/plantuml.jar
 RUN mkdir -p /tools \

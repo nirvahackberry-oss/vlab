@@ -188,18 +188,6 @@ resource "aws_vpc_endpoint" "ecs" {
   })
 }
 
-resource "aws_vpc_endpoint" "scheduler" {
-  vpc_id              = aws_vpc.main.id
-  service_name        = "com.amazonaws.${var.region}.scheduler"
-  vpc_endpoint_type   = "Interface"
-  subnet_ids          = aws_subnet.private[*].id
-  security_group_ids  = [aws_security_group.vpc_endpoints.id]
-  private_dns_enabled = true
-
-  tags = merge(local.common_tags, {
-    Name = "${local.name_prefix}-scheduler-endpoint"
-  })
-}
 
 # ECS Exec / Session Manager (tasks run in private subnets with assignPublicIp=DISABLED).
 resource "aws_vpc_endpoint" "ssm" {

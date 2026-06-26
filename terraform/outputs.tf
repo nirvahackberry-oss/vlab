@@ -3,11 +3,6 @@ output "ecs_task_definition_arns" {
   value       = { for lab_type, td in aws_ecs_task_definition.lab : lab_type => td.arn }
 }
 
-output "api_gateway_url" {
-  description = "HTTP API invoke URL."
-  value       = aws_apigatewayv2_api.lab.api_endpoint
-}
-
 output "ecr_repository_urls" {
   description = "ECR repository URLs by image key (lab types that share an image use the same repo)."
   value       = { for image_key, repo in aws_ecr_repository.lab_images : image_key => repo.repository_url }
@@ -32,9 +27,29 @@ output "ecs_cluster_name" {
   value       = aws_ecs_cluster.lab.name
 }
 
+output "ecs_cluster_arn" {
+  description = "ECS cluster ARN."
+  value       = aws_ecs_cluster.lab.arn
+}
+
 output "ecs_task_security_group_id" {
   description = "Security group attached to lab Fargate tasks."
   value       = aws_security_group.ecs_tasks.id
+}
+
+output "ecs_task_execution_role_arn" {
+  description = "IAM role ARN for ECS task execution (ECR pull, logs)."
+  value       = aws_iam_role.ecs_task_execution.arn
+}
+
+output "ecs_task_role_arn" {
+  description = "IAM role ARN attached to running lab tasks."
+  value       = aws_iam_role.ecs_task.arn
+}
+
+output "private_subnet_ids" {
+  description = "Private subnet IDs for lab Fargate tasks."
+  value       = aws_subnet.private[*].id
 }
 
 output "dynamodb_table_name" {
@@ -52,28 +67,7 @@ output "dynamodb_tables" {
   }
 }
 
-output "lambda_arns" {
-  description = "Lambda ARNs for lab control plane."
-  value = {
-    start_lab       = aws_lambda_function.start_lab.arn
-    stop_lab        = aws_lambda_function.stop_lab.arn
-    execute_code    = aws_lambda_function.execute_code.arn
-    submit_code     = aws_lambda_function.submit_code.arn
-    grade_lab       = aws_lambda_function.grade_lab.arn
-    cleanup_expired = aws_lambda_function.cleanup_expired.arn
-    get_result      = aws_lambda_function.get_result.arn
-    node_api        = var.use_node_api_gateway ? aws_lambda_function.node_api[0].arn : null
-    jwt_authorizer  = var.use_node_api_gateway ? aws_lambda_function.jwt_authorizer[0].arn : null
-  }
-}
-
-output "api_auth_login_url" {
-  description = "Public login endpoint (no JWT required)."
-  value       = "${aws_apigatewayv2_api.lab.api_endpoint}/auth/login"
-}
-
 output "test_cases_bucket" {
   description = "S3 bucket containing lab test case files."
   value       = aws_s3_bucket.test_cases.bucket
 }
-

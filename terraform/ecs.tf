@@ -11,6 +11,15 @@ locals {
   lab_ecr_key = {
     for lab_type in var.lab_types : lab_type => lookup(var.lab_image_aliases, lab_type, lab_type)
   }
+  lab_cpu_resolved = {
+    for lab_type in var.lab_types : lab_type => lookup(var.lab_cpu_by_type, lab_type, var.lab_cpu)
+  }
+  lab_memory_resolved = {
+    for lab_type in var.lab_types : lab_type => lookup(var.lab_memory_by_type, lab_type, var.lab_memory)
+  }
+  lab_ephemeral_storage_resolved = {
+    for lab_type in var.lab_types : lab_type => lookup(var.lab_ephemeral_storage_by_type, lab_type, var.ephemeral_storage_gib)
+  }
 }
 
 resource "aws_ecs_cluster" "lab" {
@@ -44,14 +53,15 @@ resource "aws_ecs_task_definition" "lab" {
   family                   = "${local.name_prefix}-${each.key}-task"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
-  # ECS Exec is enabled per task at launch (enableExecuteCommand in lambda/start_lab.py).
-  cpu                = tostring(lookup(var.lab_cpu_by_type, each.key, var.lab_cpu))
-  memory             = tostring(lookup(var.lab_memory_by_type, each.key, var.lab_memory))
+  # ECS Exec is enabled per task at launch from the app/control-plane repo.
+  # dbms runs Oracle XE + MySQL + PostgreSQL; needs more CPU/RAM than default Fargate sizing.
+  cpu                = tostring(local.lab_cpu_resolved[each.key])
+  memory             = tostring(local.lab_memory_resolved[each.key])
   execution_role_arn = aws_iam_role.ecs_task_execution.arn
   task_role_arn      = aws_iam_role.ecs_task.arn
 
   ephemeral_storage {
-    size_in_gib = var.ephemeral_storage_gib
+    size_in_gib = local.lab_ephemeral_storage_resolved[each.key]
   }
 
   container_definitions = jsonencode([

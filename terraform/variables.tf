@@ -63,7 +63,7 @@ variable "lab_cpu_by_type" {
   description = "Optional CPU overrides by lab type."
   type        = map(number)
   default = {
-    dbms = 1024
+    dbms = 1024 # Oracle XE 21 + MySQL + PostgreSQL
   }
 }
 
@@ -71,15 +71,17 @@ variable "lab_memory_by_type" {
   description = "Optional memory overrides by lab type."
   type        = map(number)
   default = {
-    dbms = 6144
+    dbms = 6144 # Oracle XE 21 + MySQL + PostgreSQL
     java = 2048
   }
 }
 
-variable "session_timeout_minutes" {
-  description = "Default lab session timeout in minutes."
-  type        = number
-  default     = 60
+variable "lab_ephemeral_storage_by_type" {
+  description = "Optional ephemeral storage (GiB) overrides by lab type."
+  type        = map(number)
+  default = {
+    dbms = 30
+  }
 }
 
 variable "enable_nat_gateway" {
@@ -92,6 +94,12 @@ variable "lab_browser_ingress_cidr_blocks" {
   description = "CIDR blocks allowed to reach lab containers on 8080/8888 (browser iframe). Use 0.0.0.0/0 for student browsers."
   type        = list(string)
   default     = ["0.0.0.0/0"]
+}
+
+variable "lab_control_plane_security_group_ids" {
+  description = "Security group IDs allowed to reach lab tasks on 8080/8888 (set from your API/Lambda repo, e.g. [aws_security_group.api_lambda.id])."
+  type        = list(string)
+  default     = []
 }
 
 variable "enable_temp_data_bucket" {
@@ -160,23 +168,4 @@ variable "tags" {
   description = "Additional tags to apply to all resources."
   type        = map(string)
   default     = {}
-}
-
-variable "jwt_secret" {
-  description = "JWT signing secret for API auth. Leave empty to auto-generate."
-  type        = string
-  default     = ""
-  sensitive   = true
-}
-
-variable "jwt_expires_in" {
-  description = "JWT expiry (jsonwebtoken expiresIn format)."
-  type        = string
-  default     = "24h"
-}
-
-variable "use_node_api_gateway" {
-  description = "Route HTTP API through Node.js Lambda + JWT authorizer (recommended)."
-  type        = bool
-  default     = true
 }

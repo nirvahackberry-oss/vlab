@@ -6,7 +6,6 @@ on:
       - main
     paths:
       - "terraform/**"
-      - "lambda/**"
       - "lab-images/base/**"
       - "lab-images/common/**"
       - "lab-images/python/**"

@@ -1,0 +1,3211 @@
+{
+  "version": 4,
+  "terraform_version": "1.14.9",
+  "serial": 33,
+  "lineage": "758e72c8-80be-3cb8-37fb-63b229b42418",
+  "outputs": {
+    "api_auth_login_url": {
+      "value": "https://k9fr0gyc25.execute-api.ap-south-1.amazonaws.com/auth/login",
+      "type": "string"
+    },
+    "api_gateway_url": {
+      "value": "https://k9fr0gyc25.execute-api.ap-south-1.amazonaws.com",
+      "type": "string"
+    },
+    "dynamodb_table_name": {
+      "value": "vlab-sessions",
+      "type": "string"
+    },
+    "dynamodb_tables": {
+      "value": {
+        "results": "lab-results",
+        "runs": "vlab-runs",
+        "sessions": "vlab-sessions",
+        "submissions": "lab-submissions"
+      },
+      "type": [
+        "object",
+        {
+          "results": "string",
+          "runs": "string",
+          "sessions": "string",
+          "submissions": "string"
+        }
+      ]
+    },
+    "ecs_cluster_name": {
+      "value": "vlab-dev-cluster",
+      "type": "string"
+    },
+    "ecs_task_security_group_id": {
+      "value": "sg-016d24faa7ef47fe1",
+      "type": "string"
+    },
+    "lock_table_name": {
+      "value": "vlab-terraform-locks",
+      "type": "string"
+    },
+    "state_bucket_name": {
+      "value": "vlab-terraform-state-e1c0tzx2",
+      "type": "string"
+    },
+    "test_cases_bucket": {
+      "value": "vlab-dev-test-cases-0kdrg0q8",
+      "type": "string"
+    }
+  },
+  "resources": [
+    {
+      "mode": "data",
+      "type": "archive_file",
+      "name": "cleanup_expired_zip",
+      "provider": "provider[\"registry.terraform.io/hashicorp/archive\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "exclude_symlink_directories": null,
+            "excludes": null,
+            "id": "72c544f71079646264f666401b851200311bcd75",
+            "output_base64sha256": "BFL6BsnXzHmmhVD2kqUFg45zFB0mQxa2013rz2Y449c=",
+            "output_base64sha512": "jkIIimwqRg54pm1ACo6Fgb3ynTXrf0fyKMj3j1GON1ShmJvmtlExWs4nfN+HrZyM7Y1aJFR5XwDXjwzNgy+q+w==",
+            "output_file_mode": null,
+            "output_md5": "26af2f1328ee1daba7b9905e3d71ddb2",
+            "output_path": "./cleanup_expired.zip",
+            "output_sha": "72c544f71079646264f666401b851200311bcd75",
+            "output_sha256": "0452fa06c9d7cc79a68550f692a505838e73141d264316b6d35debcf6638e3d7",
+            "output_sha512": "8e42088a6c2a460e78a66d400a8e8581bdf29d35eb7f47f228c8f78f518e3754a1989be6b651315ace277cdf87ad9c8ced8d5a2454795f00d78f0ccd832faafb",
+            "output_size": 732,
+            "source": [],
+            "source_content": null,
+            "source_content_filename": null,
+            "source_dir": null,
+            "source_file": "./../lambda/cleanup_expired.py",
+            "type": "zip"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0
+        }
+      ]
+    },
+    {
+      "mode": "data",
+      "type": "archive_file",
+      "name": "execute_code_zip",
+      "provider": "provider[\"registry.terraform.io/hashicorp/archive\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "exclude_symlink_directories": null,
+            "excludes": null,
+            "id": "202ca3716f5c5eb98139e98b3d2c112c0ab43988",
+            "output_base64sha256": "acjGT8FPRqCingBbtad1fle3RPPZu1tOjlhAZq/iKfI=",
+            "output_base64sha512": "pxPsTADLnei9Kfi1X79Ud2KHBnRmaE0/iVr0XMdEQPGCEJd4nby49/3RZ+dPMW+or62z8SErr8FF5aUjJkAV4A==",
+            "output_file_mode": null,
+            "output_md5": "fd7fc416b74aae54c377a5c5449110a2",
+            "output_path": "./execute_code.zip",
+            "output_sha": "202ca3716f5c5eb98139e98b3d2c112c0ab43988",
+            "output_sha256": "69c8c64fc14f46a0a29e005bb5a7757e57b744f3d9bb5b4e8e584066afe229f2",
+            "output_sha512": "a713ec4c00cb9de8bd29f8b55fbf54776287067466684d3f895af45cc74440f1821097789dbcb8f7fdd167e74f316fa8afadb3f1212bafc145e5a523264015e0",
+            "output_size": 2947,
+            "source": [],
+            "source_content": null,
+            "source_content_filename": null,
+            "source_dir": null,
+            "source_file": "./../lambda/execute_code.py",
+            "type": "zip"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0
+        }
+      ]
+    },
+    {
+      "mode": "data",
+      "type": "archive_file",
+      "name": "get_labs_zip",
+      "provider": "provider[\"registry.terraform.io/hashicorp/archive\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "exclude_symlink_directories": null,
+            "excludes": null,
+            "id": "bbb682ec1421d60b19b4ac9593fd5bc418cc633a",
+            "output_base64sha256": "teNtGzAv8gGDD2e1jtzT1QezgZrvOn+pgRXymMFhupQ=",
+            "output_base64sha512": "8n7LparMiJROklFiQei6skSbjKB9OovnCO0EzS+6mymyzDYCgPOtSC9291sd8oFLtc6ljuGYnSd4Hx9mfboJbQ==",
+            "output_file_mode": null,
+            "output_md5": "219f41f3bb1701f0aaeabd727cfd243f",
+            "output_path": "./get_labs.zip",
+            "output_sha": "bbb682ec1421d60b19b4ac9593fd5bc418cc633a",
+            "output_sha256": "b5e36d1b302ff201830f67b58edcd3d507b3819aef3a7fa98115f298c161ba94",
+            "output_sha512": "f27ecba5aacc88944e92516241e8bab2449b8ca07d3a8be708ed04cd2fba9b29b2cc360280f3ad482f76f75b1df2814bb5cea58ee1989d27781f1f667dba096d",
+            "output_size": 1073,
+            "source": [],
+            "source_content": null,
+            "source_content_filename": null,
+            "source_dir": null,
+            "source_file": "./../lambda/get_labs.py",
+            "type": "zip"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0
+        }
+      ]
+    },
+    {
+      "mode": "data",
+      "type": "archive_file",
+      "name": "get_result_zip",
+      "provider": "provider[\"registry.terraform.io/hashicorp/archive\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "exclude_symlink_directories": null,
+            "excludes": null,
+            "id": "3a25abaf0a67322ddc6c1ce906027e64a4c84805",
+            "output_base64sha256": "+S9dH7R+55Acf8bCcPIrFm2Xf/uaiKOJlGJWPvQzsyk=",
+            "output_base64sha512": "S6JN2KSuHRI/Wa4HDvdS9nn/8WyKLPbZb5hhh2SeQzNv9u4fzS3kU9viR0JI9QY/xbIKddH+rO5x81fjt605Nw==",
+            "output_file_mode": null,
+            "output_md5": "092e642c412603aaabd39c5a30e809e4",
+            "output_path": "./get_result.zip",
+            "output_sha": "3a25abaf0a67322ddc6c1ce906027e64a4c84805",
+            "output_sha256": "f92f5d1fb47ee7901c7fc6c270f22b166d977ffb9a88a3899462563ef433b329",
+            "output_sha512": "4ba24dd8a4ae1d123f59ae070ef752f679fff16c8a2cf6d96f986187649e43336ff6ee1fcd2de453dbe2474248f5063fc5b20a75d1feacee71f357e3b7ad3937",
+            "output_size": 697,
+            "source": [],
+            "source_content": null,
+            "source_content_filename": null,
+            "source_dir": null,
+            "source_file": "./../lambda/get_result.py",
+            "type": "zip"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0
+        }
+      ]
+    },
+    {
+      "mode": "data",
+      "type": "archive_file",
+      "name": "get_run_zip",
+      "provider": "provider[\"registry.terraform.io/hashicorp/archive\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "exclude_symlink_directories": null,
+            "excludes": null,
+            "id": "318654f53aa0d8b5b0e4f67e50999eef263ad6e3",
+            "output_base64sha256": "H+p5djGLJ8bjKR2vbyLvmG1KMlksx7IDLf+esz74PYw=",
+            "output_base64sha512": "OBkT4aoeiFDwxUgB4mCun25g6w2fkbEQQvNocypMXkzpGBHYGIMwYDCxldKxKnkDqoWsFNPA6EDyHHZaFBvRug==",
+            "output_file_mode": null,
+            "output_md5": "6aabbd30b27df251370fac2d18c3f0b3",
+            "output_path": "./get_run.zip",
+            "output_sha": "318654f53aa0d8b5b0e4f67e50999eef263ad6e3",
+            "output_sha256": "1fea7976318b27c6e3291daf6f22ef986d4a32592cc7b2032dff9eb33ef83d8c",
+            "output_sha512": "381913e1aa1e8850f0c54801e260ae9f6e60eb0d9f91b11042f368732a4c5e4ce91811d81883306030b195d2b12a7903aa85ac14d3c0e840f21c765a141bd1ba",
+            "output_size": 769,
+            "source": [],
+            "source_content": null,
+            "source_content_filename": null,
+            "source_dir": null,
+            "source_file": "./../lambda/get_run.py",
+            "type": "zip"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0
+        }
+      ]
+    },
+    {
+      "mode": "data",
+      "type": "archive_file",
+      "name": "get_session_zip",
+      "provider": "provider[\"registry.terraform.io/hashicorp/archive\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "exclude_symlink_directories": null,
+            "excludes": null,
+            "id": "3993765a1d9b4ee921acd9702423f3193ccb9837",
+            "output_base64sha256": "i8yaPD90bQ6Iym6t5X07Wu5QpgNA4ydSd/eg0d7x6hw=",
+            "output_base64sha512": "kfQk3L3cGyEdBV0ovVt476VXEULParpIa/V7aIePtffqh3NPHcWziKlG+z9/2PSmqRSyixi3uw99X+XqaSXU/A==",
+            "output_file_mode": null,
+            "output_md5": "6319ab0a3eae86302e026b974cc3f1aa",
+            "output_path": "./get_session.zip",
+            "output_sha": "3993765a1d9b4ee921acd9702423f3193ccb9837",
+            "output_sha256": "8bcc9a3c3f746d0e88ca6eade57d3b5aee50a60340e3275277f7a0d1def1ea1c",
+            "output_sha512": "91f424dcbddc1b211d055d28bd5b78efa5571142cf6aba486bf57b68878fb5f7ea87734f1dc5b388a946fb3f7fd8f4a6a914b28b18b7bb0f7d5fe5ea6925d4fc",
+            "output_size": 1645,
+            "source": [],
+            "source_content": null,
+            "source_content_filename": null,
+            "source_dir": null,
+            "source_file": "./../lambda/get_session.py",
+            "type": "zip"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0
+        }
+      ]
+    },
+    {
+      "mode": "data",
+      "type": "archive_file",
+      "name": "grade_lab_zip",
+      "provider": "provider[\"registry.terraform.io/hashicorp/archive\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "exclude_symlink_directories": null,
+            "excludes": null,
+            "id": "5c135eaddd237ec220c8d4b08b7e28564cbb5afa",
+            "output_base64sha256": "pK1JgT+ebcFvXhLxO6CCR3jCTQDoH1wAHaHAUOPo8VY=",
+            "output_base64sha512": "JWKV698hOGjlaIKJHmDPYe+lVYpFAp1je8pVhvvmAIUJrIMdlHVSVJPEe5JTiH9e8C1fwAMdL+nwBxAoPhavhg==",
+            "output_file_mode": null,
+            "output_md5": "6fbbce0109e8c05ff787179c53b4d975",
+            "output_path": "./grade_lab.zip",
+            "output_sha": "5c135eaddd237ec220c8d4b08b7e28564cbb5afa",
+            "output_sha256": "a4ad49813f9e6dc16f5e12f13ba0824778c24d00e81f5c001da1c050e3e8f156",
+            "output_sha512": "256295ebdf213868e56882891e60cf61efa5558a45029d637bca5586fbe6008509ac831d9475525493c47b9253887f5ef02d5fc0031d2fe9f00710283e16af86",
+            "output_size": 1656,
+            "source": [],
+            "source_content": null,
+            "source_content_filename": null,
+            "source_dir": null,
+            "source_file": "./../lambda/grade_lab.py",
+            "type": "zip"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0
+        }
+      ]
+    },
+    {
+      "mode": "data",
+      "type": "archive_file",
+      "name": "process_task_result_zip",
+      "provider": "provider[\"registry.terraform.io/hashicorp/archive\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "exclude_symlink_directories": null,
+            "excludes": null,
+            "id": "83996bdf714c55505cb602c460ed79bb952a209e",
+            "output_base64sha256": "tzQ4yYFszNke1xligA5PRaTao7ETWiXw442kAOBekCA=",
+            "output_base64sha512": "zHYw0KOegUhgZWeSXbbMNqGtucjbWBOt4zVgecArm68PARpHkkoIxXWhLcDWWHqX+XjODF8ARulqse1iRTWuEw==",
+            "output_file_mode": null,
+            "output_md5": "c94c9489822fcad8913144c3454ef302",
+            "output_path": "./process_task_result.zip",
+            "output_sha": "83996bdf714c55505cb602c460ed79bb952a209e",
+            "output_sha256": "b73438c9816cccd91ed71962800e4f45a4daa3b1135a25f0e38da400e05e9020",
+            "output_sha512": "cc7630d0a39e8148606567925db6cc36a1adb9c8db5813ade3356079c02b9baf0f011a47924a08c575a12dc0d6587a97f978ce0c5f0046e96ab1ed624535ae13",
+            "output_size": 1831,
+            "source": [],
+            "source_content": null,
+            "source_content_filename": null,
+            "source_dir": null,
+            "source_file": "./../lambda/process_task_result.py",
+            "type": "zip"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0
+        }
+      ]
+    },
+    {
+      "mode": "data",
+      "type": "archive_file",
+      "name": "start_lab_zip",
+      "provider": "provider[\"registry.terraform.io/hashicorp/archive\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "exclude_symlink_directories": null,
+            "excludes": null,
+            "id": "b0bf00ee9f152ea21b730723f356c520f2860bc0",
+            "output_base64sha256": "IKOuObKukMSpOue8cXk/bRerYWwUb1XgOz5EdBnotBA=",
+            "output_base64sha512": "w/ENDM2Juks6Xl0l/LRuMDkMlq38KJUvgdBAQSyYkxjV7FNVvYU1mCT3Gan0XFBSWs96/9v5HIYxkopfCXXcqw==",
+            "output_file_mode": null,
+            "output_md5": "129d5529c6f95e173b995fd8a2ff6ac5",
+            "output_path": "./start_lab.zip",
+            "output_sha": "b0bf00ee9f152ea21b730723f356c520f2860bc0",
+            "output_sha256": "20a3ae39b2ae90c4a93ae7bc71793f6d17ab616c146f55e03b3e447419e8b410",
+            "output_sha512": "c3f10d0ccd89ba4b3a5e5d25fcb46e30390c96adfc28952f81d040412c989318d5ec5355bd85359824f719a9f45c50525acf7affdbf91c8631928a5f0975dcab",
+            "output_size": 2604,
+            "source": [],
+            "source_content": null,
+            "source_content_filename": null,
+            "source_dir": null,
+            "source_file": "./../lambda/start_lab.py",
+            "type": "zip"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0
+        }
+      ]
+    },
+    {
+      "mode": "data",
+      "type": "archive_file",
+      "name": "stop_lab_zip",
+      "provider": "provider[\"registry.terraform.io/hashicorp/archive\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "exclude_symlink_directories": null,
+            "excludes": null,
+            "id": "290707af7ceb88dba0c2fd0dab16379bccb0ca25",
+            "output_base64sha256": "Tkunu94e4bjh6Jf50eHTINZ02RARQxyMQAbKTN+apPQ=",
+            "output_base64sha512": "dZJXR05nvtEZqrC9f90hrSDrLNcrXwRHyOFI12iNrl9hGWtoQEr0b1NzJSgRxnewPSStPLKq1qEC27XAZGHvdg==",
+            "output_file_mode": null,
+            "output_md5": "96442f8a2c4ae4510ec6f0a942e5793a",
+            "output_path": "./stop_lab.zip",
+            "output_sha": "290707af7ceb88dba0c2fd0dab16379bccb0ca25",
+            "output_sha256": "4e4ba7bbde1ee1b8e1e897f9d1e1d320d674d91011431c8c4006ca4cdf9aa4f4",
+            "output_sha512": "759257474e67bed119aab0bd7fdd21ad20eb2cd72b5f0447c8e148d7688dae5f61196b68404af46f5373252811c677b03d24ad3cb2aad6a102dbb5c06461ef76",
+            "output_size": 1133,
+            "source": [],
+            "source_content": null,
+            "source_content_filename": null,
+            "source_dir": null,
+            "source_file": "./../lambda/stop_lab.py",
+            "type": "zip"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0
+        }
+      ]
+    },
+    {
+      "mode": "data",
+      "type": "archive_file",
+      "name": "submit_code_zip",
+      "provider": "provider[\"registry.terraform.io/hashicorp/archive\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "exclude_symlink_directories": null,
+            "excludes": null,
+            "id": "2d29cb0f582bc7579665df04b824591082859d94",
+            "output_base64sha256": "2KfNz6e8NFt3fMB+SfwFCQENfQImo+XZGAb8/qcqlPo=",
+            "output_base64sha512": "niKgciqBaH1YUniTfUFwcT18PyfaOhKeSbfdrb94cfTWid3J3NtjadS3YMhO6V6XK/e7ayBvexVN+uRyYehnVQ==",
+            "output_file_mode": null,
+            "output_md5": "f795ee2401e23686121de8dd9286a04e",
+            "output_path": "./submit_code.zip",
+            "output_sha": "2d29cb0f582bc7579665df04b824591082859d94",
+            "output_sha256": "d8a7cdcfa7bc345b777cc07e49fc0509010d7d0226a3e5d91806fcfea72a94fa",
+            "output_sha512": "9e22a0722a81687d585278937d4170713d7c3f27da3a129e49b7ddadbf7871f4d689ddc9dcdb6369d4b760c84ee95e972bf7bb6b206f7b154dfae47261e86755",
+            "output_size": 1213,
+            "source": [],
+            "source_content": null,
+            "source_content_filename": null,
+            "source_dir": null,
+            "source_file": "./../lambda/submit_code.py",
+            "type": "zip"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0
+        }
+      ]
+    },
+    {
+      "mode": "data",
+      "type": "aws_availability_zones",
+      "name": "available",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "all_availability_zones": null,
+            "exclude_names": null,
+            "exclude_zone_ids": null,
+            "filter": null,
+            "group_names": [
+              "ap-south-1-zg-1"
+            ],
+            "id": "ap-south-1",
+            "names": [
+              "ap-south-1a",
+              "ap-south-1b",
+              "ap-south-1c"
+            ],
+            "state": "available",
+            "timeouts": null,
+            "zone_ids": [
+              "aps1-az1",
+              "aps1-az3",
+              "aps1-az2"
+            ]
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0
+        }
+      ]
+    },
+    {
+      "mode": "data",
+      "type": "aws_caller_identity",
+      "name": "current",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "account_id": "465443875617",
+            "arn": "arn:aws:iam::465443875617:user/nirva-padaliya",
+            "id": "465443875617",
+            "user_id": "AIDAWYXU55MQUEXJN5FJD"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0
+        }
+      ]
+    },
+    {
+      "mode": "data",
+      "type": "aws_iam_policy_document",
+      "name": "ecs_task_execute_command",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "id": "2474440182",
+            "json": "{\n  \"Version\": \"2012-10-17\",\n  \"Statement\": [\n    {\n      \"Sid\": \"EcsExecSSMMessages\",\n      \"Effect\": \"Allow\",\n      \"Action\": [\n        \"ssmmessages:OpenDataChannel\",\n        \"ssmmessages:OpenControlChannel\",\n        \"ssmmessages:CreateDataChannel\",\n        \"ssmmessages:CreateControlChannel\"\n      ],\n      \"Resource\": \"*\"\n    }\n  ]\n}",
+            "minified_json": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Sid\":\"EcsExecSSMMessages\",\"Effect\":\"Allow\",\"Action\":[\"ssmmessages:OpenDataChannel\",\"ssmmessages:OpenControlChannel\",\"ssmmessages:CreateDataChannel\",\"ssmmessages:CreateControlChannel\"],\"Resource\":\"*\"}]}",
+            "override_json": null,
+            "override_policy_documents": null,
+            "policy_id": null,
+            "source_json": null,
+            "source_policy_documents": null,
+            "statement": [
+              {
+                "actions": [
+                  "ssmmessages:CreateControlChannel",
+                  "ssmmessages:CreateDataChannel",
+                  "ssmmessages:OpenControlChannel",
+                  "ssmmessages:OpenDataChannel"
+                ],
+                "condition": [],
+                "effect": "Allow",
+                "not_actions": [],
+                "not_principals": [],
+                "not_resources": [],
+                "principals": [],
+                "resources": [
+                  "*"
+                ],
+                "sid": "EcsExecSSMMessages"
+              }
+            ],
+            "version": "2012-10-17"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0
+        }
+      ]
+    },
+    {
+      "mode": "data",
+      "type": "aws_iam_policy_document",
+      "name": "ecs_task_execution_assume_role",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "id": "1077804475",
+            "json": "{\n  \"Version\": \"2012-10-17\",\n  \"Statement\": [\n    {\n      \"Effect\": \"Allow\",\n      \"Action\": \"sts:AssumeRole\",\n      \"Principal\": {\n        \"Service\": \"ecs-tasks.amazonaws.com\"\n      }\n    }\n  ]\n}",
+            "minified_json": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":\"sts:AssumeRole\",\"Principal\":{\"Service\":\"ecs-tasks.amazonaws.com\"}}]}",
+            "override_json": null,
+            "override_policy_documents": null,
+            "policy_id": null,
+            "source_json": null,
+            "source_policy_documents": null,
+            "statement": [
+              {
+                "actions": [
+                  "sts:AssumeRole"
+                ],
+                "condition": [],
+                "effect": "Allow",
+                "not_actions": [],
+                "not_principals": [],
+                "not_resources": [],
+                "principals": [
+                  {
+                    "identifiers": [
+                      "ecs-tasks.amazonaws.com"
+                    ],
+                    "type": "Service"
+                  }
+                ],
+                "resources": [],
+                "sid": ""
+              }
+            ],
+            "version": "2012-10-17"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0
+        }
+      ]
+    },
+    {
+      "mode": "data",
+      "type": "aws_iam_policy_document",
+      "name": "jwt_authorizer_lambda",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "id": "3354678503",
+            "json": "{\n  \"Version\": \"2012-10-17\",\n  \"Statement\": [\n    {\n      \"Sid\": \"CloudWatchLogs\",\n      \"Effect\": \"Allow\",\n      \"Action\": [\n        \"logs:PutLogEvents\",\n        \"logs:CreateLogStream\",\n        \"logs:CreateLogGroup\"\n      ],\n      \"Resource\": \"*\"\n    }\n  ]\n}",
+            "minified_json": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Sid\":\"CloudWatchLogs\",\"Effect\":\"Allow\",\"Action\":[\"logs:PutLogEvents\",\"logs:CreateLogStream\",\"logs:CreateLogGroup\"],\"Resource\":\"*\"}]}",
+            "override_json": null,
+            "override_policy_documents": null,
+            "policy_id": null,
+            "source_json": null,
+            "source_policy_documents": null,
+            "statement": [
+              {
+                "actions": [
+                  "logs:CreateLogGroup",
+                  "logs:CreateLogStream",
+                  "logs:PutLogEvents"
+                ],
+                "condition": [],
+                "effect": "Allow",
+                "not_actions": [],
+                "not_principals": [],
+                "not_resources": [],
+                "principals": [],
+                "resources": [
+                  "*"
+                ],
+                "sid": "CloudWatchLogs"
+              }
+            ],
+            "version": "2012-10-17"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0
+        }
+      ]
+    },
+    {
+      "mode": "data",
+      "type": "aws_iam_policy_document",
+      "name": "lambda_assume_role",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "id": "2690255455",
+            "json": "{\n  \"Version\": \"2012-10-17\",\n  \"Statement\": [\n    {\n      \"Effect\": \"Allow\",\n      \"Action\": \"sts:AssumeRole\",\n      \"Principal\": {\n        \"Service\": \"lambda.amazonaws.com\"\n      }\n    }\n  ]\n}",
+            "minified_json": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":\"sts:AssumeRole\",\"Principal\":{\"Service\":\"lambda.amazonaws.com\"}}]}",
+            "override_json": null,
+            "override_policy_documents": null,
+            "policy_id": null,
+            "source_json": null,
+            "source_policy_documents": null,
+            "statement": [
+              {
+                "actions": [
+                  "sts:AssumeRole"
+                ],
+                "condition": [],
+                "effect": "Allow",
+                "not_actions": [],
+                "not_principals": [],
+                "not_resources": [],
+                "principals": [
+                  {
+                    "identifiers": [
+                      "lambda.amazonaws.com"
+                    ],
+                    "type": "Service"
+                  }
+                ],
+                "resources": [],
+                "sid": ""
+              }
+            ],
+            "version": "2012-10-17"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0
+        }
+      ]
+    },
+    {
+      "mode": "data",
+      "type": "aws_iam_policy_document",
+      "name": "scheduler_assume_role",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "id": "52247394",
+            "json": "{\n  \"Version\": \"2012-10-17\",\n  \"Statement\": [\n    {\n      \"Effect\": \"Allow\",\n      \"Action\": \"sts:AssumeRole\",\n      \"Principal\": {\n        \"Service\": \"scheduler.amazonaws.com\"\n      }\n    }\n  ]\n}",
+            "minified_json": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":\"sts:AssumeRole\",\"Principal\":{\"Service\":\"scheduler.amazonaws.com\"}}]}",
+            "override_json": null,
+            "override_policy_documents": null,
+            "policy_id": null,
+            "source_json": null,
+            "source_policy_documents": null,
+            "statement": [
+              {
+                "actions": [
+                  "sts:AssumeRole"
+                ],
+                "condition": [],
+                "effect": "Allow",
+                "not_actions": [],
+                "not_principals": [],
+                "not_resources": [],
+                "principals": [
+                  {
+                    "identifiers": [
+                      "scheduler.amazonaws.com"
+                    ],
+                    "type": "Service"
+                  }
+                ],
+                "resources": [],
+                "sid": ""
+              }
+            ],
+            "version": "2012-10-17"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0
+        }
+      ]
+    },
+    {
+      "mode": "data",
+      "type": "aws_region",
+      "name": "current",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "description": "Asia Pacific (Mumbai)",
+            "endpoint": "ec2.ap-south-1.amazonaws.com",
+            "id": "ap-south-1",
+            "name": "ap-south-1"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_apigatewayv2_api",
+      "name": "lab",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "api_endpoint": "https://k9fr0gyc25.execute-api.ap-south-1.amazonaws.com",
+            "api_key_selection_expression": "$request.header.x-api-key",
+            "arn": "arn:aws:apigateway:ap-south-1::/apis/k9fr0gyc25",
+            "body": null,
+            "cors_configuration": [
+              {
+                "allow_credentials": false,
+                "allow_headers": [
+                  "authorization",
+                  "content-type",
+                  "x-session-id"
+                ],
+                "allow_methods": [
+                  "DELETE",
+                  "GET",
+                  "OPTIONS",
+                  "POST"
+                ],
+                "allow_origins": [
+                  "*"
+                ],
+                "expose_headers": [],
+                "max_age": 3600
+              }
+            ],
+            "credentials_arn": null,
+            "description": "",
+            "disable_execute_api_endpoint": false,
+            "execution_arn": "arn:aws:execute-api:ap-south-1:465443875617:k9fr0gyc25",
+            "fail_on_warnings": null,
+            "id": "k9fr0gyc25",
+            "ip_address_type": "ipv4",
+            "name": "vlab-dev-http-api",
+            "protocol_type": "HTTP",
+            "route_key": null,
+            "route_selection_expression": "$request.method $request.path",
+            "tags": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Project": "vlab"
+            },
+            "tags_all": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Project": "vlab"
+            },
+            "target": null,
+            "version": ""
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "bnVsbA=="
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_apigatewayv2_authorizer",
+      "name": "jwt",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": []
+    },
+    {
+      "mode": "managed",
+      "type": "aws_apigatewayv2_integration",
+      "name": "node_api",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": []
+    },
+    {
+      "mode": "managed",
+      "type": "aws_apigatewayv2_route",
+      "name": "auth_login",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": []
+    },
+    {
+      "mode": "managed",
+      "type": "aws_apigatewayv2_route",
+      "name": "health",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": []
+    },
+    {
+      "mode": "managed",
+      "type": "aws_apigatewayv2_route",
+      "name": "node_execute",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": []
+    },
+    {
+      "mode": "managed",
+      "type": "aws_apigatewayv2_route",
+      "name": "node_files",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": []
+    },
+    {
+      "mode": "managed",
+      "type": "aws_apigatewayv2_route",
+      "name": "node_files_content",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": []
+    },
+    {
+      "mode": "managed",
+      "type": "aws_apigatewayv2_route",
+      "name": "node_files_delete",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": []
+    },
+    {
+      "mode": "managed",
+      "type": "aws_apigatewayv2_route",
+      "name": "node_get_run",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": []
+    },
+    {
+      "mode": "managed",
+      "type": "aws_apigatewayv2_route",
+      "name": "node_lab_detail",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": []
+    },
+    {
+      "mode": "managed",
+      "type": "aws_apigatewayv2_route",
+      "name": "node_lab_sessions",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": []
+    },
+    {
+      "mode": "managed",
+      "type": "aws_apigatewayv2_route",
+      "name": "node_labs",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": []
+    },
+    {
+      "mode": "managed",
+      "type": "aws_apigatewayv2_route",
+      "name": "node_run_legacy",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": []
+    },
+    {
+      "mode": "managed",
+      "type": "aws_apigatewayv2_route",
+      "name": "node_save",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": []
+    },
+    {
+      "mode": "managed",
+      "type": "aws_apigatewayv2_route",
+      "name": "node_session_status",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": []
+    },
+    {
+      "mode": "managed",
+      "type": "aws_apigatewayv2_route",
+      "name": "node_session_stop",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": []
+    },
+    {
+      "mode": "managed",
+      "type": "aws_apigatewayv2_route",
+      "name": "node_session_user",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": []
+    },
+    {
+      "mode": "managed",
+      "type": "aws_apigatewayv2_route",
+      "name": "node_submit",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": []
+    },
+    {
+      "mode": "managed",
+      "type": "aws_cloudwatch_event_rule",
+      "name": "ecs_task_stopped",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 1,
+          "attributes": {
+            "arn": "arn:aws:events:ap-south-1:465443875617:rule/vlab-dev-ecs-task-stopped",
+            "description": "Capture ECS task STOPPED events to persist run output.",
+            "event_bus_name": "default",
+            "event_pattern": "{\"detail\":{\"clusterArn\":[\"arn:aws:ecs:ap-south-1:465443875617:cluster/vlab-dev-cluster\"],\"lastStatus\":[\"STOPPED\"]},\"detail-type\":[\"ECS Task State Change\"],\"source\":[\"aws.ecs\"]}",
+            "force_destroy": false,
+            "id": "vlab-dev-ecs-task-stopped",
+            "is_enabled": true,
+            "name": "vlab-dev-ecs-task-stopped",
+            "name_prefix": "",
+            "role_arn": "",
+            "schedule_expression": "",
+            "state": "ENABLED",
+            "tags": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Project": "vlab"
+            },
+            "tags_all": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Project": "vlab"
+            }
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJzY2hlbWFfdmVyc2lvbiI6IjEifQ==",
+          "dependencies": [
+            "aws_ecs_cluster.lab"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_cloudwatch_log_group",
+      "name": "jwt_authorizer_lambda",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:logs:ap-south-1:465443875617:log-group:/aws/lambda/vlab-dev-jwt-authorizer",
+            "id": "/aws/lambda/vlab-dev-jwt-authorizer",
+            "kms_key_id": "",
+            "log_group_class": "STANDARD",
+            "name": "/aws/lambda/vlab-dev-jwt-authorizer",
+            "name_prefix": "",
+            "retention_in_days": 14,
+            "skip_destroy": false,
+            "tags": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Project": "vlab"
+            },
+            "tags_all": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Project": "vlab"
+            }
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "bnVsbA=="
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_cloudwatch_log_group",
+      "name": "node_api_lambda",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:logs:ap-south-1:465443875617:log-group:/aws/lambda/vlab-dev-node-api",
+            "id": "/aws/lambda/vlab-dev-node-api",
+            "kms_key_id": "",
+            "log_group_class": "STANDARD",
+            "name": "/aws/lambda/vlab-dev-node-api",
+            "name_prefix": "",
+            "retention_in_days": 14,
+            "skip_destroy": false,
+            "tags": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Project": "vlab"
+            },
+            "tags_all": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Project": "vlab"
+            }
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "bnVsbA=="
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_ecs_cluster",
+      "name": "lab",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:ecs:ap-south-1:465443875617:cluster/vlab-dev-cluster",
+            "configuration": [
+              {
+                "execute_command_configuration": [
+                  {
+                    "kms_key_id": "",
+                    "log_configuration": [],
+                    "logging": "DEFAULT"
+                  }
+                ],
+                "managed_storage_configuration": []
+              }
+            ],
+            "id": "arn:aws:ecs:ap-south-1:465443875617:cluster/vlab-dev-cluster",
+            "name": "vlab-dev-cluster",
+            "service_connect_defaults": [],
+            "setting": [
+              {
+                "name": "containerInsights",
+                "value": "enabled"
+              }
+            ],
+            "tags": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Name": "vlab-dev-cluster",
+              "Project": "vlab"
+            },
+            "tags_all": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Name": "vlab-dev-cluster",
+              "Project": "vlab"
+            }
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "bnVsbA=="
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_eip",
+      "name": "nat",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": []
+    },
+    {
+      "mode": "managed",
+      "type": "aws_iam_role",
+      "name": "jwt_authorizer_lambda",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:iam::465443875617:role/vlab-dev-jwt-authorizer-role",
+            "assume_role_policy": "{\"Statement\":[{\"Action\":\"sts:AssumeRole\",\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"lambda.amazonaws.com\"}}],\"Version\":\"2012-10-17\"}",
+            "create_date": "2026-06-02T07:42:31Z",
+            "description": "",
+            "force_detach_policies": false,
+            "id": "vlab-dev-jwt-authorizer-role",
+            "inline_policy": [
+              {
+                "name": "vlab-dev-jwt-authorizer-policy",
+                "policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Action\":[\"logs:PutLogEvents\",\"logs:CreateLogStream\",\"logs:CreateLogGroup\"],\"Effect\":\"Allow\",\"Resource\":\"*\",\"Sid\":\"CloudWatchLogs\"}]}"
+              }
+            ],
+            "managed_policy_arns": [],
+            "max_session_duration": 3600,
+            "name": "vlab-dev-jwt-authorizer-role",
+            "name_prefix": "",
+            "path": "/",
+            "permissions_boundary": "",
+            "tags": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Project": "vlab"
+            },
+            "tags_all": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Project": "vlab"
+            },
+            "unique_id": "AROAWYXU55MQ5E7BKF6QL"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "bnVsbA==",
+          "dependencies": [
+            "data.aws_iam_policy_document.lambda_assume_role"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_iam_role",
+      "name": "node_api_lambda",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:iam::465443875617:role/vlab-dev-node-api-lambda-role",
+            "assume_role_policy": "{\"Statement\":[{\"Action\":\"sts:AssumeRole\",\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"lambda.amazonaws.com\"}}],\"Version\":\"2012-10-17\"}",
+            "create_date": "2026-06-02T07:42:32Z",
+            "description": "",
+            "force_detach_policies": false,
+            "id": "vlab-dev-node-api-lambda-role",
+            "inline_policy": [],
+            "managed_policy_arns": [
+              "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+            ],
+            "max_session_duration": 3600,
+            "name": "vlab-dev-node-api-lambda-role",
+            "name_prefix": "",
+            "path": "/",
+            "permissions_boundary": "",
+            "tags": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Project": "vlab"
+            },
+            "tags_all": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Project": "vlab"
+            },
+            "unique_id": "AROAWYXU55MQU4E7VRPNO"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "bnVsbA==",
+          "dependencies": [
+            "data.aws_iam_policy_document.lambda_assume_role"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_iam_role_policy",
+      "name": "jwt_authorizer_lambda",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "id": "vlab-dev-jwt-authorizer-role:vlab-dev-jwt-authorizer-policy",
+            "name": "vlab-dev-jwt-authorizer-policy",
+            "name_prefix": "",
+            "policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Action\":[\"logs:PutLogEvents\",\"logs:CreateLogStream\",\"logs:CreateLogGroup\"],\"Effect\":\"Allow\",\"Resource\":\"*\",\"Sid\":\"CloudWatchLogs\"}]}",
+            "role": "vlab-dev-jwt-authorizer-role"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "bnVsbA==",
+          "dependencies": [
+            "aws_iam_role.jwt_authorizer_lambda",
+            "data.aws_iam_policy_document.jwt_authorizer_lambda",
+            "data.aws_iam_policy_document.lambda_assume_role"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_iam_role_policy_attachment",
+      "name": "node_api_lambda_vpc",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "id": "vlab-dev-node-api-lambda-role-20260602074315830600000001",
+            "policy_arn": "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole",
+            "role": "vlab-dev-node-api-lambda-role"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "bnVsbA==",
+          "dependencies": [
+            "aws_iam_role.node_api_lambda",
+            "data.aws_iam_policy_document.lambda_assume_role"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_internet_gateway",
+      "name": "main",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": []
+    },
+    {
+      "mode": "managed",
+      "type": "aws_lambda_function",
+      "name": "jwt_authorizer",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": []
+    },
+    {
+      "mode": "managed",
+      "type": "aws_lambda_function",
+      "name": "node_api",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": []
+    },
+    {
+      "mode": "managed",
+      "type": "aws_lambda_permission",
+      "name": "apigw_jwt_authorizer",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": []
+    },
+    {
+      "mode": "managed",
+      "type": "aws_lambda_permission",
+      "name": "apigw_node_api",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": []
+    },
+    {
+      "mode": "managed",
+      "type": "aws_nat_gateway",
+      "name": "main",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": []
+    },
+    {
+      "mode": "managed",
+      "type": "aws_route",
+      "name": "private_nat",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": []
+    },
+    {
+      "mode": "managed",
+      "type": "aws_route",
+      "name": "public_internet",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": []
+    },
+    {
+      "mode": "managed",
+      "type": "aws_route_table",
+      "name": "private",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "index_key": 0,
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:ec2:ap-south-1:465443875617:route-table/rtb-02973f5fca9d37dc4",
+            "id": "rtb-02973f5fca9d37dc4",
+            "owner_id": "465443875617",
+            "propagating_vgws": [],
+            "route": [],
+            "tags": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Name": "vlab-dev-private-rt-1",
+              "Project": "vlab"
+            },
+            "tags_all": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Name": "vlab-dev-private-rt-1",
+              "Project": "vlab"
+            },
+            "timeouts": null,
+            "vpc_id": "vpc-0bf8c04fb7993a44d"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjozMDAwMDAwMDAwMDAsImRlbGV0ZSI6MzAwMDAwMDAwMDAwLCJ1cGRhdGUiOjEyMDAwMDAwMDAwMH19",
+          "dependencies": [
+            "aws_subnet.private",
+            "aws_vpc.main",
+            "data.aws_availability_zones.available"
+          ]
+        },
+        {
+          "index_key": 1,
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:ec2:ap-south-1:465443875617:route-table/rtb-0d2e98723666d8c98",
+            "id": "rtb-0d2e98723666d8c98",
+            "owner_id": "465443875617",
+            "propagating_vgws": [],
+            "route": [],
+            "tags": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Name": "vlab-dev-private-rt-2",
+              "Project": "vlab"
+            },
+            "tags_all": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Name": "vlab-dev-private-rt-2",
+              "Project": "vlab"
+            },
+            "timeouts": null,
+            "vpc_id": "vpc-0bf8c04fb7993a44d"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjozMDAwMDAwMDAwMDAsImRlbGV0ZSI6MzAwMDAwMDAwMDAwLCJ1cGRhdGUiOjEyMDAwMDAwMDAwMH19",
+          "dependencies": [
+            "aws_subnet.private",
+            "aws_vpc.main",
+            "data.aws_availability_zones.available"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_route_table",
+      "name": "public",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": []
+    },
+    {
+      "mode": "managed",
+      "type": "aws_route_table_association",
+      "name": "private",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "index_key": 0,
+          "schema_version": 0,
+          "attributes": {
+            "gateway_id": "",
+            "id": "rtbassoc-08df6665bef9bde4d",
+            "route_table_id": "rtb-02973f5fca9d37dc4",
+            "subnet_id": "subnet-0f864eb8f9622ddd8",
+            "timeouts": null
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjozMDAwMDAwMDAwMDAsImRlbGV0ZSI6MzAwMDAwMDAwMDAwLCJ1cGRhdGUiOjEyMDAwMDAwMDAwMH19",
+          "dependencies": [
+            "aws_route_table.private",
+            "aws_subnet.private",
+            "aws_vpc.main",
+            "data.aws_availability_zones.available"
+          ]
+        },
+        {
+          "index_key": 1,
+          "schema_version": 0,
+          "attributes": {
+            "gateway_id": "",
+            "id": "rtbassoc-01b3d341905ae8ab9",
+            "route_table_id": "rtb-0d2e98723666d8c98",
+            "subnet_id": "subnet-05eb1e62daf003edd",
+            "timeouts": null
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjozMDAwMDAwMDAwMDAsImRlbGV0ZSI6MzAwMDAwMDAwMDAwLCJ1cGRhdGUiOjEyMDAwMDAwMDAwMH19",
+          "dependencies": [
+            "aws_route_table.private",
+            "aws_subnet.private",
+            "aws_vpc.main",
+            "data.aws_availability_zones.available"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_route_table_association",
+      "name": "public",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": []
+    },
+    {
+      "mode": "managed",
+      "type": "aws_s3_bucket",
+      "name": "temp_lab_data",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": []
+    },
+    {
+      "mode": "managed",
+      "type": "aws_s3_bucket",
+      "name": "terraform_state",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "acceleration_status": "",
+            "acl": null,
+            "arn": "arn:aws:s3:::vlab-terraform-state-e1c0tzx2",
+            "bucket": "vlab-terraform-state-e1c0tzx2",
+            "bucket_domain_name": "vlab-terraform-state-e1c0tzx2.s3.amazonaws.com",
+            "bucket_prefix": "",
+            "bucket_regional_domain_name": "vlab-terraform-state-e1c0tzx2.s3.ap-south-1.amazonaws.com",
+            "cors_rule": [],
+            "force_destroy": false,
+            "grant": [
+              {
+                "id": "ff10efb958309f884659d700a4d562d7fe35160ba4e53adab7bad092070355ec",
+                "permissions": [
+                  "FULL_CONTROL"
+                ],
+                "type": "CanonicalUser",
+                "uri": ""
+              }
+            ],
+            "hosted_zone_id": "Z11RGJOFQNVJUP",
+            "id": "vlab-terraform-state-e1c0tzx2",
+            "lifecycle_rule": [],
+            "logging": [],
+            "object_lock_configuration": [],
+            "object_lock_enabled": false,
+            "policy": "",
+            "region": "ap-south-1",
+            "replication_configuration": [],
+            "request_payer": "BucketOwner",
+            "server_side_encryption_configuration": [
+              {
+                "rule": [
+                  {
+                    "apply_server_side_encryption_by_default": [
+                      {
+                        "kms_master_key_id": "",
+                        "sse_algorithm": "AES256"
+                      }
+                    ],
+                    "bucket_key_enabled": false
+                  }
+                ]
+              }
+            ],
+            "tags": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Project": "vlab"
+            },
+            "tags_all": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Project": "vlab"
+            },
+            "timeouts": null,
+            "versioning": [
+              {
+                "enabled": true,
+                "mfa_delete": false
+              }
+            ],
+            "website": [],
+            "website_domain": null,
+            "website_endpoint": null
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjoxMjAwMDAwMDAwMDAwLCJkZWxldGUiOjM2MDAwMDAwMDAwMDAsInJlYWQiOjEyMDAwMDAwMDAwMDAsInVwZGF0ZSI6MTIwMDAwMDAwMDAwMH19",
+          "dependencies": [
+            "random_string.backend_suffix"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_s3_bucket",
+      "name": "test_cases",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "acceleration_status": "",
+            "acl": null,
+            "arn": "arn:aws:s3:::vlab-dev-test-cases-0kdrg0q8",
+            "bucket": "vlab-dev-test-cases-0kdrg0q8",
+            "bucket_domain_name": "vlab-dev-test-cases-0kdrg0q8.s3.amazonaws.com",
+            "bucket_prefix": "",
+            "bucket_regional_domain_name": "vlab-dev-test-cases-0kdrg0q8.s3.ap-south-1.amazonaws.com",
+            "cors_rule": [],
+            "force_destroy": false,
+            "grant": [
+              {
+                "id": "ff10efb958309f884659d700a4d562d7fe35160ba4e53adab7bad092070355ec",
+                "permissions": [
+                  "FULL_CONTROL"
+                ],
+                "type": "CanonicalUser",
+                "uri": ""
+              }
+            ],
+            "hosted_zone_id": "Z11RGJOFQNVJUP",
+            "id": "vlab-dev-test-cases-0kdrg0q8",
+            "lifecycle_rule": [],
+            "logging": [],
+            "object_lock_configuration": [],
+            "object_lock_enabled": false,
+            "policy": "",
+            "region": "ap-south-1",
+            "replication_configuration": [],
+            "request_payer": "BucketOwner",
+            "server_side_encryption_configuration": [
+              {
+                "rule": [
+                  {
+                    "apply_server_side_encryption_by_default": [
+                      {
+                        "kms_master_key_id": "",
+                        "sse_algorithm": "AES256"
+                      }
+                    ],
+                    "bucket_key_enabled": false
+                  }
+                ]
+              }
+            ],
+            "tags": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Name": "vlab-dev-test-cases",
+              "Project": "vlab"
+            },
+            "tags_all": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Name": "vlab-dev-test-cases",
+              "Project": "vlab"
+            },
+            "timeouts": null,
+            "versioning": [
+              {
+                "enabled": false,
+                "mfa_delete": false
+              }
+            ],
+            "website": [],
+            "website_domain": null,
+            "website_endpoint": null
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjoxMjAwMDAwMDAwMDAwLCJkZWxldGUiOjM2MDAwMDAwMDAwMDAsInJlYWQiOjEyMDAwMDAwMDAwMDAsInVwZGF0ZSI6MTIwMDAwMDAwMDAwMH19",
+          "dependencies": [
+            "random_string.test_cases_suffix"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_s3_bucket_public_access_block",
+      "name": "temp_lab_data",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": []
+    },
+    {
+      "mode": "managed",
+      "type": "aws_s3_bucket_public_access_block",
+      "name": "test_cases",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "block_public_acls": true,
+            "block_public_policy": true,
+            "bucket": "vlab-dev-test-cases-0kdrg0q8",
+            "id": "vlab-dev-test-cases-0kdrg0q8",
+            "ignore_public_acls": true,
+            "restrict_public_buckets": true
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "bnVsbA==",
+          "dependencies": [
+            "aws_s3_bucket.test_cases",
+            "random_string.test_cases_suffix"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_s3_bucket_server_side_encryption_configuration",
+      "name": "state_encryption",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "bucket": "vlab-terraform-state-e1c0tzx2",
+            "expected_bucket_owner": "",
+            "id": "vlab-terraform-state-e1c0tzx2",
+            "rule": [
+              {
+                "apply_server_side_encryption_by_default": [
+                  {
+                    "kms_master_key_id": "",
+                    "sse_algorithm": "AES256"
+                  }
+                ],
+                "bucket_key_enabled": false
+              }
+            ]
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "bnVsbA==",
+          "dependencies": [
+            "aws_s3_bucket.terraform_state",
+            "random_string.backend_suffix"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_s3_bucket_versioning",
+      "name": "state_versioning",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "bucket": "vlab-terraform-state-e1c0tzx2",
+            "expected_bucket_owner": "",
+            "id": "vlab-terraform-state-e1c0tzx2",
+            "mfa": null,
+            "versioning_configuration": [
+              {
+                "mfa_delete": "",
+                "status": "Enabled"
+              }
+            ]
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "bnVsbA==",
+          "dependencies": [
+            "aws_s3_bucket.terraform_state",
+            "random_string.backend_suffix"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_security_group",
+      "name": "ecs_tasks",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 1,
+          "attributes": {
+            "arn": "arn:aws:ec2:ap-south-1:465443875617:security-group/sg-016d24faa7ef47fe1",
+            "description": "Security group for ephemeral lab tasks",
+            "egress": [
+              {
+                "cidr_blocks": [
+                  "0.0.0.0/0"
+                ],
+                "description": "Allow all outbound",
+                "from_port": 0,
+                "ipv6_cidr_blocks": [],
+                "prefix_list_ids": [],
+                "protocol": "-1",
+                "security_groups": [],
+                "self": false,
+                "to_port": 0
+              }
+            ],
+            "id": "sg-016d24faa7ef47fe1",
+            "ingress": [
+              {
+                "cidr_blocks": [
+                  "49.36.67.112/32"
+                ],
+                "description": "Browser access to JupyterLab (8888) on lab public IPs",
+                "from_port": 8888,
+                "ipv6_cidr_blocks": [],
+                "prefix_list_ids": [],
+                "protocol": "tcp",
+                "security_groups": [],
+                "self": false,
+                "to_port": 8888
+              },
+              {
+                "cidr_blocks": [
+                  "49.36.67.112/32"
+                ],
+                "description": "Browser access to code-server (8080) on lab public IPs",
+                "from_port": 8080,
+                "ipv6_cidr_blocks": [],
+                "prefix_list_ids": [],
+                "protocol": "tcp",
+                "security_groups": [],
+                "self": false,
+                "to_port": 8080
+              },
+              {
+                "cidr_blocks": [],
+                "description": "Allow Lambdas to call warm session runtime",
+                "from_port": 8080,
+                "ipv6_cidr_blocks": [],
+                "prefix_list_ids": [],
+                "protocol": "tcp",
+                "security_groups": [
+                  "sg-00863d80ed414dc51"
+                ],
+                "self": false,
+                "to_port": 8080
+              },
+              {
+                "cidr_blocks": [],
+                "description": "Allow Lambdas to reach Jupyter on datascience tasks",
+                "from_port": 8888,
+                "ipv6_cidr_blocks": [],
+                "prefix_list_ids": [],
+                "protocol": "tcp",
+                "security_groups": [
+                  "sg-00863d80ed414dc51"
+                ],
+                "self": false,
+                "to_port": 8888
+              }
+            ],
+            "name": "vlab-dev-ecs-task-sg",
+            "name_prefix": "",
+            "owner_id": "465443875617",
+            "revoke_rules_on_delete": false,
+            "tags": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Name": "vlab-dev-ecs-task-sg",
+              "Project": "vlab"
+            },
+            "tags_all": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Name": "vlab-dev-ecs-task-sg",
+              "Project": "vlab"
+            },
+            "timeouts": null,
+            "vpc_id": "vpc-0bf8c04fb7993a44d"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo2MDAwMDAwMDAwMDAsImRlbGV0ZSI6OTAwMDAwMDAwMDAwfSwic2NoZW1hX3ZlcnNpb24iOiIxIn0=",
+          "dependencies": [
+            "aws_security_group.lambda",
+            "aws_vpc.main"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_security_group",
+      "name": "lambda",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 1,
+          "attributes": {
+            "arn": "arn:aws:ec2:ap-south-1:465443875617:security-group/sg-00863d80ed414dc51",
+            "description": "Security group for lab control Lambdas",
+            "egress": [
+              {
+                "cidr_blocks": [
+                  "0.0.0.0/0"
+                ],
+                "description": "Allow all outbound",
+                "from_port": 0,
+                "ipv6_cidr_blocks": [],
+                "prefix_list_ids": [],
+                "protocol": "-1",
+                "security_groups": [],
+                "self": false,
+                "to_port": 0
+              }
+            ],
+            "id": "sg-00863d80ed414dc51",
+            "ingress": [],
+            "name": "vlab-dev-lambda-sg",
+            "name_prefix": "",
+            "owner_id": "465443875617",
+            "revoke_rules_on_delete": false,
+            "tags": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Name": "vlab-dev-lambda-sg",
+              "Project": "vlab"
+            },
+            "tags_all": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Name": "vlab-dev-lambda-sg",
+              "Project": "vlab"
+            },
+            "timeouts": null,
+            "vpc_id": "vpc-0bf8c04fb7993a44d"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo2MDAwMDAwMDAwMDAsImRlbGV0ZSI6OTAwMDAwMDAwMDAwfSwic2NoZW1hX3ZlcnNpb24iOiIxIn0=",
+          "dependencies": [
+            "aws_vpc.main"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_security_group",
+      "name": "vpc_endpoints",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 1,
+          "attributes": {
+            "arn": "arn:aws:ec2:ap-south-1:465443875617:security-group/sg-07e40ffbb7e3dc2d0",
+            "description": "Security group for interface VPC endpoints",
+            "egress": [
+              {
+                "cidr_blocks": [
+                  "0.0.0.0/0"
+                ],
+                "description": "Allow endpoint responses",
+                "from_port": 0,
+                "ipv6_cidr_blocks": [],
+                "prefix_list_ids": [],
+                "protocol": "-1",
+                "security_groups": [],
+                "self": false,
+                "to_port": 0
+              }
+            ],
+            "id": "sg-07e40ffbb7e3dc2d0",
+            "ingress": [
+              {
+                "cidr_blocks": [],
+                "description": "Allow VPC resources to call endpoints",
+                "from_port": 443,
+                "ipv6_cidr_blocks": [],
+                "prefix_list_ids": [],
+                "protocol": "tcp",
+                "security_groups": [
+                  "sg-00863d80ed414dc51",
+                  "sg-016d24faa7ef47fe1"
+                ],
+                "self": false,
+                "to_port": 443
+              }
+            ],
+            "name": "vlab-dev-vpce-sg",
+            "name_prefix": "",
+            "owner_id": "465443875617",
+            "revoke_rules_on_delete": false,
+            "tags": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Name": "vlab-dev-vpce-sg",
+              "Project": "vlab"
+            },
+            "tags_all": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Name": "vlab-dev-vpce-sg",
+              "Project": "vlab"
+            },
+            "timeouts": null,
+            "vpc_id": "vpc-0bf8c04fb7993a44d"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo2MDAwMDAwMDAwMDAsImRlbGV0ZSI6OTAwMDAwMDAwMDAwfSwic2NoZW1hX3ZlcnNpb24iOiIxIn0=",
+          "dependencies": [
+            "aws_security_group.ecs_tasks",
+            "aws_security_group.lambda",
+            "aws_vpc.main"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_subnet",
+      "name": "private",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "index_key": 0,
+          "schema_version": 1,
+          "attributes": {
+            "arn": "arn:aws:ec2:ap-south-1:465443875617:subnet/subnet-0f864eb8f9622ddd8",
+            "assign_ipv6_address_on_creation": false,
+            "availability_zone": "ap-south-1a",
+            "availability_zone_id": "aps1-az1",
+            "cidr_block": "10.40.1.0/24",
+            "customer_owned_ipv4_pool": "",
+            "enable_dns64": false,
+            "enable_lni_at_device_index": 0,
+            "enable_resource_name_dns_a_record_on_launch": false,
+            "enable_resource_name_dns_aaaa_record_on_launch": false,
+            "id": "subnet-0f864eb8f9622ddd8",
+            "ipv6_cidr_block": "",
+            "ipv6_cidr_block_association_id": "",
+            "ipv6_native": false,
+            "map_customer_owned_ip_on_launch": false,
+            "map_public_ip_on_launch": false,
+            "outpost_arn": "",
+            "owner_id": "465443875617",
+            "private_dns_hostname_type_on_launch": "ip-name",
+            "tags": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Name": "vlab-dev-private-1",
+              "Project": "vlab",
+              "Tier": "private"
+            },
+            "tags_all": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Name": "vlab-dev-private-1",
+              "Project": "vlab",
+              "Tier": "private"
+            },
+            "timeouts": null,
+            "vpc_id": "vpc-0bf8c04fb7993a44d"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo2MDAwMDAwMDAwMDAsImRlbGV0ZSI6MTIwMDAwMDAwMDAwMH0sInNjaGVtYV92ZXJzaW9uIjoiMSJ9",
+          "dependencies": [
+            "aws_vpc.main",
+            "data.aws_availability_zones.available"
+          ]
+        },
+        {
+          "index_key": 1,
+          "schema_version": 1,
+          "attributes": {
+            "arn": "arn:aws:ec2:ap-south-1:465443875617:subnet/subnet-05eb1e62daf003edd",
+            "assign_ipv6_address_on_creation": false,
+            "availability_zone": "ap-south-1b",
+            "availability_zone_id": "aps1-az3",
+            "cidr_block": "10.40.2.0/24",
+            "customer_owned_ipv4_pool": "",
+            "enable_dns64": false,
+            "enable_lni_at_device_index": 0,
+            "enable_resource_name_dns_a_record_on_launch": false,
+            "enable_resource_name_dns_aaaa_record_on_launch": false,
+            "id": "subnet-05eb1e62daf003edd",
+            "ipv6_cidr_block": "",
+            "ipv6_cidr_block_association_id": "",
+            "ipv6_native": false,
+            "map_customer_owned_ip_on_launch": false,
+            "map_public_ip_on_launch": false,
+            "outpost_arn": "",
+            "owner_id": "465443875617",
+            "private_dns_hostname_type_on_launch": "ip-name",
+            "tags": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Name": "vlab-dev-private-2",
+              "Project": "vlab",
+              "Tier": "private"
+            },
+            "tags_all": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Name": "vlab-dev-private-2",
+              "Project": "vlab",
+              "Tier": "private"
+            },
+            "timeouts": null,
+            "vpc_id": "vpc-0bf8c04fb7993a44d"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo2MDAwMDAwMDAwMDAsImRlbGV0ZSI6MTIwMDAwMDAwMDAwMH0sInNjaGVtYV92ZXJzaW9uIjoiMSJ9",
+          "dependencies": [
+            "aws_vpc.main",
+            "data.aws_availability_zones.available"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_subnet",
+      "name": "public",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": []
+    },
+    {
+      "mode": "managed",
+      "type": "aws_vpc",
+      "name": "main",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 1,
+          "attributes": {
+            "arn": "arn:aws:ec2:ap-south-1:465443875617:vpc/vpc-0bf8c04fb7993a44d",
+            "assign_generated_ipv6_cidr_block": false,
+            "cidr_block": "10.40.0.0/16",
+            "default_network_acl_id": "acl-04a6003665e836ad7",
+            "default_route_table_id": "rtb-0b234af1a7b335b31",
+            "default_security_group_id": "sg-0ed7543b676df3a54",
+            "dhcp_options_id": "dopt-0c69ebb4ca70f7a94",
+            "enable_dns_hostnames": true,
+            "enable_dns_support": true,
+            "enable_network_address_usage_metrics": false,
+            "id": "vpc-0bf8c04fb7993a44d",
+            "instance_tenancy": "default",
+            "ipv4_ipam_pool_id": null,
+            "ipv4_netmask_length": null,
+            "ipv6_association_id": "",
+            "ipv6_cidr_block": "",
+            "ipv6_cidr_block_network_border_group": "",
+            "ipv6_ipam_pool_id": "",
+            "ipv6_netmask_length": 0,
+            "main_route_table_id": "rtb-0b234af1a7b335b31",
+            "owner_id": "465443875617",
+            "tags": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Name": "vlab-dev-vpc",
+              "Project": "vlab"
+            },
+            "tags_all": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Name": "vlab-dev-vpc",
+              "Project": "vlab"
+            }
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJzY2hlbWFfdmVyc2lvbiI6IjEifQ=="
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_vpc_endpoint",
+      "name": "dynamodb",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:ec2:ap-south-1:465443875617:vpc-endpoint/vpce-07f215744fbf905ce",
+            "auto_accept": null,
+            "cidr_blocks": [
+              "35.71.100.0/25",
+              "35.71.100.128/26",
+              "52.94.20.0/24"
+            ],
+            "dns_entry": [],
+            "dns_options": [
+              {
+                "dns_record_ip_type": "service-defined",
+                "private_dns_only_for_inbound_resolver_endpoint": false
+              }
+            ],
+            "id": "vpce-07f215744fbf905ce",
+            "ip_address_type": "ipv4",
+            "network_interface_ids": [],
+            "owner_id": "465443875617",
+            "policy": "{\"Statement\":[{\"Action\":\"*\",\"Effect\":\"Allow\",\"Principal\":\"*\",\"Resource\":\"*\"}],\"Version\":\"2008-10-17\"}",
+            "prefix_list_id": "pl-66a7420f",
+            "private_dns_enabled": false,
+            "requester_managed": false,
+            "resource_configuration_arn": "",
+            "route_table_ids": [
+              "rtb-02973f5fca9d37dc4",
+              "rtb-0d2e98723666d8c98"
+            ],
+            "security_group_ids": [],
+            "service_name": "com.amazonaws.ap-south-1.dynamodb",
+            "service_network_arn": "",
+            "service_region": "ap-south-1",
+            "state": "available",
+            "subnet_configuration": [],
+            "subnet_ids": [],
+            "tags": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Name": "vlab-dev-dynamodb-endpoint",
+              "Project": "vlab"
+            },
+            "tags_all": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Name": "vlab-dev-dynamodb-endpoint",
+              "Project": "vlab"
+            },
+            "timeouts": null,
+            "vpc_endpoint_type": "Gateway",
+            "vpc_id": "vpc-0bf8c04fb7993a44d"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo2MDAwMDAwMDAwMDAsImRlbGV0ZSI6NjAwMDAwMDAwMDAwLCJ1cGRhdGUiOjYwMDAwMDAwMDAwMH19",
+          "dependencies": [
+            "aws_route_table.private",
+            "aws_subnet.private",
+            "aws_vpc.main",
+            "data.aws_availability_zones.available"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_vpc_endpoint",
+      "name": "ec2messages",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:ec2:ap-south-1:465443875617:vpc-endpoint/vpce-0f26d959e52428e3f",
+            "auto_accept": null,
+            "cidr_blocks": [],
+            "dns_entry": [
+              {
+                "dns_name": "vpce-0f26d959e52428e3f-jyzki6dz.ec2messages.ap-south-1.vpce.amazonaws.com",
+                "hosted_zone_id": "Z2KVTB3ZLFM7JR"
+              },
+              {
+                "dns_name": "vpce-0f26d959e52428e3f-jyzki6dz-ap-south-1b.ec2messages.ap-south-1.vpce.amazonaws.com",
+                "hosted_zone_id": "Z2KVTB3ZLFM7JR"
+              },
+              {
+                "dns_name": "vpce-0f26d959e52428e3f-jyzki6dz-ap-south-1a.ec2messages.ap-south-1.vpce.amazonaws.com",
+                "hosted_zone_id": "Z2KVTB3ZLFM7JR"
+              },
+              {
+                "dns_name": "ec2messages.ap-south-1.amazonaws.com",
+                "hosted_zone_id": "Z0348783JLDQZBYPUQ72"
+              }
+            ],
+            "dns_options": [
+              {
+                "dns_record_ip_type": "ipv4",
+                "private_dns_only_for_inbound_resolver_endpoint": false
+              }
+            ],
+            "id": "vpce-0f26d959e52428e3f",
+            "ip_address_type": "ipv4",
+            "network_interface_ids": [
+              "eni-017c8c463a7658fa2",
+              "eni-0f9a34ddd46cbca22"
+            ],
+            "owner_id": "465443875617",
+            "policy": "{\"Statement\":[{\"Action\":\"*\",\"Effect\":\"Allow\",\"Principal\":\"*\",\"Resource\":\"*\"}]}",
+            "prefix_list_id": null,
+            "private_dns_enabled": true,
+            "requester_managed": false,
+            "resource_configuration_arn": "",
+            "route_table_ids": [],
+            "security_group_ids": [
+              "sg-07e40ffbb7e3dc2d0"
+            ],
+            "service_name": "com.amazonaws.ap-south-1.ec2messages",
+            "service_network_arn": "",
+            "service_region": "ap-south-1",
+            "state": "available",
+            "subnet_configuration": [
+              {
+                "ipv4": "10.40.1.185",
+                "ipv6": "",
+                "subnet_id": "subnet-0f864eb8f9622ddd8"
+              },
+              {
+                "ipv4": "10.40.2.185",
+                "ipv6": "",
+                "subnet_id": "subnet-05eb1e62daf003edd"
+              }
+            ],
+            "subnet_ids": [
+              "subnet-05eb1e62daf003edd",
+              "subnet-0f864eb8f9622ddd8"
+            ],
+            "tags": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Name": "vlab-dev-ec2messages-endpoint",
+              "Project": "vlab"
+            },
+            "tags_all": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Name": "vlab-dev-ec2messages-endpoint",
+              "Project": "vlab"
+            },
+            "timeouts": null,
+            "vpc_endpoint_type": "Interface",
+            "vpc_id": "vpc-0bf8c04fb7993a44d"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo2MDAwMDAwMDAwMDAsImRlbGV0ZSI6NjAwMDAwMDAwMDAwLCJ1cGRhdGUiOjYwMDAwMDAwMDAwMH19",
+          "dependencies": [
+            "aws_security_group.ecs_tasks",
+            "aws_security_group.lambda",
+            "aws_security_group.vpc_endpoints",
+            "aws_subnet.private",
+            "aws_vpc.main",
+            "data.aws_availability_zones.available"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_vpc_endpoint",
+      "name": "ecr_api",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:ec2:ap-south-1:465443875617:vpc-endpoint/vpce-0125a148009f4d6f5",
+            "auto_accept": null,
+            "cidr_blocks": [],
+            "dns_entry": [
+              {
+                "dns_name": "vpce-0125a148009f4d6f5-q40jracd.api.ecr.ap-south-1.vpce.amazonaws.com",
+                "hosted_zone_id": "Z2KVTB3ZLFM7JR"
+              },
+              {
+                "dns_name": "vpce-0125a148009f4d6f5-q40jracd-ap-south-1b.api.ecr.ap-south-1.vpce.amazonaws.com",
+                "hosted_zone_id": "Z2KVTB3ZLFM7JR"
+              },
+              {
+                "dns_name": "vpce-0125a148009f4d6f5-q40jracd-ap-south-1a.api.ecr.ap-south-1.vpce.amazonaws.com",
+                "hosted_zone_id": "Z2KVTB3ZLFM7JR"
+              },
+              {
+                "dns_name": "api.ecr.ap-south-1.amazonaws.com",
+                "hosted_zone_id": "Z00691003NML184ZK7RK9"
+              },
+              {
+                "dns_name": "ecr.ap-south-1.api.aws",
+                "hosted_zone_id": "Z0351383193TWX5N2DP8Y"
+              }
+            ],
+            "dns_options": [
+              {
+                "dns_record_ip_type": "ipv4",
+                "private_dns_only_for_inbound_resolver_endpoint": false
+              }
+            ],
+            "id": "vpce-0125a148009f4d6f5",
+            "ip_address_type": "ipv4",
+            "network_interface_ids": [
+              "eni-04bbdb168dbea64b4",
+              "eni-052279f69e1f762ef"
+            ],
+            "owner_id": "465443875617",
+            "policy": "{\"Statement\":[{\"Action\":\"*\",\"Effect\":\"Allow\",\"Principal\":\"*\",\"Resource\":\"*\"}]}",
+            "prefix_list_id": null,
+            "private_dns_enabled": true,
+            "requester_managed": false,
+            "resource_configuration_arn": "",
+            "route_table_ids": [],
+            "security_group_ids": [
+              "sg-07e40ffbb7e3dc2d0"
+            ],
+            "service_name": "com.amazonaws.ap-south-1.ecr.api",
+            "service_network_arn": "",
+            "service_region": "ap-south-1",
+            "state": "available",
+            "subnet_configuration": [
+              {
+                "ipv4": "10.40.1.31",
+                "ipv6": "",
+                "subnet_id": "subnet-0f864eb8f9622ddd8"
+              },
+              {
+                "ipv4": "10.40.2.103",
+                "ipv6": "",
+                "subnet_id": "subnet-05eb1e62daf003edd"
+              }
+            ],
+            "subnet_ids": [
+              "subnet-05eb1e62daf003edd",
+              "subnet-0f864eb8f9622ddd8"
+            ],
+            "tags": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Name": "vlab-dev-ecr-api-endpoint",
+              "Project": "vlab"
+            },
+            "tags_all": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Name": "vlab-dev-ecr-api-endpoint",
+              "Project": "vlab"
+            },
+            "timeouts": null,
+            "vpc_endpoint_type": "Interface",
+            "vpc_id": "vpc-0bf8c04fb7993a44d"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo2MDAwMDAwMDAwMDAsImRlbGV0ZSI6NjAwMDAwMDAwMDAwLCJ1cGRhdGUiOjYwMDAwMDAwMDAwMH19",
+          "dependencies": [
+            "aws_security_group.ecs_tasks",
+            "aws_security_group.lambda",
+            "aws_security_group.vpc_endpoints",
+            "aws_subnet.private",
+            "aws_vpc.main",
+            "data.aws_availability_zones.available"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_vpc_endpoint",
+      "name": "ecr_dkr",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:ec2:ap-south-1:465443875617:vpc-endpoint/vpce-05ec4d2c5cf3993dd",
+            "auto_accept": null,
+            "cidr_blocks": [],
+            "dns_entry": [
+              {
+                "dns_name": "vpce-05ec4d2c5cf3993dd-lh6zf6yy.dkr.ecr.ap-south-1.vpce.amazonaws.com",
+                "hosted_zone_id": "Z2KVTB3ZLFM7JR"
+              },
+              {
+                "dns_name": "vpce-05ec4d2c5cf3993dd-lh6zf6yy-ap-south-1b.dkr.ecr.ap-south-1.vpce.amazonaws.com",
+                "hosted_zone_id": "Z2KVTB3ZLFM7JR"
+              },
+              {
+                "dns_name": "vpce-05ec4d2c5cf3993dd-lh6zf6yy-ap-south-1a.dkr.ecr.ap-south-1.vpce.amazonaws.com",
+                "hosted_zone_id": "Z2KVTB3ZLFM7JR"
+              },
+              {
+                "dns_name": "dkr.ecr.ap-south-1.amazonaws.com",
+                "hosted_zone_id": "Z019533640JQTKOT9KBQ"
+              },
+              {
+                "dns_name": "*.dkr.ecr.ap-south-1.amazonaws.com",
+                "hosted_zone_id": "Z019533640JQTKOT9KBQ"
+              },
+              {
+                "dns_name": "dkr-ecr.ap-south-1.on.aws",
+                "hosted_zone_id": "Z03717341UZ4YDIZ2WQ4K"
+              },
+              {
+                "dns_name": "*.dkr-ecr.ap-south-1.on.aws",
+                "hosted_zone_id": "Z03717341UZ4YDIZ2WQ4K"
+              }
+            ],
+            "dns_options": [
+              {
+                "dns_record_ip_type": "ipv4",
+                "private_dns_only_for_inbound_resolver_endpoint": false
+              }
+            ],
+            "id": "vpce-05ec4d2c5cf3993dd",
+            "ip_address_type": "ipv4",
+            "network_interface_ids": [
+              "eni-098b6549133b05fe8",
+              "eni-0f9366a3198031f0c"
+            ],
+            "owner_id": "465443875617",
+            "policy": "{\"Statement\":[{\"Action\":\"*\",\"Effect\":\"Allow\",\"Principal\":\"*\",\"Resource\":\"*\"}]}",
+            "prefix_list_id": null,
+            "private_dns_enabled": true,
+            "requester_managed": false,
+            "resource_configuration_arn": "",
+            "route_table_ids": [],
+            "security_group_ids": [
+              "sg-07e40ffbb7e3dc2d0"
+            ],
+            "service_name": "com.amazonaws.ap-south-1.ecr.dkr",
+            "service_network_arn": "",
+            "service_region": "ap-south-1",
+            "state": "available",
+            "subnet_configuration": [
+              {
+                "ipv4": "10.40.1.52",
+                "ipv6": "",
+                "subnet_id": "subnet-0f864eb8f9622ddd8"
+              },
+              {
+                "ipv4": "10.40.2.88",
+                "ipv6": "",
+                "subnet_id": "subnet-05eb1e62daf003edd"
+              }
+            ],
+            "subnet_ids": [
+              "subnet-05eb1e62daf003edd",
+              "subnet-0f864eb8f9622ddd8"
+            ],
+            "tags": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Name": "vlab-dev-ecr-dkr-endpoint",
+              "Project": "vlab"
+            },
+            "tags_all": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Name": "vlab-dev-ecr-dkr-endpoint",
+              "Project": "vlab"
+            },
+            "timeouts": null,
+            "vpc_endpoint_type": "Interface",
+            "vpc_id": "vpc-0bf8c04fb7993a44d"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo2MDAwMDAwMDAwMDAsImRlbGV0ZSI6NjAwMDAwMDAwMDAwLCJ1cGRhdGUiOjYwMDAwMDAwMDAwMH19",
+          "dependencies": [
+            "aws_security_group.ecs_tasks",
+            "aws_security_group.lambda",
+            "aws_security_group.vpc_endpoints",
+            "aws_subnet.private",
+            "aws_vpc.main",
+            "data.aws_availability_zones.available"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_vpc_endpoint",
+      "name": "ecs",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:ec2:ap-south-1:465443875617:vpc-endpoint/vpce-0da5c90ee27f19590",
+            "auto_accept": null,
+            "cidr_blocks": [],
+            "dns_entry": [
+              {
+                "dns_name": "vpce-0da5c90ee27f19590-4ywm3520.ecs.ap-south-1.vpce.amazonaws.com",
+                "hosted_zone_id": "Z2KVTB3ZLFM7JR"
+              },
+              {
+                "dns_name": "vpce-0da5c90ee27f19590-4ywm3520-ap-south-1a.ecs.ap-south-1.vpce.amazonaws.com",
+                "hosted_zone_id": "Z2KVTB3ZLFM7JR"
+              },
+              {
+                "dns_name": "vpce-0da5c90ee27f19590-4ywm3520-ap-south-1b.ecs.ap-south-1.vpce.amazonaws.com",
+                "hosted_zone_id": "Z2KVTB3ZLFM7JR"
+              },
+              {
+                "dns_name": "ecs.ap-south-1.amazonaws.com",
+                "hosted_zone_id": "Z0194228R8006PUUNJCM"
+              },
+              {
+                "dns_name": "ecs.ap-south-1.api.aws",
+                "hosted_zone_id": "Z03490852SYZ29BJE5F9E"
+              }
+            ],
+            "dns_options": [
+              {
+                "dns_record_ip_type": "ipv4",
+                "private_dns_only_for_inbound_resolver_endpoint": false
+              }
+            ],
+            "id": "vpce-0da5c90ee27f19590",
+            "ip_address_type": "ipv4",
+            "network_interface_ids": [
+              "eni-008079268c8b85859",
+              "eni-049089b6b3a2929b5"
+            ],
+            "owner_id": "465443875617",
+            "policy": "{\"Statement\":[{\"Action\":\"*\",\"Effect\":\"Allow\",\"Principal\":\"*\",\"Resource\":\"*\"}]}",
+            "prefix_list_id": null,
+            "private_dns_enabled": true,
+            "requester_managed": false,
+            "resource_configuration_arn": "",
+            "route_table_ids": [],
+            "security_group_ids": [
+              "sg-07e40ffbb7e3dc2d0"
+            ],
+            "service_name": "com.amazonaws.ap-south-1.ecs",
+            "service_network_arn": "",
+            "service_region": "ap-south-1",
+            "state": "available",
+            "subnet_configuration": [
+              {
+                "ipv4": "10.40.1.172",
+                "ipv6": "",
+                "subnet_id": "subnet-0f864eb8f9622ddd8"
+              },
+              {
+                "ipv4": "10.40.2.233",
+                "ipv6": "",
+                "subnet_id": "subnet-05eb1e62daf003edd"
+              }
+            ],
+            "subnet_ids": [
+              "subnet-05eb1e62daf003edd",
+              "subnet-0f864eb8f9622ddd8"
+            ],
+            "tags": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Name": "vlab-dev-ecs-endpoint",
+              "Project": "vlab"
+            },
+            "tags_all": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Name": "vlab-dev-ecs-endpoint",
+              "Project": "vlab"
+            },
+            "timeouts": null,
+            "vpc_endpoint_type": "Interface",
+            "vpc_id": "vpc-0bf8c04fb7993a44d"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo2MDAwMDAwMDAwMDAsImRlbGV0ZSI6NjAwMDAwMDAwMDAwLCJ1cGRhdGUiOjYwMDAwMDAwMDAwMH19",
+          "dependencies": [
+            "aws_security_group.ecs_tasks",
+            "aws_security_group.lambda",
+            "aws_security_group.vpc_endpoints",
+            "aws_subnet.private",
+            "aws_vpc.main",
+            "data.aws_availability_zones.available"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_vpc_endpoint",
+      "name": "logs",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:ec2:ap-south-1:465443875617:vpc-endpoint/vpce-01ec392be4a2ef360",
+            "auto_accept": null,
+            "cidr_blocks": [],
+            "dns_entry": [
+              {
+                "dns_name": "vpce-01ec392be4a2ef360-vino9pzk.logs.ap-south-1.vpce.amazonaws.com",
+                "hosted_zone_id": "Z2KVTB3ZLFM7JR"
+              },
+              {
+                "dns_name": "vpce-01ec392be4a2ef360-vino9pzk-ap-south-1a.logs.ap-south-1.vpce.amazonaws.com",
+                "hosted_zone_id": "Z2KVTB3ZLFM7JR"
+              },
+              {
+                "dns_name": "vpce-01ec392be4a2ef360-vino9pzk-ap-south-1b.logs.ap-south-1.vpce.amazonaws.com",
+                "hosted_zone_id": "Z2KVTB3ZLFM7JR"
+              },
+              {
+                "dns_name": "logs.ap-south-1.amazonaws.com",
+                "hosted_zone_id": "Z03707661H12SQ3O3YQTR"
+              },
+              {
+                "dns_name": "streaming-logs.ap-south-1.api.aws",
+                "hosted_zone_id": "Z0349691372XSMYF0GE5X"
+              },
+              {
+                "dns_name": "streaming-logs.ap-south-1.amazonaws.com",
+                "hosted_zone_id": "Z01963612H08LWN84HM2U"
+              },
+              {
+                "dns_name": "logs.ap-south-1.api.aws",
+                "hosted_zone_id": "Z01963603L093R4G2BXDR"
+              }
+            ],
+            "dns_options": [
+              {
+                "dns_record_ip_type": "ipv4",
+                "private_dns_only_for_inbound_resolver_endpoint": false
+              }
+            ],
+            "id": "vpce-01ec392be4a2ef360",
+            "ip_address_type": "ipv4",
+            "network_interface_ids": [
+              "eni-0908a81889d7ed5df",
+              "eni-0cb5c6a6be5ddb634"
+            ],
+            "owner_id": "465443875617",
+            "policy": "{\"Statement\":[{\"Action\":\"*\",\"Effect\":\"Allow\",\"Principal\":\"*\",\"Resource\":\"*\"}]}",
+            "prefix_list_id": null,
+            "private_dns_enabled": true,
+            "requester_managed": false,
+            "resource_configuration_arn": "",
+            "route_table_ids": [],
+            "security_group_ids": [
+              "sg-07e40ffbb7e3dc2d0"
+            ],
+            "service_name": "com.amazonaws.ap-south-1.logs",
+            "service_network_arn": "",
+            "service_region": "ap-south-1",
+            "state": "available",
+            "subnet_configuration": [
+              {
+                "ipv4": "10.40.1.240",
+                "ipv6": "",
+                "subnet_id": "subnet-0f864eb8f9622ddd8"
+              },
+              {
+                "ipv4": "10.40.2.175",
+                "ipv6": "",
+                "subnet_id": "subnet-05eb1e62daf003edd"
+              }
+            ],
+            "subnet_ids": [
+              "subnet-05eb1e62daf003edd",
+              "subnet-0f864eb8f9622ddd8"
+            ],
+            "tags": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Name": "vlab-dev-logs-endpoint",
+              "Project": "vlab"
+            },
+            "tags_all": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Name": "vlab-dev-logs-endpoint",
+              "Project": "vlab"
+            },
+            "timeouts": null,
+            "vpc_endpoint_type": "Interface",
+            "vpc_id": "vpc-0bf8c04fb7993a44d"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo2MDAwMDAwMDAwMDAsImRlbGV0ZSI6NjAwMDAwMDAwMDAwLCJ1cGRhdGUiOjYwMDAwMDAwMDAwMH19",
+          "dependencies": [
+            "aws_security_group.ecs_tasks",
+            "aws_security_group.lambda",
+            "aws_security_group.vpc_endpoints",
+            "aws_subnet.private",
+            "aws_vpc.main",
+            "data.aws_availability_zones.available"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_vpc_endpoint",
+      "name": "s3",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:ec2:ap-south-1:465443875617:vpc-endpoint/vpce-01484f83a6dfc20b8",
+            "auto_accept": null,
+            "cidr_blocks": [
+              "52.219.156.0/22",
+              "52.219.160.0/23",
+              "52.219.62.0/23",
+              "3.5.212.0/23",
+              "3.5.208.0/22",
+              "16.12.3.0/24",
+              "16.12.40.0/23",
+              "52.219.64.0/22",
+              "16.12.36.0/22"
+            ],
+            "dns_entry": [],
+            "dns_options": [
+              {
+                "dns_record_ip_type": "service-defined",
+                "private_dns_only_for_inbound_resolver_endpoint": false
+              }
+            ],
+            "id": "vpce-01484f83a6dfc20b8",
+            "ip_address_type": "ipv4",
+            "network_interface_ids": [],
+            "owner_id": "465443875617",
+            "policy": "{\"Statement\":[{\"Action\":\"*\",\"Effect\":\"Allow\",\"Principal\":\"*\",\"Resource\":\"*\"}],\"Version\":\"2008-10-17\"}",
+            "prefix_list_id": "pl-78a54011",
+            "private_dns_enabled": false,
+            "requester_managed": false,
+            "resource_configuration_arn": "",
+            "route_table_ids": [
+              "rtb-02973f5fca9d37dc4",
+              "rtb-0d2e98723666d8c98"
+            ],
+            "security_group_ids": [],
+            "service_name": "com.amazonaws.ap-south-1.s3",
+            "service_network_arn": "",
+            "service_region": "ap-south-1",
+            "state": "available",
+            "subnet_configuration": [],
+            "subnet_ids": [],
+            "tags": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Name": "vlab-dev-s3-endpoint",
+              "Project": "vlab"
+            },
+            "tags_all": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Name": "vlab-dev-s3-endpoint",
+              "Project": "vlab"
+            },
+            "timeouts": null,
+            "vpc_endpoint_type": "Gateway",
+            "vpc_id": "vpc-0bf8c04fb7993a44d"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo2MDAwMDAwMDAwMDAsImRlbGV0ZSI6NjAwMDAwMDAwMDAwLCJ1cGRhdGUiOjYwMDAwMDAwMDAwMH19",
+          "dependencies": [
+            "aws_route_table.private",
+            "aws_subnet.private",
+            "aws_vpc.main",
+            "data.aws_availability_zones.available"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_vpc_endpoint",
+      "name": "scheduler",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:ec2:ap-south-1:465443875617:vpc-endpoint/vpce-00c287c61436f8470",
+            "auto_accept": null,
+            "cidr_blocks": [],
+            "dns_entry": [
+              {
+                "dns_name": "vpce-00c287c61436f8470-y297ur0h.scheduler.ap-south-1.vpce.amazonaws.com",
+                "hosted_zone_id": "Z2KVTB3ZLFM7JR"
+              },
+              {
+                "dns_name": "vpce-00c287c61436f8470-y297ur0h-ap-south-1b.scheduler.ap-south-1.vpce.amazonaws.com",
+                "hosted_zone_id": "Z2KVTB3ZLFM7JR"
+              },
+              {
+                "dns_name": "vpce-00c287c61436f8470-y297ur0h-ap-south-1a.scheduler.ap-south-1.vpce.amazonaws.com",
+                "hosted_zone_id": "Z2KVTB3ZLFM7JR"
+              },
+              {
+                "dns_name": "scheduler.ap-south-1.amazonaws.com",
+                "hosted_zone_id": "Z019513010N2WVV4Q8GQ1"
+              },
+              {
+                "dns_name": "scheduler.ap-south-1.api.aws",
+                "hosted_zone_id": "Z0349860DNL9CAY3VZ8D"
+              }
+            ],
+            "dns_options": [
+              {
+                "dns_record_ip_type": "ipv4",
+                "private_dns_only_for_inbound_resolver_endpoint": false
+              }
+            ],
+            "id": "vpce-00c287c61436f8470",
+            "ip_address_type": "ipv4",
+            "network_interface_ids": [
+              "eni-0d750a4122404ffbe",
+              "eni-0d9a2622bbd751343"
+            ],
+            "owner_id": "465443875617",
+            "policy": "{\"Statement\":[{\"Action\":\"*\",\"Effect\":\"Allow\",\"Principal\":\"*\",\"Resource\":\"*\"}]}",
+            "prefix_list_id": null,
+            "private_dns_enabled": true,
+            "requester_managed": false,
+            "resource_configuration_arn": "",
+            "route_table_ids": [],
+            "security_group_ids": [
+              "sg-07e40ffbb7e3dc2d0"
+            ],
+            "service_name": "com.amazonaws.ap-south-1.scheduler",
+            "service_network_arn": "",
+            "service_region": "ap-south-1",
+            "state": "available",
+            "subnet_configuration": [
+              {
+                "ipv4": "10.40.1.235",
+                "ipv6": "",
+                "subnet_id": "subnet-0f864eb8f9622ddd8"
+              },
+              {
+                "ipv4": "10.40.2.181",
+                "ipv6": "",
+                "subnet_id": "subnet-05eb1e62daf003edd"
+              }
+            ],
+            "subnet_ids": [
+              "subnet-05eb1e62daf003edd",
+              "subnet-0f864eb8f9622ddd8"
+            ],
+            "tags": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Name": "vlab-dev-scheduler-endpoint",
+              "Project": "vlab"
+            },
+            "tags_all": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Name": "vlab-dev-scheduler-endpoint",
+              "Project": "vlab"
+            },
+            "timeouts": null,
+            "vpc_endpoint_type": "Interface",
+            "vpc_id": "vpc-0bf8c04fb7993a44d"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo2MDAwMDAwMDAwMDAsImRlbGV0ZSI6NjAwMDAwMDAwMDAwLCJ1cGRhdGUiOjYwMDAwMDAwMDAwMH19",
+          "dependencies": [
+            "aws_security_group.ecs_tasks",
+            "aws_security_group.lambda",
+            "aws_security_group.vpc_endpoints",
+            "aws_subnet.private",
+            "aws_vpc.main",
+            "data.aws_availability_zones.available"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_vpc_endpoint",
+      "name": "ssm",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:ec2:ap-south-1:465443875617:vpc-endpoint/vpce-0cec0734e583535eb",
+            "auto_accept": null,
+            "cidr_blocks": [],
+            "dns_entry": [
+              {
+                "dns_name": "vpce-0cec0734e583535eb-p2qklkzi.ssm.ap-south-1.vpce.amazonaws.com",
+                "hosted_zone_id": "Z2KVTB3ZLFM7JR"
+              },
+              {
+                "dns_name": "vpce-0cec0734e583535eb-p2qklkzi-ap-south-1a.ssm.ap-south-1.vpce.amazonaws.com",
+                "hosted_zone_id": "Z2KVTB3ZLFM7JR"
+              },
+              {
+                "dns_name": "vpce-0cec0734e583535eb-p2qklkzi-ap-south-1b.ssm.ap-south-1.vpce.amazonaws.com",
+                "hosted_zone_id": "Z2KVTB3ZLFM7JR"
+              },
+              {
+                "dns_name": "ssm.ap-south-1.amazonaws.com",
+                "hosted_zone_id": "Z03483871TVMJJIVPTE7S"
+              },
+              {
+                "dns_name": "ssm.ap-south-1.api.aws",
+                "hosted_zone_id": "Z03446292F1NOMZ3RWZZA"
+              }
+            ],
+            "dns_options": [
+              {
+                "dns_record_ip_type": "ipv4",
+                "private_dns_only_for_inbound_resolver_endpoint": false
+              }
+            ],
+            "id": "vpce-0cec0734e583535eb",
+            "ip_address_type": "ipv4",
+            "network_interface_ids": [
+              "eni-08692ad961d14fc84",
+              "eni-0a6e108c97bdcb651"
+            ],
+            "owner_id": "465443875617",
+            "policy": "{\"Statement\":[{\"Action\":\"*\",\"Effect\":\"Allow\",\"Principal\":\"*\",\"Resource\":\"*\"}]}",
+            "prefix_list_id": null,
+            "private_dns_enabled": true,
+            "requester_managed": false,
+            "resource_configuration_arn": "",
+            "route_table_ids": [],
+            "security_group_ids": [
+              "sg-07e40ffbb7e3dc2d0"
+            ],
+            "service_name": "com.amazonaws.ap-south-1.ssm",
+            "service_network_arn": "",
+            "service_region": "ap-south-1",
+            "state": "available",
+            "subnet_configuration": [
+              {
+                "ipv4": "10.40.1.204",
+                "ipv6": "",
+                "subnet_id": "subnet-0f864eb8f9622ddd8"
+              },
+              {
+                "ipv4": "10.40.2.6",
+                "ipv6": "",
+                "subnet_id": "subnet-05eb1e62daf003edd"
+              }
+            ],
+            "subnet_ids": [
+              "subnet-05eb1e62daf003edd",
+              "subnet-0f864eb8f9622ddd8"
+            ],
+            "tags": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Name": "vlab-dev-ssm-endpoint",
+              "Project": "vlab"
+            },
+            "tags_all": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Name": "vlab-dev-ssm-endpoint",
+              "Project": "vlab"
+            },
+            "timeouts": null,
+            "vpc_endpoint_type": "Interface",
+            "vpc_id": "vpc-0bf8c04fb7993a44d"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo2MDAwMDAwMDAwMDAsImRlbGV0ZSI6NjAwMDAwMDAwMDAwLCJ1cGRhdGUiOjYwMDAwMDAwMDAwMH19",
+          "dependencies": [
+            "aws_security_group.ecs_tasks",
+            "aws_security_group.lambda",
+            "aws_security_group.vpc_endpoints",
+            "aws_subnet.private",
+            "aws_vpc.main",
+            "data.aws_availability_zones.available"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_vpc_endpoint",
+      "name": "ssmmessages",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:ec2:ap-south-1:465443875617:vpc-endpoint/vpce-0632627e50f6e69ff",
+            "auto_accept": null,
+            "cidr_blocks": [],
+            "dns_entry": [
+              {
+                "dns_name": "vpce-0632627e50f6e69ff-jgvib8f0.ssmmessages.ap-south-1.vpce.amazonaws.com",
+                "hosted_zone_id": "Z2KVTB3ZLFM7JR"
+              },
+              {
+                "dns_name": "vpce-0632627e50f6e69ff-jgvib8f0-ap-south-1a.ssmmessages.ap-south-1.vpce.amazonaws.com",
+                "hosted_zone_id": "Z2KVTB3ZLFM7JR"
+              },
+              {
+                "dns_name": "vpce-0632627e50f6e69ff-jgvib8f0-ap-south-1b.ssmmessages.ap-south-1.vpce.amazonaws.com",
+                "hosted_zone_id": "Z2KVTB3ZLFM7JR"
+              },
+              {
+                "dns_name": "ssmmessages.ap-south-1.amazonaws.com",
+                "hosted_zone_id": "Z0348621116KGEVCJ4FID"
+              },
+              {
+                "dns_name": "ssmmessages.ap-south-1.api.aws",
+                "hosted_zone_id": "Z0195086403EX0RQRERM"
+              }
+            ],
+            "dns_options": [
+              {
+                "dns_record_ip_type": "ipv4",
+                "private_dns_only_for_inbound_resolver_endpoint": false
+              }
+            ],
+            "id": "vpce-0632627e50f6e69ff",
+            "ip_address_type": "ipv4",
+            "network_interface_ids": [
+              "eni-08c664d34bc2a7b7a",
+              "eni-0f432bddef9fac271"
+            ],
+            "owner_id": "465443875617",
+            "policy": "{\"Statement\":[{\"Action\":\"*\",\"Effect\":\"Allow\",\"Principal\":\"*\",\"Resource\":\"*\"}]}",
+            "prefix_list_id": null,
+            "private_dns_enabled": true,
+            "requester_managed": false,
+            "resource_configuration_arn": "",
+            "route_table_ids": [],
+            "security_group_ids": [
+              "sg-07e40ffbb7e3dc2d0"
+            ],
+            "service_name": "com.amazonaws.ap-south-1.ssmmessages",
+            "service_network_arn": "",
+            "service_region": "ap-south-1",
+            "state": "available",
+            "subnet_configuration": [
+              {
+                "ipv4": "10.40.1.201",
+                "ipv6": "",
+                "subnet_id": "subnet-0f864eb8f9622ddd8"
+              },
+              {
+                "ipv4": "10.40.2.168",
+                "ipv6": "",
+                "subnet_id": "subnet-05eb1e62daf003edd"
+              }
+            ],
+            "subnet_ids": [
+              "subnet-05eb1e62daf003edd",
+              "subnet-0f864eb8f9622ddd8"
+            ],
+            "tags": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Name": "vlab-dev-ssmmessages-endpoint",
+              "Project": "vlab"
+            },
+            "tags_all": {
+              "Environment": "dev",
+              "ManagedBy": "terraform",
+              "Name": "vlab-dev-ssmmessages-endpoint",
+              "Project": "vlab"
+            },
+            "timeouts": null,
+            "vpc_endpoint_type": "Interface",
+            "vpc_id": "vpc-0bf8c04fb7993a44d"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo2MDAwMDAwMDAwMDAsImRlbGV0ZSI6NjAwMDAwMDAwMDAwLCJ1cGRhdGUiOjYwMDAwMDAwMDAwMH19",
+          "dependencies": [
+            "aws_security_group.ecs_tasks",
+            "aws_security_group.lambda",
+            "aws_security_group.vpc_endpoints",
+            "aws_subnet.private",
+            "aws_vpc.main",
+            "data.aws_availability_zones.available"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "random_password",
+      "name": "jwt_secret",
+      "provider": "provider[\"registry.terraform.io/hashicorp/random\"]",
+      "instances": [
+        {
+          "index_key": 0,
+          "schema_version": 3,
+          "attributes": {
+            "bcrypt_hash": "$2a$10$dJEM/NdlPYpcYix3/wzdxeC94CtcVHdwpqVelHz.Kssq5FIGjT2x6",
+            "id": "none",
+            "keepers": null,
+            "length": 48,
+            "lower": true,
+            "min_lower": 0,
+            "min_numeric": 0,
+            "min_special": 0,
+            "min_upper": 0,
+            "number": true,
+            "numeric": true,
+            "override_special": null,
+            "result": "w7EjkPFj6bwCDEUgSrd5NfWZ0HfJhyhG83vbkheO7bMk2Dqz",
+            "special": false,
+            "upper": true
+          },
+          "sensitive_attributes": [
+            [
+              {
+                "type": "get_attr",
+                "value": "bcrypt_hash"
+              }
+            ],
+            [
+              {
+                "type": "get_attr",
+                "value": "result"
+              }
+            ]
+          ],
+          "identity_schema_version": 0
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "random_string",
+      "name": "backend_suffix",
+      "provider": "provider[\"registry.terraform.io/hashicorp/random\"]",
+      "instances": [
+        {
+          "schema_version": 2,
+          "attributes": {
+            "id": "e1c0tzx2",
+            "keepers": null,
+            "length": 8,
+            "lower": true,
+            "min_lower": 0,
+            "min_numeric": 0,
+            "min_special": 0,
+            "min_upper": 0,
+            "number": true,
+            "numeric": true,
+            "override_special": null,
+            "result": "e1c0tzx2",
+            "special": false,
+            "upper": false
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "random_string",
+      "name": "bucket_suffix",
+      "provider": "provider[\"registry.terraform.io/hashicorp/random\"]",
+      "instances": []
+    },
+    {
+      "mode": "managed",
+      "type": "random_string",
+      "name": "test_cases_suffix",
+      "provider": "provider[\"registry.terraform.io/hashicorp/random\"]",
+      "instances": [
+        {
+          "schema_version": 2,
+          "attributes": {
+            "id": "0kdrg0q8",
+            "keepers": null,
+            "length": 8,
+            "lower": true,
+            "min_lower": 0,
+            "min_numeric": 0,
+            "min_special": 0,
+            "min_upper": 0,
+            "number": true,
+            "numeric": true,
+            "override_special": null,
+            "result": "0kdrg0q8",
+            "special": false,
+            "upper": false
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0
+        }
+      ]
+    }
+  ],
+  "check_results": [
+    {
+      "object_kind": "var",
+      "config_addr": "var.lab_types",
+      "status": "pass",
+      "objects": [
+        {
+          "object_addr": "var.lab_types",
+          "status": "pass"
+        }
+      ]
+    }
+  ]
+}

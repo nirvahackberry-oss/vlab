@@ -1,5 +1,4 @@
-# This file creates the S3 bucket and DynamoDB table needed for the Remote Backend
-# IMPORTANT: Run 'terraform apply' with this file first TO CREATE the resources locally.
+# Remote backend bucket (in state). Lock table vlab-terraform-locks is managed outside this stack.
 
 resource "random_string" "backend_suffix" {
   length  = 8
@@ -34,27 +33,11 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "state_encryption"
   }
 }
 
-resource "aws_dynamodb_table" "terraform_locks" {
-  name         = "vlab-terraform-locks"
-  billing_mode = "PAY_PER_REQUEST"
-  hash_key     = "LockID"
-
-  lifecycle {
-    prevent_destroy = true
-  }
-
-  attribute {
-    name = "LockID"
-    type = "S"
-  }
-
-  tags = local.common_tags
-}
-
 output "state_bucket_name" {
   value = aws_s3_bucket.terraform_state.bucket
 }
 
 output "lock_table_name" {
-  value = aws_dynamodb_table.terraform_locks.name
+  description = "DynamoDB lock table used by backend config in main.tf (not created here)."
+  value       = "vlab-terraform-locks"
 }
