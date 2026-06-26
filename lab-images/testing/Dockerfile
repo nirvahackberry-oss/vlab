@@ -1,6 +1,5 @@
-FROM eclipse-temurin:24-jdk-jammy AS jdk24
-
 ARG LAB_BASE_IMAGE=465443875617.dkr.ecr.ap-south-1.amazonaws.com/vlab-dev-lab-base-linux:latest
+FROM eclipse-temurin:24-jdk-jammy AS jdk24
 FROM ${LAB_BASE_IMAGE}
 
 USER root

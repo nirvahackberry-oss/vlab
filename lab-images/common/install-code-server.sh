@@ -13,5 +13,5 @@ apt-get install -y --no-install-recommends "${deb}"
 rm -f "${deb}"
 rm -rf /var/lib/apt/lists/*
 
-# install.sh can pull the small npm tarball missing web extension bundles; the .deb is complete.
-test -f /usr/lib/code-server/lib/vscode/extensions/emmet/dist/browser/emmetBrowserMain.js
+# install.sh can pull the small npm tarball missing web bundles; the .deb ships the browser workbench.
+test -f /usr/lib/code-server/lib/vscode/out/vs/code/browser/workbench/workbench.js
