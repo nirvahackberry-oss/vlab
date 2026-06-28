@@ -13,5 +13,8 @@ apt-get install -y --no-install-recommends "${deb}"
 rm -f "${deb}"
 rm -rf /var/lib/apt/lists/*
 
-# install.sh can pull the small npm tarball missing web bundles; the .deb ships the browser workbench.
+# Core web workbench — install.sh can omit browser bundles; the .deb should ship them.
 test -f /usr/lib/code-server/lib/vscode/out/vs/code/browser/workbench/workbench.js
+# Extension browser bundles — missing in broken images that still pass workbench.js alone.
+test -f /usr/lib/code-server/lib/vscode/extensions/emmet/dist/browser/emmetBrowserMain.js
+echo "code-server ${version} web install OK"

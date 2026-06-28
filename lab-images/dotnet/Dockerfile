@@ -11,8 +11,8 @@ RUN apt-get update && apt-get install -y \
     unzip \
     && rm -rf /var/lib/apt/lists/*
 
-# Create workspace
-WORKDIR /workspace
+# Match ECS LAB_WORKSPACE (/tmp/workspace)
+WORKDIR /tmp/workspace
 
 # Install code-server (VS Code in browser) from official .deb — install.sh can omit web bundles
 COPY lab-images/common/install-code-server.sh /tmp/install-code-server.sh
@@ -26,4 +26,4 @@ EXPOSE 5000
 EXPOSE 5001
 
 # Start VS Code Server
-CMD ["code-server", "--bind-addr", "0.0.0.0:8080", "--auth", "none", "/workspace"]
+CMD ["code-server", "--bind-addr", "0.0.0.0:8080", "--auth", "none", "/tmp/workspace"]
