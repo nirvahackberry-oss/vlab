@@ -18,7 +18,7 @@ LAB_TYPE_ENV = (os.environ.get("LAB_TYPE") or "").strip().lower()
 
 SUPPORTED_LABS = frozenset({
     "python", "java", "linux", "dbms", "agilemethodology", "agile", "bigdata",
-    "javascript", "testing", "android",
+    "javascript", "testing", "android", "dotnet", "csharp", "c#",
 })
 
 DEFAULT_FILES = {
@@ -32,6 +32,9 @@ DEFAULT_FILES = {
     "agilemethodology": "Main.java",
     "testing": "test.py",
     "android": "build.sh",
+    "dotnet": "Program.cs",
+    "csharp": "Program.cs",
+    "c#": "Program.cs",
 }
 
 
@@ -278,6 +281,108 @@ def _run_dbms(path: str, code: str) -> tuple[bool, str, str, str]:
     if engine in {"postgres", "postgresql"}:
         return _run_postgres(path)
     return _run_mysql(path)
+def _dotnet_snippet_dir() -> str:
+    return (os.environ.get("DOTNET_SNIPPET_DIR") or "/opt/dotnet-snippet").strip()
+
+
+def _dotnet_web_project() -> str:
+    configured = (os.environ.get("DOTNET_WEB_PROJECT") or "MyWebApp").strip()
+    if os.path.isabs(configured):
+        return configured
+    return os.path.join(_workspace_real(), configured)
+
+
+def _is_dotnet_web_code(code: str, path: str) -> bool:
+    normalized = path.replace("\\", "/").lower()
+    if "/controllers/" in normalized or normalized.endswith("controller.cs"):
+        return True
+    if "/views/" in normalized or normalized.endswith(".cshtml"):
+        return True
+    lowered = code.lower()
+    return (
+        "microsoft.aspnetcore" in lowered
+        or " : controller" in lowered
+        or "viewdata[" in lowered
+        or "entityframeworkcore" in lowered
+    )
+
+
+def _run_dotnet_console(path: str, code: str) -> tuple[bool, str, str, str]:
+    snippet_dir = _dotnet_snippet_dir()
+    if not os.path.isdir(snippet_dir):
+        return False, "", "", f"dotnet snippet project not found at {snippet_dir}"
+
+    program_path = os.path.join(snippet_dir, "Program.cs")
+    with open(program_path, "w", encoding="utf-8") as f:
+        f.write(code)
+
+    try:
+        proc = subprocess.run(
+            ["dotnet", "run", "--project", snippet_dir, "--nologo"],
+            cwd=snippet_dir,
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+        out = (proc.stdout or "") + (proc.stderr or "")
+        if proc.returncode == 0:
+            return True, out, "", ""
+        return False, out, "", f"dotnet exit {proc.returncode}"
+    except FileNotFoundError:
+        return False, "", "", "dotnet SDK not found"
+    except subprocess.TimeoutExpired:
+        return False, "", "", "Execution timed out"
+
+
+def _run_dotnet_web(path: str, code: str) -> tuple[bool, str, str, str]:
+    web_root = _dotnet_web_project()
+    if not os.path.isdir(web_root):
+        return False, "", "", f"web project not found at {web_root}"
+
+    rel = path.replace("\\", "/").lstrip("/")
+    for prefix in ("MyWebApp/", "/workspace/MyWebApp/"):
+        if rel.startswith(prefix):
+            rel = rel[len(prefix):]
+            break
+
+    if not rel or rel == "Program.cs":
+        rel = "Controllers/HomeController.cs"
+
+    target = _safe_target_path(os.path.join("MyWebApp", rel))
+    if not target:
+        target = os.path.join(web_root, os.path.basename(rel))
+
+    parent = os.path.dirname(target)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
+
+    with open(target, "w", encoding="utf-8") as f:
+        f.write(code)
+
+    try:
+        proc = subprocess.run(
+            ["dotnet", "build", web_root, "--nologo"],
+            cwd=web_root,
+            capture_output=True,
+            text=True,
+            timeout=90,
+        )
+        out = (proc.stdout or "") + (proc.stderr or "")
+        if proc.returncode == 0:
+            return True, out or "Build succeeded.", "", ""
+        return False, out, "", f"dotnet build exit {proc.returncode}"
+    except FileNotFoundError:
+        return False, "", "", "dotnet SDK not found"
+    except subprocess.TimeoutExpired:
+        return False, "", "", "Build timed out"
+
+
+def _run_dotnet(path: str, code: str) -> tuple[bool, str, str, str]:
+    if _is_dotnet_web_code(code, path):
+        return _run_dotnet_web(path, code)
+    return _run_dotnet_console(path, code)
+
+
 def _run_javascript(path: str, code: str) -> tuple[bool, str, str, str]:
     with open(path, "w", encoding="utf-8") as f:
         f.write(code)
@@ -313,6 +418,8 @@ def _normalize_lab_type(body: dict) -> str:
         lab_type = "bigdata"
     if lab_type in ("mobile-app", "mobile"):
         lab_type = "android"
+    if lab_type in ("c#", "csharp", "cs"):
+        lab_type = "dotnet"
     return lab_type
 
 
@@ -344,6 +451,8 @@ def _execute(body: dict) -> dict:
 
     if lab_type in ("python", "testing"):
         ok, out, se, re = _run_python(path, code)
+    elif lab_type in ("dotnet", "csharp", "c#"):
+        ok, out, se, re = _run_dotnet(path, code)
     elif lab_type in ("java", "bigdata", "agile", "agilemethodology"):
         ok, out, se, re = _run_java(path, code, lab_type)
     elif lab_type in ("linux", "android"):

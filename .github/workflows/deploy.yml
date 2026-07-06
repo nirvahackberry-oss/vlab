@@ -87,7 +87,7 @@ jobs:
               - 'lab-images/common/lab_server.py'
             lab-dotnet:
               - 'lab-images/dotnet/**'
-              - 'lab-images/common/install-code-server.sh'
+              - 'lab-images/common/lab_server.py'
             lab-softwareengeering:
               - 'lab-images/softwareengeering/**'
               - 'lab-images/base/java/**'
