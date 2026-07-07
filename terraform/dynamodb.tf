@@ -63,13 +63,13 @@ resource "aws_dynamodb_table" "results" {
     type = "S"
   }
 
-  point_in_time_recovery {
-    enabled = true
-  }
-
   ttl {
     attribute_name = "expiryTime"
     enabled        = true
+  }
+
+  point_in_time_recovery {
+    enabled = true
   }
 
   tags = merge(local.common_tags, {

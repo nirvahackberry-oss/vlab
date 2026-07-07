@@ -14,7 +14,8 @@ ENV DEBIAN_FRONTEND=noninteractive \
     JAVA_HOME=/opt/java/openjdk \
     CHROME_BIN=/usr/bin/google-chrome \
     CHROMEDRIVER_PATH=/usr/bin/chromedriver \
-    SELENIUM_IDE_EXTENSION_PATH=/opt/selenium-ide-extension
+    SELENIUM_IDE_EXTENSION_PATH=/opt/selenium-ide-extension \
+    SELENIUM_LIBS=/opt/selenium/lib
 
 ENV PATH="${JAVA_HOME}/bin:${PATH}"
 
@@ -77,6 +78,12 @@ RUN printf '%s\n' \
 
 # Selenium WebDriver Python bindings (last release supporting Python 3.7)
 RUN python3.7 -m pip install --no-cache-dir "selenium==4.11.2"
+
+# Selenium WebDriver Java bindings (for Main.java / WebDriver labs)
+COPY lab-images/testing/pom.xml /tmp/selenium-pom.xml
+RUN mkdir -p "${SELENIUM_LIBS}" \
+    && mvn -f /tmp/selenium-pom.xml package -q \
+    && rm -f /tmp/selenium-pom.xml
 
 WORKDIR /app
 COPY --chown=labuser:labuser lab-images/common/lab_server.py /app/lab_server.py

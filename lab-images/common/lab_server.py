@@ -93,15 +93,59 @@ def _run_python(path: str, code: str) -> tuple[bool, str, str, str]:
     return False, "", "", "Python interpreter not found"
 
 
-def _java_classpath(src_dir: str, lab_type: str) -> str:
+def _jar_paths_from_dirs(*dirs: str) -> list[str]:
+    paths: list[str] = []
+    for libs_dir in dirs:
+        if not os.path.isdir(libs_dir):
+            continue
+        for name in sorted(os.listdir(libs_dir)):
+            if name.endswith(".jar"):
+                paths.append(os.path.join(libs_dir, name))
+    return paths
+
+
+def _java_classpath(src_dir: str, lab_type: str) -> tuple[str, str]:
     paths = [src_dir]
+    warning = ""
     if lab_type == "bigdata":
         libs_dir = (os.environ.get("BIGDATA_LIBS") or "/opt/bigdata-libs").strip()
-        if os.path.isdir(libs_dir):
-            for name in sorted(os.listdir(libs_dir)):
-                if name.endswith(".jar"):
-                    paths.append(os.path.join(libs_dir, name))
-    return os.pathsep.join(paths)
+        paths.extend(_jar_paths_from_dirs(libs_dir))
+    elif lab_type == "testing":
+        selenium_dirs = [
+            (os.environ.get("SELENIUM_LIBS") or "/opt/selenium/lib").strip(),
+            os.path.join(_workspace_real(), "lib"),
+        ]
+        jar_paths = _jar_paths_from_dirs(*selenium_dirs)
+        if not jar_paths:
+            warning = (
+                "[Selenium] Warning: no Selenium JARs found; "
+                "add jars to /opt/selenium/lib or workspace/lib\n"
+            )
+        paths.extend(jar_paths)
+    return os.pathsep.join(paths), warning
+
+
+def _is_java_code(code: str, path: str) -> bool:
+    ext = os.path.splitext(path)[1].lower()
+    if ext == ".java":
+        return True
+    stripped = code.lstrip()
+    return (
+        stripped.startswith("import java.")
+        or stripped.startswith("public class")
+        or "org.openqa.selenium" in code
+    )
+
+
+def _prepare_testing_java_runtime(src_dir: str) -> None:
+    chromedriver_src = (os.environ.get("CHROMEDRIVER_PATH") or "/usr/bin/chromedriver").strip()
+    chromedriver_link = os.path.join(src_dir, "chromedriver")
+    if os.path.lexists(chromedriver_link):
+        return
+    try:
+        os.symlink(chromedriver_src, chromedriver_link)
+    except OSError:
+        pass
 
 
 def _run_java(path: str, code: str, lab_type: str = "java") -> tuple[bool, str, str, str]:
@@ -115,11 +159,14 @@ def _run_java(path: str, code: str, lab_type: str = "java") -> tuple[bool, str, 
     
     src_dir = os.path.dirname(path) or _workspace_real()
     actual_path = os.path.join(src_dir, f"{class_name}.java")
-    classpath = _java_classpath(src_dir, lab_type)
-    
+    classpath, selenium_warning = _java_classpath(src_dir, lab_type)
+
+    if lab_type == "testing":
+        _prepare_testing_java_runtime(src_dir)
+
     with open(actual_path, "w", encoding="utf-8") as f:
         f.write(code)
-        
+
     try:
         jc = subprocess.run(
             ["javac", "-cp", classpath, actual_path],
@@ -129,16 +176,21 @@ def _run_java(path: str, code: str, lab_type: str = "java") -> tuple[bool, str, 
             timeout=25,
         )
         if jc.returncode != 0:
-            err = (jc.stderr or jc.stdout or "").strip()
+            err = selenium_warning + (jc.stderr or jc.stdout or "").strip()
             return False, "", err, "javac failed"
+        java_cmd = ["java"]
+        if lab_type == "testing":
+            chromedriver = (os.environ.get("CHROMEDRIVER_PATH") or "/usr/bin/chromedriver").strip()
+            java_cmd.append(f"-Dwebdriver.chrome.driver={chromedriver}")
+        java_cmd.extend(["-cp", classpath, class_name])
         jr = subprocess.run(
-            ["java", "-cp", classpath, class_name],
+            java_cmd,
             cwd=src_dir,
             capture_output=True,
             text=True,
             timeout=25,
         )
-        out = (jr.stdout or "") + (jr.stderr or "")
+        out = selenium_warning + (jr.stdout or "") + (jr.stderr or "")
         if jr.returncode == 0:
             return True, out, "", ""
         return False, out, "", f"java exit {jr.returncode}"
@@ -383,6 +435,12 @@ def _run_dotnet(path: str, code: str) -> tuple[bool, str, str, str]:
     return _run_dotnet_console(path, code)
 
 
+def _run_testing(path: str, code: str) -> tuple[bool, str, str, str]:
+    if _is_java_code(code, path):
+        return _run_java(path, code, "testing")
+    return _run_python(path, code)
+
+
 def _run_javascript(path: str, code: str) -> tuple[bool, str, str, str]:
     with open(path, "w", encoding="utf-8") as f:
         f.write(code)
@@ -449,7 +507,9 @@ def _execute(body: dict) -> dict:
 
     path = _resolve_path(body, lab_type)
 
-    if lab_type in ("python", "testing"):
+    if lab_type == "testing":
+        ok, out, se, re = _run_testing(path, code)
+    elif lab_type == "python":
         ok, out, se, re = _run_python(path, code)
     elif lab_type in ("dotnet", "csharp", "c#"):
         ok, out, se, re = _run_dotnet(path, code)

@@ -27,7 +27,7 @@ resource "aws_ecs_cluster" "lab" {
 
   setting {
     name  = "containerInsights"
-    value = "enabled"
+    value = "disabled"
   }
 
   configuration {
@@ -43,7 +43,7 @@ resource "aws_ecs_cluster" "lab" {
 
 resource "aws_cloudwatch_log_group" "ecs" {
   name              = "/aws/ecs/${local.name_prefix}-lab"
-  retention_in_days = 14
+  retention_in_days = 7
 
   tags = local.common_tags
 }
