@@ -91,8 +91,7 @@ jobs:
             lab-softwareengeering:
               - 'lab-images/softwareengeering/**'
               - 'lab-images/base/java/**'
-              - 'lab-images/common/install-code-server.sh'
-              - 'lab-images/common/drawio-landing.html'
+              - 'lab-images/common/lab_server.py'
             lab-testing:
               - 'lab-images/testing/**'
               - 'lab-images/base/linux/**'

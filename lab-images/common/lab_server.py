@@ -18,7 +18,7 @@ LAB_TYPE_ENV = (os.environ.get("LAB_TYPE") or "").strip().lower()
 
 SUPPORTED_LABS = frozenset({
     "python", "java", "linux", "dbms", "agilemethodology", "agile", "bigdata",
-    "javascript", "testing", "android", "dotnet", "csharp", "c#",
+    "javascript", "testing", "android", "dotnet", "csharp", "c#", "softwareengeering",
 })
 
 DEFAULT_FILES = {
@@ -30,8 +30,9 @@ DEFAULT_FILES = {
     "javascript": "script.js",
     "agile": "Main.java",
     "agilemethodology": "Main.java",
-    "testing": "test.py",
-    "android": "build.sh",
+    "softwareengeering": "script.java",
+    "testing": "test.java",
+    "android": "SecondActivity.java",
     "dotnet": "Program.cs",
     "csharp": "Program.cs",
     "c#": "Program.cs",
@@ -478,6 +479,8 @@ def _normalize_lab_type(body: dict) -> str:
         lab_type = "android"
     if lab_type in ("c#", "csharp", "cs"):
         lab_type = "dotnet"
+    if lab_type in ("software-eng", "softwareengineering", "software_engineering"):
+        lab_type = "softwareengeering"
     return lab_type
 
 
@@ -513,7 +516,7 @@ def _execute(body: dict) -> dict:
         ok, out, se, re = _run_python(path, code)
     elif lab_type in ("dotnet", "csharp", "c#"):
         ok, out, se, re = _run_dotnet(path, code)
-    elif lab_type in ("java", "bigdata", "agile", "agilemethodology"):
+    elif lab_type in ("java", "bigdata", "agile", "agilemethodology", "softwareengeering"):
         ok, out, se, re = _run_java(path, code, lab_type)
     elif lab_type in ("linux", "android"):
         ok, out, se, re = _run_linux(path, code)
