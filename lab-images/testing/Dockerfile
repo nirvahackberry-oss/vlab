@@ -82,7 +82,11 @@ RUN python3.7 -m pip install --no-cache-dir "selenium==4.11.2"
 # Selenium WebDriver Java bindings (for Main.java / WebDriver labs)
 COPY lab-images/testing/pom.xml /tmp/selenium-pom.xml
 RUN mkdir -p "${SELENIUM_LIBS}" \
-    && mvn -f /tmp/selenium-pom.xml package -q \
+    && mvn -f /tmp/selenium-pom.xml -B package \
+    && curl -fsSL -o "${SELENIUM_LIBS}/failsafe-3.3.2.jar" \
+        "https://repo1.maven.org/maven2/dev/failsafe/failsafe/3.3.2/failsafe-3.3.2.jar" \
+    && test -f "${SELENIUM_LIBS}/failsafe-3.3.2.jar" \
+    && test "$(ls -1 "${SELENIUM_LIBS}"/*.jar | wc -l)" -ge 20 \
     && rm -f /tmp/selenium-pom.xml
 
 WORKDIR /app

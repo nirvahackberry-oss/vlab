@@ -105,6 +105,48 @@ def _jar_paths_from_dirs(*dirs: str) -> list[str]:
     return paths
 
 
+def _dir_has_jars(libs_dir: str) -> bool:
+    if not os.path.isdir(libs_dir):
+        return False
+    return any(name.endswith(".jar") for name in os.listdir(libs_dir))
+
+
+def _has_failsafe_jar(*dirs: str) -> bool:
+    for libs_dir in dirs:
+        if not os.path.isdir(libs_dir):
+            continue
+        for name in os.listdir(libs_dir):
+            if name.endswith(".jar") and "failsafe" in name.lower():
+                return True
+    return False
+
+
+def _ensure_testing_selenium_libs(selenium_lib: str, workspace_lib: str) -> None:
+    os.makedirs(workspace_lib, exist_ok=True)
+    if _has_failsafe_jar(selenium_lib, workspace_lib):
+        return
+
+    dest = os.path.join(workspace_lib, "failsafe-3.3.2.jar")
+    if os.path.isfile(dest):
+        return
+
+    try:
+        subprocess.run(
+            [
+                "curl",
+                "-fsSL",
+                "-o",
+                dest,
+                "https://repo1.maven.org/maven2/dev/failsafe/failsafe/3.3.2/failsafe-3.3.2.jar",
+            ],
+            capture_output=True,
+            timeout=30,
+            check=True,
+        )
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        return
+
+
 def _java_classpath(src_dir: str, lab_type: str) -> tuple[str, str]:
     paths = [src_dir]
     warning = ""
@@ -112,17 +154,25 @@ def _java_classpath(src_dir: str, lab_type: str) -> tuple[str, str]:
         libs_dir = (os.environ.get("BIGDATA_LIBS") or "/opt/bigdata-libs").strip()
         paths.extend(_jar_paths_from_dirs(libs_dir))
     elif lab_type == "testing":
-        selenium_dirs = [
-            (os.environ.get("SELENIUM_LIBS") or "/opt/selenium/lib").strip(),
-            os.path.join(_workspace_real(), "lib"),
-        ]
-        jar_paths = _jar_paths_from_dirs(*selenium_dirs)
-        if not jar_paths:
+        selenium_lib = (os.environ.get("SELENIUM_LIBS") or "/opt/selenium/lib").strip()
+        workspace_lib = os.path.join(_workspace_real(), "lib")
+        _ensure_testing_selenium_libs(selenium_lib, workspace_lib)
+
+        has_libs = False
+        for libs_dir in (selenium_lib, workspace_lib):
+            if _dir_has_jars(libs_dir):
+                paths.append(os.path.join(libs_dir, "*"))
+                has_libs = True
+        if not has_libs:
             warning = (
                 "[Selenium] Warning: no Selenium JARs found; "
                 "add jars to /opt/selenium/lib or workspace/lib\n"
             )
-        paths.extend(jar_paths)
+        elif not _has_failsafe_jar(selenium_lib, workspace_lib):
+            warning = (
+                "[Selenium] Warning: failsafe JAR missing; "
+                "rebuild the testing lab image or add failsafe-3.3.2.jar to workspace/lib\n"
+            )
     return os.pathsep.join(paths), warning
 
 

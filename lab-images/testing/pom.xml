@@ -21,6 +21,11 @@
       <artifactId>selenium-java</artifactId>
       <version>4.27.0</version>
     </dependency>
+    <dependency>
+      <groupId>dev.failsafe</groupId>
+      <artifactId>failsafe</artifactId>
+      <version>3.3.2</version>
+    </dependency>
   </dependencies>
 
   <build>
@@ -38,7 +43,6 @@
             </goals>
             <configuration>
               <outputDirectory>/opt/selenium/lib</outputDirectory>
-              <includeScope>runtime</includeScope>
             </configuration>
           </execution>
         </executions>
