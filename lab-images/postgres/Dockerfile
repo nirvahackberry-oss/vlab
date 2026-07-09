@@ -15,11 +15,14 @@ ENV DEBIAN_FRONTEND=noninteractive \
 RUN apt-get update && apt-get install -y --no-install-recommends \
     postgresql \
     postgresql-client \
+    procps \
     python3 \
     && rm -rf /var/lib/apt/lists/* \
     && mkdir -p /workspace "${PGDATA}" /var/run/postgresql \
     && chown -R postgres:postgres "${PGDATA}" /var/run/postgresql \
     && chmod 777 /workspace
+
+ENV PATH="/usr/lib/postgresql/14/bin:${PATH}"
 
 WORKDIR /app
 COPY lab-images/common/lab_server.py /app/lab_server.py
@@ -29,7 +32,7 @@ RUN chmod +x /app/init-postgres.sh /app/start.sh
 
 # Pre-initialize cluster/users at build so cold starts only start postgres.
 RUN /app/init-postgres.sh \
-    && su - postgres -s /bin/bash -c "pg_ctl -D '${PGDATA}' -m fast stop"
+    && su - postgres -s /bin/bash -c "export PATH=\"${PATH}\"; pg_ctl -D '${PGDATA}' -m fast stop"
 
 EXPOSE 5432 8080
 CMD ["/app/start.sh"]

@@ -14,6 +14,8 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     mysql-server \
+    mysql-client \
+    procps \
     python3 \
     && rm -rf /var/lib/apt/lists/* \
     && mkdir -p /workspace /var/run/mysqld /var/lib/mysql \
@@ -27,9 +29,8 @@ COPY lab-images/dbms/start-mysql.sh /app/start.sh
 RUN chmod +x /app/init-mysql.sh /app/start.sh
 
 # Pre-initialize schema/users at build so cold starts only start mysqld.
-RUN mysqld --initialize-insecure --user=mysql --datadir=/var/lib/mysql \
-    && /app/init-mysql.sh \
-    && mysqladmin -u root -p"${MYSQL_ROOT_PASSWORD}" shutdown
+RUN /app/init-mysql.sh \
+    && mysqladmin --socket=/var/run/mysqld/mysqld.sock -u root -p"${MYSQL_ROOT_PASSWORD}" shutdown
 
 EXPOSE 3306 8080
 CMD ["/app/start.sh"]
