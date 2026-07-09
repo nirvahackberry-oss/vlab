@@ -5,10 +5,14 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
+import tarfile
+import tempfile
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import urlparse
+from urllib.request import urlopen
 
 LAB_WORKSPACE = os.environ.get("LAB_WORKSPACE", "/workspace").rstrip("/") or "/workspace"
 PORT = int(os.environ.get("LAB_SERVER_PORT", "8080"))
@@ -17,8 +21,10 @@ SESSION_ID = (os.environ.get("SESSION_ID") or "").strip()
 LAB_TYPE_ENV = (os.environ.get("LAB_TYPE") or "").strip().lower()
 
 SUPPORTED_LABS = frozenset({
-    "python", "java", "linux", "dbms", "agilemethodology", "agile", "bigdata",
-    "javascript", "testing", "android", "dotnet", "csharp", "c#", "softwareengeering",
+    "python", "java", "linux", "dbms", "mysql", "postgres", "postgresql", "oracle",
+    "agilemethodology", "agile", "bigdata",
+    "javascript", "testing", "android", "android-emulator", "dotnet", "csharp", "c#",
+    "softwareengeering",
 })
 
 DEFAULT_FILES = {
@@ -27,12 +33,17 @@ DEFAULT_FILES = {
     "java": "Main.java",
     "linux": "script.sh",
     "dbms": "query.sql",
+    "mysql": "query.sql",
+    "postgres": "query.sql",
+    "postgresql": "query.sql",
+    "oracle": "query.sql",
     "javascript": "script.js",
     "agile": "Main.java",
     "agilemethodology": "Main.java",
     "softwareengeering": "script.java",
     "testing": "test.java",
     "android": "SecondActivity.java",
+    "android-emulator": "SecondActivity.java",
     "dotnet": "Program.cs",
     "csharp": "Program.cs",
     "c#": "Program.cs",
@@ -375,15 +386,26 @@ def _run_oracle(path: str) -> tuple[bool, str, str, str]:
         return False, "", "", "Execution timed out"
 
 
-def _run_dbms(path: str, code: str) -> tuple[bool, str, str, str]:
+def _dbms_lab_engine(lab_type: str, code: str) -> str:
+    if lab_type == "mysql":
+        return "mysql"
+    if lab_type in {"postgres", "postgresql"}:
+        return "postgres"
+    if lab_type == "oracle":
+        return "oracle"
+    return _dbms_engine(code)
+
+
+def _run_dbms(path: str, code: str, lab_type: str = "dbms") -> tuple[bool, str, str, str]:
     with open(path, "w", encoding="utf-8") as f:
         f.write(code)
-    engine = _dbms_engine(code)
+    engine = _dbms_lab_engine(lab_type, code)
     if engine == "oracle":
         return _run_oracle(path)
     if engine in {"postgres", "postgresql"}:
         return _run_postgres(path)
     return _run_mysql(path)
+
 def _dotnet_snippet_dir() -> str:
     return (os.environ.get("DOTNET_SNIPPET_DIR") or "/opt/dotnet-snippet").strip()
 
@@ -527,11 +549,215 @@ def _normalize_lab_type(body: dict) -> str:
         lab_type = "bigdata"
     if lab_type in ("mobile-app", "mobile"):
         lab_type = "android"
+    if lab_type == "android-emulator":
+        lab_type = "android"
     if lab_type in ("c#", "csharp", "cs"):
         lab_type = "dotnet"
     if lab_type in ("software-eng", "softwareengineering", "software_engineering"):
         lab_type = "softwareengeering"
+    if lab_type == "postgresql":
+        lab_type = "postgres"
     return lab_type
+
+
+def _bootstrap_root_for_target(target: str) -> str:
+    normalized = (target or "workspace").strip().lower()
+    if normalized in {"workspace", "workdir", "lab"}:
+        return _workspace_real()
+    if normalized in {"snippet", "console", "dotnet-snippet"}:
+        return os.path.realpath(_dotnet_snippet_dir())
+    if normalized in {"opt", "dotnet-snippet"}:
+        return os.path.realpath(_dotnet_snippet_dir())
+    if os.path.isabs(target):
+        return os.path.realpath(target)
+    return os.path.realpath(os.path.join(_workspace_real(), target.lstrip("/")))
+
+
+def _download_archive(archive_url: str, dest_path: str) -> None:
+    with urlopen(archive_url, timeout=120) as response:
+        with open(dest_path, "wb") as out_file:
+            shutil.copyfileobj(response, out_file)
+
+
+def _extract_archive(archive_path: str, dest_dir: str) -> None:
+    dest = os.path.realpath(dest_dir)
+    os.makedirs(dest, exist_ok=True)
+    with tarfile.open(archive_path, "r:gz") as tar:
+        for member in tar.getmembers():
+            member_path = os.path.realpath(os.path.join(dest, member.name))
+            if not member_path.startswith(dest + os.sep) and member_path != dest:
+                raise ValueError(f"unsafe path in archive: {member.name}")
+        if sys.version_info >= (3, 12):
+            tar.extractall(dest, filter="data")
+        else:
+            tar.extractall(dest)
+
+
+def _run_command(cmd: list[str], cwd: str | None = None, timeout: int = 180) -> tuple[bool, str]:
+    try:
+        proc = subprocess.run(
+            cmd,
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError) as exc:
+        return False, str(exc)
+    output = ((proc.stdout or "") + (proc.stderr or "")).strip()
+    if proc.returncode != 0:
+        return False, output or f"exit {proc.returncode}"
+    return True, output
+
+
+def _bootstrap_android_hook(workspace: str) -> tuple[bool, str]:
+    android_home = (os.environ.get("ANDROID_HOME") or "/opt/android-sdk").strip()
+    local_props = os.path.join(workspace, "local.properties")
+    with open(local_props, "w", encoding="utf-8") as handle:
+        handle.write(f"sdk.dir={android_home}\n")
+    gradle_version = (os.environ.get("GRADLE_VERSION") or "8.2").strip()
+    if not os.path.isfile(os.path.join(workspace, "gradlew")):
+        ok, output = _run_command(
+            ["gradle", "wrapper", f"--gradle-version={gradle_version}"],
+            cwd=workspace,
+        )
+        if not ok:
+            return False, output
+    for name in ("gradlew", "build.sh"):
+        path = os.path.join(workspace, name)
+        if os.path.isfile(path):
+            try:
+                os.chmod(path, 0o755)
+            except OSError:
+                pass
+    return True, "android starter prepared"
+
+
+def _bootstrap_dotnet_restore(project_dir: str) -> tuple[bool, str]:
+    if not os.path.isdir(project_dir):
+        return False, f"dotnet project not found at {project_dir}"
+    return _run_command(["dotnet", "restore", project_dir, "--nologo"], cwd=project_dir)
+
+
+def _bootstrap_preset_hook(preset: str, target_root: str) -> tuple[bool, str]:
+    preset_name = (preset or "generic").strip().lower()
+    if preset_name == "android":
+        return _bootstrap_android_hook(target_root)
+    if preset_name in {"dotnet-mvc", "dotnet-web"}:
+        project = os.path.join(target_root, "MyWebApp")
+        return _bootstrap_dotnet_restore(project)
+    if preset_name in {"dotnet-console", "dotnet-snippet"}:
+        return _bootstrap_dotnet_restore(target_root)
+    if preset_name == "dotnet":
+        messages: list[str] = []
+        web_project = os.path.join(_workspace_real(), "MyWebApp")
+        snippet_dir = _dotnet_snippet_dir()
+        if os.path.isdir(web_project):
+            ok, output = _bootstrap_dotnet_restore(web_project)
+            if not ok:
+                return False, output
+            messages.append(output or "restored MyWebApp")
+        if os.path.isdir(snippet_dir):
+            ok, output = _bootstrap_dotnet_restore(snippet_dir)
+            if not ok:
+                return False, output
+            messages.append(output or "restored console snippet")
+        return True, "; ".join(messages) or "dotnet assets prepared"
+    return True, f"preset {preset_name} extracted"
+
+
+def _bootstrap_archive(archive_url: str, target: str, preset: str) -> dict:
+    if not archive_url:
+        return {"success": False, "message": "archiveUrl is required"}
+    target_root = _bootstrap_root_for_target(target)
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            archive_path = os.path.join(tmpdir, "bootstrap.tar.gz")
+            _download_archive(archive_url, archive_path)
+            _extract_archive(archive_path, target_root)
+        ok, output = _bootstrap_preset_hook(preset, target_root)
+        if not ok:
+            return {"success": False, "message": output, "target": target_root}
+        return {
+            "success": True,
+            "message": output or "archive bootstrapped",
+            "target": target_root,
+            "preset": preset or "generic",
+        }
+    except (OSError, ValueError, tarfile.TarError) as exc:
+        return {"success": False, "message": f"archive bootstrap failed: {exc}"}
+
+
+def _bootstrap_android_starter(archive_url: str) -> dict:
+    script = "/usr/local/bin/bootstrap-android-starter.sh"
+    if os.path.isfile(script):
+        if not archive_url:
+            return {"success": False, "message": "archiveUrl is required"}
+        try:
+            proc = subprocess.run(
+                [script, archive_url],
+                capture_output=True,
+                text=True,
+                timeout=180,
+            )
+        except (subprocess.TimeoutExpired, FileNotFoundError, OSError) as exc:
+            return {"success": False, "message": f"Android starter bootstrap failed: {exc}"}
+        output = ((proc.stdout or "") + (proc.stderr or "")).strip()
+        if proc.returncode != 0:
+            return {
+                "success": False,
+                "message": output or f"bootstrap exit {proc.returncode}",
+            }
+        return {
+            "success": True,
+            "message": output or "Android starter bootstrapped",
+            "workspace": _workspace_real(),
+        }
+    return _bootstrap_archive(archive_url, "workspace", "android")
+
+
+def _default_bootstrap_preset(lab_type: str) -> str:
+    if lab_type in ("android", "android-emulator"):
+        return "android"
+    if lab_type in ("dotnet", "csharp", "c#"):
+        return "dotnet"
+    if lab_type == "datascience":
+        return "datascience"
+    return "generic"
+
+
+def _session_bootstrap_from_env() -> dict | None:
+    archive_url = (os.environ.get("LAB_BOOTSTRAP_URL") or os.environ.get("ANDROID_STARTER_URL") or "").strip()
+    console_url = (os.environ.get("LAB_BOOTSTRAP_CONSOLE_URL") or "").strip()
+    if not archive_url and not console_url:
+        return None
+
+    lab_type = _normalize_lab_type({"labType": LAB_TYPE_ENV})
+    preset = (os.environ.get("LAB_BOOTSTRAP_PRESET") or "").strip().lower() or _default_bootstrap_preset(lab_type)
+    target = (os.environ.get("LAB_BOOTSTRAP_TARGET") or "workspace").strip()
+
+    result: dict | None = None
+    if archive_url:
+        if lab_type == "android" and preset in {"", "generic", "android"}:
+            result = _bootstrap_android_starter(archive_url)
+        else:
+            result = _bootstrap_archive(archive_url, target, preset)
+        if not result.get("success"):
+            return result
+
+    if console_url:
+        extra = _bootstrap_archive(
+            console_url,
+            (os.environ.get("LAB_BOOTSTRAP_CONSOLE_TARGET") or "dotnet-snippet").strip(),
+            "dotnet-console",
+        )
+        if not extra.get("success"):
+            return extra
+        if result is None:
+            return extra
+        result["console"] = extra
+
+    return result or {"success": False, "message": "no bootstrap archive configured"}
 
 
 def _save_file(body: dict) -> dict:
@@ -572,8 +798,15 @@ def _execute(body: dict) -> dict:
         ok, out, se, re = _run_linux(path, code)
     elif lab_type == "javascript":
         ok, out, se, re = _run_javascript(path, code)
+    elif lab_type in ("mysql", "postgres", "oracle", "dbms"):
+        ok, out, se, re = _run_dbms(path, code, lab_type)
     else:
-        ok, out, se, re = _run_dbms(path, code)
+        return {
+            "success": False,
+            "output": "",
+            "syntaxError": "",
+            "runtimeError": f"lab_server: unhandled labType {lab_type!r}",
+        }
 
     return {
         "success": ok,
@@ -581,6 +814,46 @@ def _execute(body: dict) -> dict:
         "syntaxError": se,
         "runtimeError": re,
     }
+
+
+def _hdfs_health_status() -> str | None:
+    hadoop_home = (os.environ.get("HADOOP_HOME") or "").strip()
+    if not hadoop_home:
+        return None
+
+    hdfs_bin = shutil.which("hdfs")
+    if not hdfs_bin:
+        return "unavailable"
+
+    try:
+        safemode = subprocess.run(
+            [hdfs_bin, "dfsadmin", "-safemode", "get"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if safemode.returncode != 0 or "OFF" not in (safemode.stdout or ""):
+            return "starting"
+
+        dfs_check = subprocess.run(
+            [hdfs_bin, "dfs", "-test", "-d", "/"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if dfs_check.returncode == 0:
+            return "ready"
+        return "starting"
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        return "starting"
+
+
+def _health_payload() -> dict:
+    payload = {"ok": True, "service": "lab_server"}
+    hdfs = _hdfs_health_status()
+    if hdfs is not None:
+        payload["hdfs"] = hdfs
+    return payload
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -598,7 +871,7 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         parsed = urlparse(self.path)
         if parsed.path in ("/", "/health"):
-            self._json(200, {"ok": True, "service": "lab_server"})
+            self._json(200, _health_payload())
             return
         self.send_error(404)
 
@@ -669,6 +942,17 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main() -> None:
+    if "--session-bootstrap" in sys.argv:
+        result = _session_bootstrap_from_env()
+        if result is None:
+            print("no bootstrap configuration found", file=sys.stderr)
+            sys.exit(0)
+        if not result.get("success"):
+            print(result.get("message", "bootstrap failed"), file=sys.stderr)
+            sys.exit(1)
+        print(result.get("message", "bootstrap ok"))
+        sys.exit(0)
+
     server = HTTPServer(("0.0.0.0", PORT), Handler)
     try:
         server.serve_forever()

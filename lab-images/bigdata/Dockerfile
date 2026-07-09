@@ -40,7 +40,15 @@ COPY --chown=labuser:labuser lab-images/common/lab_server.py /app/lab_server.py
 
 RUN chown -R labuser:labuser /workspace /var/hadoop "${BIGDATA_LIBS}"
 
+ENV HDFS_NAMENODE_USER=labuser \
+    HDFS_DATANODE_USER=labuser \
+    HDFS_SECONDARYNAMENODE_USER=labuser
+
 USER labuser
+
+# Pre-format namenode at image build so ephemeral Fargate tasks skip format on cold start.
+RUN hdfs namenode -format -force -nonInteractive
+
 WORKDIR /workspace
 
 EXPOSE 8080

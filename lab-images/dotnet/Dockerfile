@@ -1,4 +1,4 @@
-# .NET lab: lab_server for console snippets; pre-scaffolded MVC + EF Core for web practicals.
+# .NET lab: SDK + lab_server. MVC/console scaffolds load at session start from S3 (LAB_BOOTSTRAP_* env).
 FROM mcr.microsoft.com/dotnet/sdk:8.0
 
 ENV DEBIAN_FRONTEND=noninteractive \
@@ -8,35 +8,28 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     DOTNET_SNIPPET_DIR=/opt/dotnet-snippet \
-    DOTNET_WEB_PROJECT=/workspace/MyWebApp
+    DOTNET_WEB_PROJECT=/workspace/MyWebApp \
+    LAB_TYPE=dotnet
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     python3 \
     && rm -rf /var/lib/apt/lists/*
 
-RUN useradd --create-home --uid 1000 --shell /bin/bash labuser
-
-# Pre-restored console project for paste-and-run snippets (variables, loops, OOP, LINQ, etc.)
-RUN mkdir -p /opt/dotnet-snippet \
-    && dotnet new console -o /opt/dotnet-snippet --force \
-    && dotnet restore /opt/dotnet-snippet
-
-# Full ASP.NET Core MVC + EF Core workspace for practicals 13–15 (controllers, views, CRUD).
-RUN dotnet new mvc -o /workspace/MyWebApp -n MyWebApp --no-https -f net8.0 --force \
-    && dotnet add /workspace/MyWebApp package Microsoft.EntityFrameworkCore.Sqlite --version 8.0.11 \
-    && dotnet add /workspace/MyWebApp package Microsoft.EntityFrameworkCore.Design --version 8.0.11 \
-    && dotnet restore /workspace/MyWebApp
+RUN useradd --create-home --uid 1000 --shell /bin/bash labuser \
+    && mkdir -p /workspace /opt/dotnet-snippet \
+    && chown -R labuser:labuser /workspace /opt/dotnet-snippet
 
 WORKDIR /app
 COPY lab-images/common/lab_server.py /app/lab_server.py
+COPY lab-images/common/session-entrypoint.sh /usr/local/bin/lab-entrypoint.sh
+RUN chmod +x /usr/local/bin/lab-entrypoint.sh
 
-RUN chown -R labuser:labuser /workspace /opt/dotnet-snippet /app
+RUN chown -R labuser:labuser /app
 
 USER labuser
 WORKDIR /workspace
 
 EXPOSE 8080
 EXPOSE 5000
-
-CMD ["python3", "/app/lab_server.py"]
+CMD ["/usr/local/bin/lab-entrypoint.sh"]

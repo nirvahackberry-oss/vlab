@@ -15,7 +15,7 @@ Import-Tf "aws_ecr_repository.lab_base_python" "vlab-dev-lab-base-python"
 Import-Tf "aws_ecr_repository.lab_base_java" "vlab-dev-lab-base-java"
 
 $labImages = @(
-  "python", "java", "linux", "dbms", "android", "bigdata",
+  "python", "java", "linux", "mysql", "postgres", "oracle", "android", "android-emulator", "bigdata",
   "datascience", "dotnet", "softwareengeering", "testing"
 )
 foreach ($lab in $labImages) {
@@ -34,7 +34,7 @@ Import-Tf "aws_iam_role_policy.ecs_task_execute_command" "vlab-dev-ecs-task-role
 Import-Tf "aws_iam_role_policy_attachment.ecs_task_execution_managed" "vlab-dev-ecs-task-execution-role/arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 
 $taskDefs = @(
-  "python", "java", "linux", "dbms", "agilemethodology", "android", "bigdata",
+  "python", "java", "linux", "mysql", "postgres", "oracle", "agilemethodology", "android", "android-emulator", "bigdata",
   "datascience", "dotnet", "softwareengeering", "testing"
 )
 foreach ($lab in $taskDefs) {

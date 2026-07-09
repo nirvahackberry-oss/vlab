@@ -1,12 +1,16 @@
-# Android SDK + Gradle starter project for mobile-app-lab (CLI build; no Studio GUI).
-# GUI emulator needs KVM — use sdkmanager/avdmanager from the IDE terminal on Fargate if required.
+# Android lab images: ANDROID_VARIANT=build (default, SDK + platform-tools) or emulator (adds AVD).
+# Starter project is not baked in; session bootstrap loads it from S3 (see bootstrap-starter.sh).
 ARG LAB_BASE_IMAGE=465443875617.dkr.ecr.ap-south-1.amazonaws.com/vlab-dev-lab-base-linux:latest
+ARG ANDROID_VARIANT=build
 FROM ${LAB_BASE_IMAGE}
+
+ARG ANDROID_VARIANT=build
 
 USER root
 
 ENV DEBIAN_FRONTEND=noninteractive \
-    GRADLE_VERSION=8.2
+    GRADLE_VERSION=8.2 \
+    LAB_TYPE=android
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
@@ -22,44 +26,24 @@ ENV ANDROID_HOME=/opt/android-sdk \
     JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 ENV PATH="${JAVA_HOME}/bin:${PATH}:${ANDROID_HOME}/cmdline-tools/latest/bin:${ANDROID_HOME}/platform-tools:${ANDROID_HOME}/emulator"
 
-RUN mkdir -p "${ANDROID_HOME}/cmdline-tools"
+COPY lab-images/android/install-sdk.sh /tmp/install-sdk.sh
+RUN chmod +x /tmp/install-sdk.sh \
+    && /tmp/install-sdk.sh "${ANDROID_VARIANT}" \
+    && rm -f /tmp/install-sdk.sh
 
-RUN wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O sdk.zip \
-    && unzip sdk.zip -d "${ANDROID_HOME}/cmdline-tools" \
-    && mv "${ANDROID_HOME}/cmdline-tools/cmdline-tools" "${ANDROID_HOME}/cmdline-tools/latest" \
-    && rm sdk.zip
-
-RUN yes | sdkmanager --licenses
-
-RUN sdkmanager \
-    "platform-tools" \
-    "platforms;android-33" \
-    "build-tools;33.0.2" \
-    "emulator" \
-    "system-images;android-33;google_apis;x86_64"
-
-# Gradle 8.x for wrapper generation and image warmup (distro gradle is too old for AGP 8).
 RUN curl -fsSL "https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip" -o /tmp/gradle.zip \
     && unzip -q /tmp/gradle.zip -d /opt \
     && ln -sf "/opt/gradle-${GRADLE_VERSION}/bin/gradle" /usr/local/bin/gradle \
     && rm /tmp/gradle.zip
 
-COPY lab-images/android/starter/ /workspace/
-RUN echo "sdk.dir=${ANDROID_HOME}" > /workspace/local.properties \
-    && cd /workspace \
-    && gradle wrapper --gradle-version "${GRADLE_VERSION}" \
-    && chmod +x /workspace/build.sh /workspace/gradlew
-
 WORKDIR /app
 COPY --chown=labuser:labuser lab-images/common/lab_server.py /app/lab_server.py
-COPY lab-images/android/entrypoint.sh /usr/local/bin/android-entrypoint.sh
-RUN chmod +x /usr/local/bin/android-entrypoint.sh
+COPY lab-images/android/bootstrap-starter.sh /usr/local/bin/bootstrap-android-starter.sh
+COPY lab-images/common/session-entrypoint.sh /usr/local/bin/android-entrypoint.sh
+RUN chmod +x /usr/local/bin/android-entrypoint.sh /usr/local/bin/bootstrap-android-starter.sh
 
-# Warmup as root (network + SDK write access), then hand caches to labuser.
-RUN cd /workspace \
-    && ./gradlew assembleDebug --no-daemon --stacktrace \
-    && mkdir -p /home/labuser/.android /home/labuser/.gradle \
-    && cp -a /root/.gradle/. /home/labuser/.gradle/ 2>/dev/null || true \
+RUN mkdir -p /home/labuser/.android /home/labuser/.gradle /workspace \
+    && gradle --version \
     && chown -R labuser:labuser /workspace /home/labuser "${ANDROID_HOME}"
 
 USER labuser

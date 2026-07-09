@@ -71,3 +71,38 @@ output "test_cases_bucket" {
   description = "S3 bucket containing lab test case files."
   value       = aws_s3_bucket.test_cases.bucket
 }
+
+output "android_starter_s3_key" {
+  description = "S3 object key for the Android starter project tarball (session bootstrap)."
+  value       = "lab-assets/android/starter/latest.tar.gz"
+}
+
+output "android_starter_s3_uri" {
+  description = "S3 URI for the Android starter project tarball."
+  value       = "s3://${aws_s3_bucket.test_cases.bucket}/lab-assets/android/starter/latest.tar.gz"
+}
+
+output "lab_assets_s3_prefix" {
+  description = "S3 prefix for session bootstrap archives."
+  value       = "lab-assets"
+}
+
+output "lab_assets_s3_keys" {
+  description = "Default S3 object keys for session bootstrap archives."
+  value = {
+    android_starter   = "lab-assets/android/starter/latest.tar.gz"
+    dotnet_mvc        = "lab-assets/dotnet/mvc/latest.tar.gz"
+    dotnet_console    = "lab-assets/dotnet/console-snippet/latest.tar.gz"
+    datascience_notebook = "lab-assets/datascience/notebook/latest.tar.gz"
+  }
+}
+
+output "lab_assets_s3_uris" {
+  description = "Default S3 URIs for session bootstrap archives."
+  value = {
+    android_starter   = "s3://${aws_s3_bucket.test_cases.bucket}/lab-assets/android/starter/latest.tar.gz"
+    dotnet_mvc        = "s3://${aws_s3_bucket.test_cases.bucket}/lab-assets/dotnet/mvc/latest.tar.gz"
+    dotnet_console    = "s3://${aws_s3_bucket.test_cases.bucket}/lab-assets/dotnet/console-snippet/latest.tar.gz"
+    datascience_notebook = "s3://${aws_s3_bucket.test_cases.bucket}/lab-assets/datascience/notebook/latest.tar.gz"
+  }
+}

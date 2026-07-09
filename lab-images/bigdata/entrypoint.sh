@@ -11,6 +11,6 @@ if [ ! -f /var/hadoop/hdfs/namenode/current/VERSION ]; then
   hdfs namenode -format -force -nonInteractive
 fi
 
-"${HADOOP_HOME}/sbin/start-dfs.sh"
+"${HADOOP_HOME}/sbin/start-dfs.sh" &
 
 exec python3 /app/lab_server.py

@@ -23,9 +23,12 @@ variable "lab_types" {
     "python",
     "java",
     "linux",
-    "dbms",
+    "mysql",
+    "postgres",
+    "oracle",
     "agilemethodology",
     "android",
+    "android-emulator",
     "bigdata",
     "datascience",
     "dotnet",
@@ -63,7 +66,7 @@ variable "lab_cpu_by_type" {
   description = "Optional CPU overrides by lab type."
   type        = map(number)
   default = {
-    dbms = 1024 # Oracle XE 21 + MySQL + PostgreSQL
+    oracle = 1024
   }
 }
 
@@ -71,8 +74,8 @@ variable "lab_memory_by_type" {
   description = "Optional memory overrides by lab type."
   type        = map(number)
   default = {
-    dbms = 6144 # Oracle XE 21 + MySQL + PostgreSQL
-    java = 2048
+    oracle = 4096
+    java   = 2048
   }
 }
 
@@ -80,7 +83,7 @@ variable "lab_ephemeral_storage_by_type" {
   description = "Optional ephemeral storage (GiB) overrides by lab type."
   type        = map(number)
   default = {
-    dbms = 30
+    oracle = 30
   }
 }
 

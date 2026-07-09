@@ -3,6 +3,8 @@ FROM ${LAB_BASE_IMAGE}
 
 USER root
 
+ENV LAB_TYPE=datascience
+
 RUN pip install --no-cache-dir \
     seaborn \
     scikit-learn \
@@ -13,9 +15,10 @@ RUN pip install --no-cache-dir \
 ENV JUPYTER_CONFIG_DIR=/etc/jupyter
 COPY lab-images/datascience/jupyter_server_config.py /etc/jupyter/jupyter_server_config.py
 COPY lab-images/datascience/custom/custom.css /etc/jupyter/custom/custom.css
+COPY lab-images/datascience/entrypoint.sh /usr/local/bin/datascience-entrypoint.sh
+RUN chmod +x /usr/local/bin/datascience-entrypoint.sh
 
 WORKDIR /workspace
-COPY lab-images/datascience/lab.ipynb /workspace/lab.ipynb
 
 EXPOSE 8888
-CMD ["jupyter", "notebook", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--allow-root", "--NotebookApp.token=", "--NotebookApp.password=", "--NotebookApp.allow_origin=*", "--NotebookApp.disable_check_xsrf=True", "--NotebookApp.default_url=/notebooks/lab.ipynb"]
+CMD ["/usr/local/bin/datascience-entrypoint.sh"]

@@ -272,3 +272,7 @@ override.tf.json
 # CLI config
 .terraformrc
 terraform.rc
+
+lab-images/android/android-starter.tar.gz
+lab-images/dotnet/assets/
+lab-images/datascience/datascience-notebook.tar.gz

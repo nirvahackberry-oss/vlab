@@ -54,7 +54,7 @@ resource "aws_ecs_task_definition" "lab" {
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   # ECS Exec is enabled per task at launch from the app/control-plane repo.
-  # dbms runs Oracle XE + MySQL + PostgreSQL; needs more CPU/RAM than default Fargate sizing.
+  # oracle runs Oracle XE 21; needs more CPU/RAM than default Fargate sizing.
   cpu                = tostring(local.lab_cpu_resolved[each.key])
   memory             = tostring(local.lab_memory_resolved[each.key])
   execution_role_arn = aws_iam_role.ecs_task_execution.arn
